@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cdbb851ce1f1f6f4f8e1b3190f17423d, type: 3}
+  m_Name: TileMappingConfig
+  m_EditorClassIdentifier: 
+  entries:
+  - tileAsset: {fileID: 11400000, guid: 3bea0349caac47748a49c9532845edbf, type: 2}
+    tileID: 1
+    isWall: 1
+  - tileAsset: {fileID: 11400000, guid: 36802b43ed933fb4e827a4d57b197634, type: 2}
+    tileID: 2
+    isWall: 0
+  - tileAsset: {fileID: 11400000, guid: ad8771a21e3b0594d8be0132700e3f64, type: 2}
+    tileID: 3
+    isWall: 0
+  - tileAsset: {fileID: 11400000, guid: 53f0411119e50de408a51d0aebc8e9c9, type: 2}
+    tileID: 4
+    isWall: 0
+  tagDefinitions:
+  - editorTile: {fileID: 11400000, guid: f727d35ae89fed442aa629fa0429bf69, type: 2}
+    tagID: 1
+    tagName: Player
+  - editorTile: {fileID: 11400000, guid: 498390bb3419ed748915bc98d2c16c09, type: 2}
+    tagID: 2
+    tagName: Box
+  - editorTile: {fileID: 11400000, guid: 1c0b16d2a49956c4393713a3190de7c3, type: 2}
+    tagID: 3
+    tagName: Target

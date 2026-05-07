@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(curl -s -L \"https://api.github.com/repos/OMerkel/Sokoban\")",
+      "Bash(curl:*)",
+      "Bash(python3 -c \"import sys,json,base64; d=json.load\\(sys.stdin\\); print\\(base64.b64decode\\(d['content']\\).decode\\(\\)\\)\")",
+      "Bash(python3 -c \"import sys,json; [print\\(f['name']\\) for f in json.load\\(sys.stdin\\) if f['type']=='file']\")",
+      "Bash(python -c \"import sys,json,base64; d=json.load\\(sys.stdin\\); print\\(base64.b64decode\\(d['content']\\).decode\\(\\)\\)\")",
+      "Bash(python -c \" import sys, json data = json.load\\(sys.stdin\\) for item in data['tree']: print\\(item['path']\\) \")",
+      "WebFetch(domain:odininspector.com)",
+      "Bash(grep -v '^$')",
+      "Bash(/c/Users/SeBenux/AppData/Local/Programs/Python/Python313/python -m venv venv)"
+    ]
+  },
+  "outputStyle": "neko-chan"
+}

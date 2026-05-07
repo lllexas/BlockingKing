@@ -1,0 +1,2 @@
+@echo off
+start pwsh -NoLogo -Command "$env:ANTHROPIC_BASE_URL='https://api.deepseek.com/anthropic'; $env:ANTHROPIC_AUTH_TOKEN='sk-1c5ac1b372ab45bbadc8c8695b80d347'; $env:ANTHROPIC_MODEL='deepseek-v4-flash'; $env:ANTHROPIC_DEFAULT_HAIKU_MODEL='deepseek-v4-flash'; $env:ANTHROPIC_DEFAULT_SONNET_MODEL='deepseek-v4-pro'; $env:API_TIMEOUT_MS='600000'; $env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC='1';   $env:CLAUDE_CODE_SUBAGENT_MODEL='deepseek-v4-flash'; $env:CLAUDE_CODE_EFFORT_LEVEL='max'; $env:ANTHROPIC_API_KEY=$null; Set-Location '%~dp0'; claude"
