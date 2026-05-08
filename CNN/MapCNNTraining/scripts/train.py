@@ -14,10 +14,10 @@ from torch.utils.data import TensorDataset, DataLoader
 # ── 超参数 ────────────────────────────────────────────────
 BATCH_SIZE     = 512
 LR             = 0.001
-EPOCHS         = 20       # 固定跑 20 轮
+EPOCHS         = 5        # = max(SAVE_EPOCHS)，不浪费
 VAL_SPLIT      = 0.1
 RANDOM_SEED    = 42
-SAVE_EPOCHS    = [2, 3, 5, 8]   # 保存哪些轮次的权重
+SAVE_EPOCHS    = [1, 2, 3, 5]   # 保存哪些轮次的权重
 
 _SCRIPT_DIR    = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR       = os.path.join(_SCRIPT_DIR, "../data")

@@ -1,0 +1,12 @@
+生成时间: 2026-05-08 11:43:13
+数据来源: 经典推箱子关卡 (16 文件)
+窗口范围: 5~20 × 5~20
+筛选: box == goal >= 1, max_n=5
+每 (level,size) 最大采样: 3
+增强: 旋转×4 × 镜像×2 = ×8
+输入: [N, 2, 20, 20] (ch0=n/5, ch1=mask)
+标签: [N, 2, 20, 20] (ch0=箱, ch1=目标)
+原始窗口: 25,079
+增强后样本: 200,632
+文件: data.npz (原始 1224.6 MB, 压缩后 6.3 MB)
+来源文件: Microban II.txt, Microban III.txt, Microban IV.txt, Microban.txt, Original.xsb, Sasquatch II.txt, Sasquatch III.txt, Sasquatch IV.txt, Sasquatch IX.txt, Sasquatch V.txt, Sasquatch VI.txt, Sasquatch VII.txt, Sasquatch VIII.txt, Sasquatch X.txt, Sasquatch XI.txt, Sasquatch.txt

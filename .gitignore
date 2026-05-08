@@ -70,6 +70,22 @@ crashlytics-build.properties
 # Packed Addressables
 /[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
 
+# Python / CNN experiments
+**/venv/
+**/.venv/
+**/__pycache__/
+*.py[cod]
+
+# CNN generated data and training outputs
+CNN/**/data/*.npy
+CNN/**/data/*.npz
+CNN/**/weights/
+CNN/**/*.pt
+
+# Local scratch outputs
+_out.txt
+_es_dump.txt
+
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*

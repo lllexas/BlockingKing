@@ -1,0 +1,8 @@
+生成时间: 2026-05-07 23:51:47
+类别数: 5
+映射: {1: 0, 2: 1, 3: 2, 4: 3, 6: 4}
+char→id: {'#': 1, ' ': 2, '@': 2, '.': 3, '+': 3, '$': 4, '*': 6}
+窗口: 7×7
+增强: 旋转×4 × 镜像×2 = ×8
+总样本: 1882160
+来源: Microban II.txt, Microban III.txt, Microban IV.txt, Microban.txt, Original.xsb, Sasquatch II.txt, Sasquatch III.txt, Sasquatch IV.txt, Sasquatch IX.txt, Sasquatch V.txt, Sasquatch VI.txt, Sasquatch VII.txt, Sasquatch VIII.txt, Sasquatch X.txt, Sasquatch XI.txt, Sasquatch.txt

@@ -26,7 +26,7 @@ WINDOW_SIZE = 7
 PAD = WINDOW_SIZE // 2  # = 3
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-LEVEL_DIR = os.path.join(_SCRIPT_DIR, "../../Sokoban_Classic_Reference/3rdParty/Levels")
+LEVEL_DIR = os.path.join(_SCRIPT_DIR, "../../../Sokoban_Classic_Reference/3rdParty/Levels")
 OUT_DIR = os.path.join(_SCRIPT_DIR, "../data")
 
 
