@@ -10,7 +10,26 @@
       "Bash(python -c \" import sys, json data = json.load\\(sys.stdin\\) for item in data['tree']: print\\(item['path']\\) \")",
       "WebFetch(domain:odininspector.com)",
       "Bash(grep -v '^$')",
-      "Bash(/c/Users/SeBenux/AppData/Local/Programs/Python/Python313/python -m venv venv)"
+      "Bash(/c/Users/SeBenux/AppData/Local/Programs/Python/Python313/python -m venv venv)",
+      "WebFetch(domain:docs.unity3d.com)",
+      "WebFetch(domain:blog.csdn.net)",
+      "Bash(python MapLayoutTraining/scripts/parse_layout_data.py)",
+      "Bash(python MapLayoutTraining/scripts/train_layout.py)",
+      "Bash(where python:*)",
+      "Bash(pip list:*)",
+      "Bash(pip3 list:*)",
+      "Bash(python -c \"import torch; print\\(torch.__file__\\)\")",
+      "Bash(conda env:*)",
+      "Bash(pip cache:*)",
+      "Bash(dir \"C:\\\\Users\\\\SeBenux\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\\" 2>&1; dir \"C:\\\\Users\\\\SeBenux\\\\.conda\" 2>&1; dir \"C:\\\\ProgramData\\\\miniconda3\" 2>&1; dir \"C:\\\\Users\\\\SeBenux\\\\miniconda3\" 2>&1)",
+      "Read(//c/Users/SeBenux/miniconda3/**)",
+      "Read(//c/ProgramData/miniconda3/**)",
+      "Read(//c/Users/SeBenux/anaconda3/**)",
+      "Bash(python -c \"import sys; print\\(sys.executable\\)\")",
+      "Bash(python -m pip list)",
+      "Bash(python -m pip show torch)",
+      "Bash(ls -d MapCNNTraining/weights/*/)",
+      "Bash(ls -d MapLayoutTraining/weights/*/)"
     ]
   },
   "outputStyle": "neko-chan"

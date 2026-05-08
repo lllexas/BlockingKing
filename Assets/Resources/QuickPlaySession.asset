@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b62076e42a47f04a9f4e20d632efb64, type: 3}
   m_Name: QuickPlaySession
   m_EditorClassIdentifier: 
-  targetLevel: {fileID: 11400000, guid: 11945009df593fd4383dd940327933f8, type: 2}
+  targetLevel: {fileID: 11400000, guid: 3c867c2c9555bf94999f146c755fb234, type: 2}
   config: {fileID: 11400000, guid: a6504b011fb4543449390f3df07b8d89, type: 2}
   active: 1

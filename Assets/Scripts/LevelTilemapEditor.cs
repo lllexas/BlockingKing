@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
@@ -6,16 +7,18 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// 驻留在 TilemapLevelEditor 场景中，管理双层 Tilemap 编辑：
+/// 驻留在 TilemapLevelEditor 场景中，管理三层 Tilemap 编辑：
 ///   - Terrain Tilemap → LevelData.tiles (静态地形)
-///   - Objects Tilemap → LevelData.tags (Tag 标记)
+///   - Targets Tilemap → LevelData.tags (非占格标记)
+///   - Actors Tilemap → LevelData.tags (占格单位)
 /// </summary>
 [ExecuteAlways]
 public class LevelTilemapEditor : MonoBehaviour
 {
     public Grid grid;
     public Tilemap terrainTilemap;
-    public Tilemap objectsTilemap;
+    public Tilemap targetTilemap;
+    public Tilemap actorTilemap;
 
     [SerializeField] private TileMappingConfig _tileMappingConfig;
 
@@ -27,24 +30,22 @@ public class LevelTilemapEditor : MonoBehaviour
 
     private void OnEnable()
     {
-        LoadSession();
+        if (terrainTilemap != null && targetTilemap != null && actorTilemap != null)
+            LoadSession();
     }
 
-    // ─────────── 从会话加载 ───────────
-
-    private void LoadSession()
+    public void LoadSession()
     {
         if (_sessionLoaded) return;
+        if (terrainTilemap == null || targetTilemap == null || actorTilemap == null) return;
         if (!LevelTilemapSessionBridge.TryGetSession(out var session)) return;
 
         _levelDataGUID = session.LevelDataGUID;
         _sessionLoaded = true;
 
         LoadLevelDataToTilemaps(_levelDataGUID);
-        Debug.Log($"<color=cyan>已加载关卡到双层 Tilemap 编辑器</color> [GUID: {_levelDataGUID}]");
+        Debug.Log($"<color=cyan>已加载关卡到三层 Tilemap 编辑器</color> [GUID: {_levelDataGUID}]");
     }
-
-    // ─────────── 加载 SO → 双层 Tilemap ───────────
 
     private void LoadLevelDataToTilemaps(string guid)
     {
@@ -52,13 +53,19 @@ public class LevelTilemapEditor : MonoBehaviour
         if (levelData == null) return;
 
         EnsureConfig();
+        if (levelData.EnsureInitialized(10, 10, GetDefaultFloorTileId()))
+        {
+            EditorUtility.SetDirty(levelData);
+            AssetDatabase.SaveAssets();
+        }
+
         terrainTilemap.ClearAllTiles();
-        objectsTilemap.ClearAllTiles();
+        targetTilemap.ClearAllTiles();
+        actorTilemap.ClearAllTiles();
 
         int w = levelData.width;
         int h = levelData.height;
 
-        // Terrain 层
         for (int y = 0; y < h; y++)
         {
             for (int x = 0; x < w; x++)
@@ -72,18 +79,18 @@ public class LevelTilemapEditor : MonoBehaviour
             }
         }
 
-        // Objects 层：每个 tag 放一个 Tile
+        if (levelData.tags == null)
+            levelData.tags = new List<LevelTagEntry>();
+
         foreach (var tag in levelData.tags)
         {
             TileBase tile = _tileMappingConfig?.GetTagTile(tag.tagID);
             if (tile != null)
-                objectsTilemap.SetTile(TilePos(tag.x, h, tag.y), tile);
+                GetTagTilemap(tag.tagID).SetTile(TilePos(tag.x, h, tag.y), tile);
         }
 
         Debug.Log($"已加载 [{levelData.levelName}]: 地形 {w}x{h}, Tag {levelData.tags.Count} 个");
     }
-
-    // ─────────── 保存双层 Tilemap → SO ───────────
 
     public bool SaveToLevelData()
     {
@@ -98,7 +105,6 @@ public class LevelTilemapEditor : MonoBehaviour
 
         EnsureConfig();
 
-        // ── 计算地形包围盒 ──
         terrainTilemap.CompressBounds();
         BoundsInt terrainBounds = terrainTilemap.cellBounds;
         int w = Mathf.Max(1, terrainBounds.size.x);
@@ -107,39 +113,19 @@ public class LevelTilemapEditor : MonoBehaviour
         int[][] map2D = new int[h][];
         for (int y = 0; y < h; y++)
         {
-            map2D[h - 1 - y] = new int[w];
+            map2D[y] = new int[w];
             for (int x = 0; x < w; x++)
             {
                 Vector3Int wp = new Vector3Int(terrainBounds.xMin + x, terrainBounds.yMin + y, 0);
                 TileBase tile = terrainTilemap.GetTile(wp);
-                map2D[h - 1 - y][x] = tile != null ? _tileMappingConfig.GetTileID(tile) : 0;
+                map2D[y][x] = tile != null ? _tileMappingConfig.GetTileID(tile) : 0;
             }
         }
         levelData.SetFromMap2D(map2D);
 
-        // ── 收集 Tag ──
         levelData.tags = new List<LevelTagEntry>();
-        objectsTilemap.CompressBounds();
-        BoundsInt objectsBounds = objectsTilemap.cellBounds;
-
-        for (int y = objectsBounds.yMin; y < objectsBounds.yMax; y++)
-        {
-            for (int x = objectsBounds.xMin; x < objectsBounds.xMax; x++)
-            {
-                Vector3Int wp = new Vector3Int(x, y, 0);
-                TileBase tile = objectsTilemap.GetTile(wp);
-                if (tile == null) continue;
-
-                int tagId = _tileMappingConfig.GetTagID(tile);
-                if (tagId == 0) continue;
-
-                int lx = x - terrainBounds.xMin;
-                int ly = (terrainBounds.yMax - 1) - y;
-                if (lx < 0 || lx >= w || ly < 0 || ly >= h) continue;
-
-                levelData.tags.Add(new LevelTagEntry { tagID = tagId, x = lx, y = ly });
-            }
-        }
+        AppendTagsFromTilemap(levelData.tags, targetTilemap, terrainBounds, w, h);
+        AppendTagsFromTilemap(levelData.tags, actorTilemap, terrainBounds, w, h);
 
         EditorUtility.SetDirty(levelData);
         AssetDatabase.SaveAssets();
@@ -148,8 +134,6 @@ public class LevelTilemapEditor : MonoBehaviour
         Debug.Log($"<color=green>保存 [{levelData.levelName}]: {w}x{h}, Tag {levelData.tags.Count} 个</color>");
         return true;
     }
-
-    // ─────────── 保存并返回 ───────────
 
     public void SaveAndReturn()
     {
@@ -183,15 +167,70 @@ public class LevelTilemapEditor : MonoBehaviour
         SaveToLevelData();
     }
 
-    // ─────────── 辅助 ───────────
-
     private void EnsureConfig()
     {
-        if (_tileMappingConfig != null) return;
-        var guids = AssetDatabase.FindAssets("t:TileMappingConfig");
-        if (guids.Length > 0)
-            _tileMappingConfig = AssetDatabase.LoadAssetAtPath<TileMappingConfig>(
-                AssetDatabase.GUIDToAssetPath(guids[0]));
+        if (_tileMappingConfig == null)
+        {
+            var guids = AssetDatabase.FindAssets("t:TileMappingConfig");
+            if (guids.Length > 0)
+                _tileMappingConfig = AssetDatabase.LoadAssetAtPath<TileMappingConfig>(
+                    AssetDatabase.GUIDToAssetPath(guids[0]));
+        }
+
+        _tileMappingConfig?.RebuildCache();
+    }
+
+    private int GetDefaultFloorTileId()
+    {
+        if (_tileMappingConfig == null || _tileMappingConfig.entries == null)
+            return 0;
+
+        foreach (var entry in _tileMappingConfig.entries)
+        {
+            if (entry != null && !entry.isWall && entry.tileID != 0)
+                return entry.tileID;
+        }
+
+        return 0;
+    }
+
+    private Tilemap GetTagTilemap(int tagId)
+    {
+        return IsTargetTag(tagId) ? targetTilemap : actorTilemap;
+    }
+
+    private bool IsTargetTag(int tagId)
+    {
+        string tagName = _tileMappingConfig != null ? _tileMappingConfig.GetTagName(tagId) : string.Empty;
+        return string.Equals(tagName, "target", System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void AppendTagsFromTilemap(List<LevelTagEntry> tags, Tilemap source, BoundsInt terrainBounds, int w, int h)
+    {
+        if (source == null)
+            return;
+
+        source.CompressBounds();
+        BoundsInt bounds = source.cellBounds;
+
+        for (int y = bounds.yMin; y < bounds.yMax; y++)
+        {
+            for (int x = bounds.xMin; x < bounds.xMax; x++)
+            {
+                Vector3Int wp = new Vector3Int(x, y, 0);
+                TileBase tile = source.GetTile(wp);
+                if (tile == null) continue;
+
+                int tagId = _tileMappingConfig.GetTagID(tile);
+                if (tagId == 0) continue;
+
+                int lx = x - terrainBounds.xMin;
+                int ly = y - terrainBounds.yMin;
+                if (lx < 0 || lx >= w || ly < 0 || ly >= h) continue;
+
+                tags.Add(new LevelTagEntry { tagID = tagId, x = lx, y = ly });
+            }
+        }
     }
 
     private LevelData LoadAsset(string guid)
@@ -207,6 +246,7 @@ public class LevelTilemapEditor : MonoBehaviour
 
     private Vector3Int TilePos(int x, int h, int y)
     {
-        return new Vector3Int(x, h - 1 - y, 0);
+        return new Vector3Int(x, y, 0);
     }
 }
+#endif

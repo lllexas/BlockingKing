@@ -216,6 +216,7 @@ public class EntitySystem : MonoBehaviour
     private void UpdateTick()
     {
         IntentSystem.Instance?.Tick();
+        EnemyAutoAISystem.Instance?.Tick();
     }
 
     #endregion

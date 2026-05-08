@@ -15,12 +15,11 @@ using Sirenix.OdinInspector.Editor;
 [CustomEditor(typeof(LevelData))]
 public class LevelDataInspector : OdinEditor
 {
+    private const int DefaultNewLevelWidth = 10;
+    private const int DefaultNewLevelHeight = 10;
+
     private LevelData _data;
     private TileMappingConfig _config;
-
-    // 快速播放场景切换状态
-    private static string _quickPlayOriginPath;
-    private static SceneSetup[] _quickPlayOriginSetup;
 
     protected override void OnEnable()
     {
@@ -210,6 +209,7 @@ public class LevelDataInspector : OdinEditor
 
     private static Sprite GetSprite(TileBase tile)
     {
+        if (tile == null) return null;
         if (tile is Tile t && t.sprite != null) return t.sprite;
         var prop = tile.GetType().GetProperty("sprite",
             System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
@@ -228,6 +228,8 @@ public class LevelDataInspector : OdinEditor
             EditorUtility.DisplayDialog("错误", "请先保存 LevelData SO 到磁盘。", "确定");
             return;
         }
+
+        EnsureEditableLevelData();
 
         var sceneSetup = EditorSceneManager.GetSceneManagerSetup();
         var originScene = EditorSceneManager.GetActiveScene();
@@ -248,6 +250,7 @@ public class LevelDataInspector : OdinEditor
             return;
         }
 
+        var ensuredEditor = TilemapEditorSceneUtility.EnsureSceneObjects(editorScene);
         EditorSceneManager.SetActiveScene(editorScene);
 
         foreach (var root in editorScene.GetRootGameObjects())
@@ -260,7 +263,42 @@ public class LevelDataInspector : OdinEditor
             }
         }
 
+        ensuredEditor?.LoadSession();
+
         EditorSceneManager.CloseScene(originScene, false);
+    }
+
+    private void EnsureEditableLevelData()
+    {
+        if (_data == null) return;
+
+        if (_config == null)
+            _config = FindConfig();
+
+        int defaultTileId = GetDefaultFloorTileId();
+        if (_data.EnsureInitialized(DefaultNewLevelWidth, DefaultNewLevelHeight, defaultTileId))
+        {
+            if (string.IsNullOrEmpty(_data.levelName))
+                _data.levelName = _data.name;
+
+            EditorUtility.SetDirty(_data);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[LevelDataInspector] 初始化空 LevelData: {_data.name}, {_data.width}x{_data.height}");
+        }
+    }
+
+    private int GetDefaultFloorTileId()
+    {
+        if (_config == null || _config.entries == null)
+            return 0;
+
+        foreach (var entry in _config.entries)
+        {
+            if (entry != null && !entry.isWall && entry.tileID != 0)
+                return entry.tileID;
+        }
+
+        return 0;
     }
 
     // ─────────── 颜色 ───────────
@@ -295,21 +333,31 @@ public class LevelDataInspector : OdinEditor
 
     private bool IsDark(Color c) => c.r * 0.299f + c.g * 0.587f + c.b * 0.114f < 0.5f;
 
-    // ─────────── 快速播放（Play Mode）───────────
+    // ─────────── 快速播放（Domain Reload Safe）───────────
+
+    private const string PREFS_ORIGIN_PATH = "QuickPlay_OriginPath";
+    private const string PREFS_ORIGIN_SETUP = "QuickPlay_OriginSetup";
 
     private void QuickPlay()
     {
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
 
-        // 1. 保存当前场景，记录当前 load 的场景
+        SaveActiveTilemapEditorIfNeeded();
+        EnsureEditableLevelData();
+
         var originScene = EditorSceneManager.GetActiveScene();
         if (!originScene.IsValid() || string.IsNullOrEmpty(originScene.path))
         {
             EditorUtility.DisplayDialog("错误", "当前没有活动场景。", "确定");
             return;
         }
-        _quickPlayOriginPath = originScene.path;
-        _quickPlayOriginSetup = EditorSceneManager.GetSceneManagerSetup();
+
+        // 1. EditorPrefs 持久化 origin（跨 Domain Reload）
+        EditorPrefs.SetString(PREFS_ORIGIN_PATH, originScene.path);
+        var setup = EditorSceneManager.GetSceneManagerSetup();
+        EditorPrefs.SetString(PREFS_ORIGIN_SETUP, SerializeSceneSetup(setup));
+
+        Debug.Log($"[QuickPlay] 步骤1: origin={originScene.path}, scenes={setup?.Length ?? 0}");
 
         // 2. 准备 QuickPlaySession
         const string sessionPath = "Assets/Resources/QuickPlaySession.asset";
@@ -327,45 +375,174 @@ public class LevelDataInspector : OdinEditor
         EditorUtility.SetDirty(session);
         AssetDatabase.SaveAssets();
 
-        // 3. 设置 StageScene 为播放模式启动场景 → Unity 会 unload 当前场景并 load StageScene
-        const string stageScenePath = "Assets/Scenes/StageScene.unity";
-        EditorSceneManager.playModeStartScene =
-            AssetDatabase.LoadAssetAtPath<SceneAsset>(stageScenePath);
+        Debug.Log($"[QuickPlay] 步骤2: QuickPlaySession target={_data.levelName}");
 
-        // 4. 进入播放模式（StageScene 中 LevelPlayer.Start() 执行 mesh 操作）
-        EditorApplication.playModeStateChanged += OnQuickPlayStateChanged;
+        // 3. 单独打开 StageScene，避免从 Tilemap 编辑场景进入播放时场景栈错乱。
+        const string stageScenePath = "Assets/Scenes/StageScene.unity";
+        if (AssetDatabase.LoadAssetAtPath<SceneAsset>(stageScenePath) == null)
+        {
+            EditorPrefs.DeleteKey(PREFS_ORIGIN_PATH);
+            EditorPrefs.DeleteKey(PREFS_ORIGIN_SETUP);
+            EditorUtility.DisplayDialog("错误",
+                "找不到 StageScene.unity！\n请先在 Assets/Scenes/ 下创建场景，\n" +
+                "放入 Camera + Light + LevelPlayer 组件。", "确定");
+            return;
+        }
+
+        EditorSceneManager.playModeStartScene = null;
+        var stageScene = EditorSceneManager.OpenScene(stageScenePath, OpenSceneMode.Single);
+        if (!stageScene.IsValid())
+        {
+            EditorPrefs.DeleteKey(PREFS_ORIGIN_PATH);
+            EditorPrefs.DeleteKey(PREFS_ORIGIN_SETUP);
+            EditorUtility.DisplayDialog("错误", "无法打开 StageScene.unity。", "确定");
+            return;
+        }
+
+        Debug.Log("[QuickPlay] 步骤3: StageScene 已单独打开 → EnterPlaymode()");
+
+        // 4. 进入播放模式
         EditorApplication.EnterPlaymode();
     }
 
-    private static void OnQuickPlayStateChanged(PlayModeStateChange state)
+    private void SaveActiveTilemapEditorIfNeeded()
     {
-        switch (state)
-        {
-            case PlayModeStateChange.ExitingEditMode:
-                // 进入播放模式，清理 playModeStartScene
-                EditorSceneManager.playModeStartScene = null;
-                break;
+        if (!LevelTilemapSessionBridge.TryGetSession(out var session))
+            return;
 
-            case PlayModeStateChange.EnteredEditMode:
-                // 5. 从播放模式退出，恢复步骤 1 中记录的场景 load 状态
-                EditorApplication.playModeStateChanged -= OnQuickPlayStateChanged;
-                RestoreQuickPlayOrigin();
-                break;
+        string currentGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(_data));
+        if (string.IsNullOrEmpty(currentGuid) || currentGuid != session.LevelDataGUID)
+            return;
+
+        for (int i = 0; i < SceneManager.sceneCount; i++)
+        {
+            var scene = SceneManager.GetSceneAt(i);
+            if (!scene.IsValid() || !scene.isLoaded)
+                continue;
+
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                var editor = root.GetComponentInChildren<LevelTilemapEditor>(true);
+                if (editor != null && editor.HasActiveSession)
+                {
+                    editor.SaveOnly();
+                    return;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 跨 Domain Reload 自持的快速播放状态机。
+    /// [InitializeOnLoad] 保证每次 Assembly 加载都重新订阅，不会丢失事件。
+    /// </summary>
+    [InitializeOnLoad]
+    private static class QuickPlayTracker
+    {
+        static QuickPlayTracker()
+        {
+            EditorApplication.playModeStateChanged += OnStateChanged;
+        }
+
+        private static void OnStateChanged(PlayModeStateChange state)
+        {
+            bool isQuickPlay = EditorPrefs.HasKey(PREFS_ORIGIN_PATH);
+
+            switch (state)
+            {
+                case PlayModeStateChange.ExitingEditMode:
+                    if (isQuickPlay)
+                        Debug.Log("[QuickPlay] ExitingEditMode → StageScene 进入播放");
+                    break;
+
+                case PlayModeStateChange.ExitingPlayMode:
+                    // 最安全时机：退出 Play Mode 时清空，不影响下次正常 Play
+                    EditorSceneManager.playModeStartScene = null;
+                    break;
+
+                case PlayModeStateChange.EnteredEditMode:
+                    if (isQuickPlay)
+                        RestoreQuickPlayOrigin();
+                    break;
+            }
         }
     }
 
     private static void RestoreQuickPlayOrigin()
     {
-        if (string.IsNullOrEmpty(_quickPlayOriginPath)) return;
+        string originPath = EditorPrefs.GetString(PREFS_ORIGIN_PATH, null);
+        string setupJson = EditorPrefs.GetString(PREFS_ORIGIN_SETUP, null);
 
-        var originPath = _quickPlayOriginPath;
-        var setup = _quickPlayOriginSetup;
-        _quickPlayOriginPath = null;
-        _quickPlayOriginSetup = null;
+        EditorPrefs.DeleteKey(PREFS_ORIGIN_PATH);
+        EditorPrefs.DeleteKey(PREFS_ORIGIN_SETUP);
 
-        if (setup != null)
-            EditorSceneManager.RestoreSceneManagerSetup(setup);
+        if (string.IsNullOrEmpty(originPath))
+        {
+            Debug.LogWarning("[QuickPlay] 无 origin 记录，跳过恢复");
+            return;
+        }
 
-        Debug.Log($"[QuickPlay] 已恢复编辑场景: {originPath}");
+        Debug.Log($"[QuickPlay] 步骤5: 退出 Play Mode，恢复场景 {originPath}");
+
+        // Unity 已自动恢复编辑场景，此处额外恢复多场景加载布局
+        var loadedSetups = DeserializeSceneSetup(setupJson);
+        if (loadedSetups != null)
+            EditorSceneManager.RestoreSceneManagerSetup(loadedSetups);
+        else
+            EditorSceneManager.OpenScene(originPath, OpenSceneMode.Single);
+
+        Debug.Log("[QuickPlay] 已完成");
+    }
+
+    // ─────────── SceneSetup 序列化（EditorPrefs 用）───────────
+
+    [System.Serializable]
+    private sealed class SceneSetupEntry
+    {
+        public string path;
+        public bool isActive;
+        public bool isLoaded;
+    }
+
+    [System.Serializable]
+    private sealed class SceneSetupList
+    {
+        public SceneSetupEntry[] items;
+    }
+
+    private static string SerializeSceneSetup(SceneSetup[] setups)
+    {
+        if (setups == null || setups.Length == 0) return "";
+        var data = new SceneSetupList();
+        data.items = new SceneSetupEntry[setups.Length];
+        for (int i = 0; i < setups.Length; i++)
+        {
+            data.items[i] = new SceneSetupEntry
+            {
+                path = setups[i].path,
+                isActive = setups[i].isActive,
+                isLoaded = setups[i].isLoaded
+            };
+        }
+        return JsonUtility.ToJson(data);
+    }
+
+    private static SceneSetup[] DeserializeSceneSetup(string json)
+    {
+        if (string.IsNullOrEmpty(json)) return null;
+        var data = JsonUtility.FromJson<SceneSetupList>(json);
+        if (data?.items == null || data.items.Length == 0) return null;
+
+        var result = new SceneSetup[data.items.Length];
+        for (int i = 0; i < data.items.Length; i++)
+        {
+            result[i] = new SceneSetup
+            {
+                path = data.items[i].path,
+                isActive = data.items[i].isActive,
+                isLoaded = data.items[i].isLoaded
+            };
+        }
+        return result;
     }
 }

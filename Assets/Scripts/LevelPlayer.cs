@@ -5,12 +5,12 @@ using Sirenix.OdinInspector;
 /// <summary>
 /// 播放场景入口：Inspector 可拖入 LevelData SO 直接预览，
 /// 面板按钮一键重建 Mesh。
-/// 优先级：直接引用 > QuickPlaySession。
+/// 优先级：QuickPlaySession > 直接引用。
 /// </summary>
 public class LevelPlayer : MonoBehaviour
 {
     [Header("关卡数据")]
-    [SerializeField, Tooltip("直接拖入 LevelData SO（优先于 QuickPlaySession）")]
+    [SerializeField, Tooltip("直接拖入 LevelData SO（QuickPlaySession 激活时会覆盖它）")]
     private LevelData levelData;
 
     [SerializeField, Tooltip("直接拖入 TileMappingConfig（可选，为空则无墙壁）")]
@@ -33,6 +33,7 @@ public class LevelPlayer : MonoBehaviour
     private TileMappingConfig _config;
     private GameObject _meshGO;
     private Material _materialInstance;
+    private bool _usingQuickPlaySession;
 
     private void Start()
     {
@@ -43,23 +44,28 @@ public class LevelPlayer : MonoBehaviour
 
     private void ResolveLevelData()
     {
-        // 优先使用直接引用
+        if (_usingQuickPlaySession)
+            return;
+
+        // 快速播放优先于场景里的固定引用。
+        var session = Resources.Load<QuickPlaySession>("QuickPlaySession");
+        if (session != null && session.active && session.targetLevel != null)
+        {
+            _level = session.targetLevel;
+            _config = session.config != null ? session.config : tileConfig;
+            _config?.RebuildCache();
+            session.active = false;
+            _usingQuickPlaySession = true;
+            return;
+        }
+
+        // 正常播放使用直接引用
         if (levelData != null)
         {
             _level = levelData;
             _config = tileConfig;
             _config?.RebuildCache();
             return;
-        }
-
-        // 回退到 QuickPlaySession
-        var session = Resources.Load<QuickPlaySession>("QuickPlaySession");
-        if (session != null && session.active && session.targetLevel != null)
-        {
-            _level = session.targetLevel;
-            _config = session.config;
-            _config?.RebuildCache();
-            session.active = false;
         }
     }
 
@@ -151,6 +157,7 @@ public class LevelPlayer : MonoBehaviour
         EnsureRuntimeSystem<IntentSystem>();
         EnsureRuntimeSystem<MoveSystem>();
         EnsureRuntimeSystem<AttackSystem>();
+        EnsureRuntimeSystem<EnemyAutoAISystem>();
         EnsureRuntimeSystem<DrawSystem>();
         EnsureRuntimeSystem<UserInputReader>();
 
@@ -160,17 +167,23 @@ public class LevelPlayer : MonoBehaviour
 
         int playerTagID = ResolveTagID("player", 3);
         int boxTagID = ResolveTagID("box", 2);
+        int boxCoreTagID = ResolveTagID("Box.Core", -1);
         int targetTagID = ResolveTagID("target", 1);
+        int enemyGoTagID = ResolveTagID("Enemy.Go", 4);
 
         foreach (var tag in _level.tags)
         {
             var pos = new Vector2Int(tag.x, tag.y);
             if (tag.tagID == playerTagID)
-                entitySystem.CreateEntity(EntityType.Player, pos);
+                CreateTaggedEntity(entitySystem, EntityType.Player, pos, tag.tagID);
             else if (tag.tagID == boxTagID)
-                entitySystem.CreateEntity(EntityType.Box, pos);
+                CreateTaggedEntity(entitySystem, EntityType.Box, pos, tag.tagID);
+            else if (boxCoreTagID > 0 && tag.tagID == boxCoreTagID)
+                CreateCoreBox(entitySystem, pos, tag.tagID);
             else if (tag.tagID == targetTagID)
-                entitySystem.CreateEntity(EntityType.Target, pos, false);
+                CreateTaggedEntity(entitySystem, EntityType.Target, pos, tag.tagID, false);
+            else if (tag.tagID == enemyGoTagID)
+                CreateTaggedEntity(entitySystem, EntityType.Enemy, pos, tag.tagID);
         }
 
         Debug.Log($"[LevelPlayer] ECS 已初始化，实体数={entitySystem.entities.entityCount}");
@@ -196,6 +209,42 @@ public class LevelPlayer : MonoBehaviour
         if (system == null)
             system = gameObject.AddComponent<T>();
         return system;
+    }
+
+    private EntityHandle CreateTaggedEntity(
+        EntitySystem entitySystem,
+        EntityType entityType,
+        Vector2Int pos,
+        int tagId,
+        bool occupiesGrid = true)
+    {
+        var handle = entitySystem.CreateEntity(entityType, pos, occupiesGrid);
+        ApplyEntityBP(entitySystem, handle, tagId);
+        return handle;
+    }
+
+    private void CreateCoreBox(EntitySystem entitySystem, Vector2Int pos, int tagId)
+    {
+        var handle = CreateTaggedEntity(entitySystem, EntityType.Box, pos, tagId);
+        int index = entitySystem.GetIndex(handle);
+        if (index >= 0)
+            entitySystem.entities.propertyComponents[index].IsCore = true;
+    }
+
+    private void ApplyEntityBP(EntitySystem entitySystem, EntityHandle handle, int tagId)
+    {
+        int index = entitySystem.GetIndex(handle);
+        if (index < 0)
+            return;
+
+        EntityBP bp = _config != null ? _config.GetTagEntityBP(tagId) : null;
+        if (bp == null)
+            return;
+
+        ref var core = ref entitySystem.entities.coreComponents[index];
+        ref var properties = ref entitySystem.entities.propertyComponents[index];
+        core.Health = Mathf.Max(1, bp.health);
+        properties.Attack = Mathf.Max(0, bp.attack);
     }
 
     private List<LevelTagEntry> GetLevelMarkerTags()

@@ -27,6 +27,8 @@ public class TileMappingConfig : ScriptableObject
         public TileBase editorTile;
         public int tagID;
         public string tagName;
+        public EntityBP entityBP;
+        public Color color = Color.white;
     }
 
     // ─────────── 地形表 ───────────
@@ -167,7 +169,7 @@ public class TileMappingConfig : ScriptableObject
 
             _tagTileToId[tag.editorTile] = tag.tagID;
             _idToTag[tag.tagID] = tag;
-            _tagIdToColor[tag.tagID] = SampleColor(tag.editorTile);
+            _tagIdToColor[tag.tagID] = tag.color;
         }
 
         _cacheBuilt = true;
@@ -225,7 +227,13 @@ public class TileMappingConfig : ScriptableObject
     public Color GetTagColor(int tagId)
     {
         if (!_cacheBuilt) RebuildCache();
-        return _tagIdToColor.TryGetValue(tagId, out var c) ? c : Color.magenta;
+        return _tagIdToColor.TryGetValue(tagId, out var c) ? c : Color.white;
+    }
+
+    public EntityBP GetTagEntityBP(int tagId)
+    {
+        if (!_cacheBuilt) RebuildCache();
+        return _idToTag.TryGetValue(tagId, out var tag) ? tag.entityBP : null;
     }
 
     public IEnumerable<int> AllTagIDs
@@ -236,63 +244,12 @@ public class TileMappingConfig : ScriptableObject
         }
     }
 
-    // ─────────── Sprite 颜色采样 ───────────
+    // ─────────── 颜色生成（基于名称哈希，不采样 Tile 纹理） ───────────
 
     private static Color SampleColor(TileBase tile)
     {
-        Sprite sprite = GetSpriteFromTile(tile);
-
-        if (sprite == null)
-        {
-            int hash = tile.name.GetHashCode();
-            return Color.HSVToRGB(Mathf.Abs(hash % 360) / 360f, 0.55f, 0.75f);
-        }
-
-        Texture2D tex = sprite.texture;
-        if (tex == null || !tex.isReadable)
-        {
-            int hash = sprite.name.GetHashCode();
-            return Color.HSVToRGB(Mathf.Abs(hash % 360) / 360f, 0.55f, 0.75f);
-        }
-
-        try
-        {
-            Rect r = sprite.textureRect;
-            Color[] pixels = tex.GetPixels(
-                Mathf.FloorToInt(r.x),
-                Mathf.FloorToInt(r.y),
-                Mathf.FloorToInt(r.width),
-                Mathf.FloorToInt(r.height));
-
-            float sr = 0, sg = 0, sb = 0;
-            int count = 0;
-            foreach (var p in pixels)
-            {
-                if (p.a < 0.1f) continue;
-                sr += p.r;
-                sg += p.g;
-                sb += p.b;
-                count++;
-            }
-
-            if (count > 0)
-                return new Color(sr / count, sg / count, sb / count, 1f);
-        }
-        catch { }
-
-        return Color.gray;
-    }
-
-    private static Sprite GetSpriteFromTile(TileBase tile)
-    {
-        if (tile is Tile t && t.sprite != null)
-            return t.sprite;
-
-        var spriteProp = tile.GetType().GetProperty("sprite",
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-        if (spriteProp != null)
-            return spriteProp.GetValue(tile) as Sprite;
-
-        return null;
+        string key = tile != null ? tile.name : "unknown";
+        int hash = key.GetHashCode();
+        return Color.HSVToRGB(Mathf.Abs(hash % 360) / 360f, 0.6f, 0.8f);
     }
 }

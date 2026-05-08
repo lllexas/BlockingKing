@@ -35,23 +35,63 @@ public class LevelData : ScriptableObject
     [BoxGroup("Tag")]
     public List<LevelTagEntry> tags = new List<LevelTagEntry>();
 
+    public bool EnsureInitialized(int defaultWidth, int defaultHeight, int defaultTileId = 0)
+    {
+        bool changed = false;
+
+        if (width <= 0)
+        {
+            width = Mathf.Max(1, defaultWidth);
+            changed = true;
+        }
+
+        if (height <= 0)
+        {
+            height = Mathf.Max(1, defaultHeight);
+            changed = true;
+        }
+
+        int expectedLength = width * height;
+        if (tiles == null || tiles.Length != expectedLength)
+        {
+            tiles = new int[expectedLength];
+            for (int i = 0; i < tiles.Length; i++)
+                tiles[i] = defaultTileId;
+            changed = true;
+        }
+
+        if (tags == null)
+        {
+            tags = new List<LevelTagEntry>();
+            changed = true;
+        }
+
+        return changed;
+    }
+
     // ─────────── 地形 ───────────
 
     public int GetTile(int x, int y)
     {
         if (x < 0 || x >= width || y < 0 || y >= height) return -1;
+        if (tiles == null || tiles.Length != width * height) return 0;
         return tiles[y * width + x];
     }
 
     public void SetTile(int x, int y, int id)
     {
         if (x < 0 || x >= width || y < 0 || y >= height) return;
+        if (tiles == null || tiles.Length != width * height)
+            EnsureInitialized(width, height);
         tiles[y * width + x] = id;
     }
 
     public int[][] GetMap2D()
     {
-        if (tiles == null) return null;
+        if (width <= 0 || height <= 0) return null;
+        if (tiles == null || tiles.Length != width * height)
+            EnsureInitialized(width, height);
+
         int[][] result = new int[height][];
         for (int y = 0; y < height; y++)
         {
@@ -75,6 +115,10 @@ public class LevelData : ScriptableObject
 
     public int[,] To2DArray()
     {
+        if (width <= 0 || height <= 0) return new int[0, 0];
+        if (tiles == null || tiles.Length != width * height)
+            EnsureInitialized(width, height);
+
         int[,] result = new int[height, width];
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)

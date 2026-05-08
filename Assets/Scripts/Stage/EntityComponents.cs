@@ -39,6 +39,7 @@ public struct PropertyComponent
     public int Attack;
     public int Parameter0;
     public int Parameter1;
+    public bool IsCore;
 }
 
 // ─────────── IntentComponent ───────────

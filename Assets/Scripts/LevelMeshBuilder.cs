@@ -57,8 +57,8 @@ public class LevelMeshBuilder
                 if (id == 0) continue;
 
                 bool isWall = config != null && config.IsWall(id);
-                // 顶点色编码: R=1 表示墙（供 Shader 区分）
-                Color wallColor = new Color(1f, 0f, 0f, 1f);
+                // 顶点色编码: A=1 墙, A=0 地板, A=2 Tag（供 Shader 区分）
+                Color wallColor  = new Color(0f, 0f, 0f, 1f);
                 Color floorColor = new Color(0f, 0f, 0f, 0f);
                 Vector3 origin = new Vector3(x * cellSize, 0f, y * cellSize);
 
@@ -96,6 +96,7 @@ public class LevelMeshBuilder
             if (tag.x < 0 || tag.x >= w || tag.y < 0 || tag.y >= h) continue;
 
             Color color = config != null ? config.GetTagColor(tag.tagID) : Color.white;
+            color.a = 2f; // A=2 → Shader 识别为 Tag
 
             // Tag 在墙顶还是地面上？
             int terrainId = map[tag.y][tag.x];
@@ -114,8 +115,9 @@ public class LevelMeshBuilder
             Vector3 lt = center + new Vector3(-hs, 0, hs);
             Vector3 rt = center + new Vector3(hs, 0, hs);
 
+            // 绕序修复：Tag 面朝上 (+Y)，需用 lb, lt, rb, rt
             AddQuadRaw(verts, normals, tris, colors,
-                lb, rb, lt, rt, Vector3.up, color);
+                lb, lt, rb, rt, Vector3.up, color);
         }
     }
 
@@ -176,7 +178,11 @@ public class LevelMeshBuilder
             default:           normal = Vector3.up;     break;
         }
 
-        AddQuadRaw(verts, normals, tris, colors, lb, rb, lt, rt, normal, color);
+        // Up / Right / Left 三个方向需要交换 rb↔lt 才能使绕序正确
+        if (dir == FaceDir.Up || dir == FaceDir.Right || dir == FaceDir.Left)
+            AddQuadRaw(verts, normals, tris, colors, lb, lt, rb, rt, normal, color);
+        else
+            AddQuadRaw(verts, normals, tris, colors, lb, rb, lt, rt, normal, color);
     }
 
     private static void AddQuadRaw(List<Vector3> verts, List<Vector3> normals,

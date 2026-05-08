@@ -4,16 +4,17 @@ using UnityEditor;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// 关卡烘焙窗口：从场景双层 Tilemap 生成 LevelData SO
+/// 关卡烘焙窗口：从场景三层 Tilemap 生成 LevelData SO
 ///   - Terrain Tilemap → int[] tiles
-///   - Objects Tilemap → List<LevelTagEntry> tags
+///   - Targets Tilemap + Actors Tilemap → List<LevelTagEntry> tags
 /// </summary>
 public class LevelBakerWindow : EditorWindow
 {
     private string _levelId = "Level_01";
     private TileMappingConfig _mappingConfig;
     private Tilemap _terrainTilemap;
-    private Tilemap _objectsTilemap;
+    private Tilemap _targetsTilemap;
+    private Tilemap _actorsTilemap;
     private string _outputPath = "Assets/Levels/";
 
     [MenuItem("Tools/推箱子/关卡烘焙机")]
@@ -40,8 +41,11 @@ public class LevelBakerWindow : EditorWindow
         _terrainTilemap = (Tilemap)EditorGUILayout.ObjectField(
             "地形 Tilemap", _terrainTilemap, typeof(Tilemap), true);
 
-        _objectsTilemap = (Tilemap)EditorGUILayout.ObjectField(
-            "对象 Tilemap", _objectsTilemap, typeof(Tilemap), true);
+        _targetsTilemap = (Tilemap)EditorGUILayout.ObjectField(
+            "目标 Tilemap", _targetsTilemap, typeof(Tilemap), true);
+
+        _actorsTilemap = (Tilemap)EditorGUILayout.ObjectField(
+            "单位 Tilemap", _actorsTilemap, typeof(Tilemap), true);
 
         EditorGUILayout.Space(20);
 
@@ -54,18 +58,8 @@ public class LevelBakerWindow : EditorWindow
                 $"地形范围: {b.size.x} x {b.size.y}", MessageType.Info);
         }
 
-        if (_objectsTilemap != null)
-        {
-            _objectsTilemap.CompressBounds();
-            var b = _objectsTilemap.cellBounds;
-            int count = 0;
-            for (int y = b.yMin; y < b.yMax; y++)
-                for (int x = b.xMin; x < b.xMax; x++)
-                    if (_objectsTilemap.GetTile(new Vector3Int(x, y, 0)) != null)
-                        count++;
-            EditorGUILayout.HelpBox(
-                $"对象 Tilemap: {b.size.x} x {b.size.y}, 有效标记: {count}", MessageType.Info);
-        }
+        DrawTagTilemapPreview("目标 Tilemap", _targetsTilemap);
+        DrawTagTilemapPreview("单位 Tilemap", _actorsTilemap);
 
         EditorGUILayout.Space(10);
 
@@ -108,7 +102,7 @@ public class LevelBakerWindow : EditorWindow
         int[][] map2D = new int[h][];
         for (int y = 0; y < h; y++)
         {
-            map2D[h - 1 - y] = new int[w];
+            map2D[y] = new int[w];
             for (int x = 0; x < w; x++)
             {
                 Vector3Int wp = new Vector3Int(terrainBounds.xMin + x, terrainBounds.yMin + y, 0);
@@ -119,7 +113,7 @@ public class LevelBakerWindow : EditorWindow
                     unregistered++;
                     Debug.LogWarning($"<color=yellow>【未注册地形 Tile】</color> {tile.name} @ {wp}");
                 }
-                map2D[h - 1 - y][x] = id;
+                map2D[y][x] = id;
             }
         }
 
@@ -127,36 +121,8 @@ public class LevelBakerWindow : EditorWindow
         var tags = new List<LevelTagEntry>();
         int tagUnregistered = 0;
 
-        if (_objectsTilemap != null)
-        {
-            _objectsTilemap.CompressBounds();
-            BoundsInt objBounds = _objectsTilemap.cellBounds;
-
-            for (int y = objBounds.yMin; y < objBounds.yMax; y++)
-            {
-                for (int x = objBounds.xMin; x < objBounds.xMax; x++)
-                {
-                    Vector3Int wp = new Vector3Int(x, y, 0);
-                    TileBase tile = _objectsTilemap.GetTile(wp);
-                    if (tile == null) continue;
-
-                    int tagId = _mappingConfig.GetTagID(tile);
-                    if (tagId == 0)
-                    {
-                        tagUnregistered++;
-                        Debug.LogWarning($"<color=yellow>【未注册 Tag Tile】</color> {tile.name} @ {wp}");
-                        continue;
-                    }
-
-                    int lx = x - terrainBounds.xMin;
-                    int ly = (terrainBounds.yMax - 1) - y;
-                    if (lx >= 0 && lx < w && ly >= 0 && ly < h)
-                    {
-                        tags.Add(new LevelTagEntry { tagID = tagId, x = lx, y = ly });
-                    }
-                }
-            }
-        }
+        tagUnregistered += AppendTagsFromTilemap(tags, _targetsTilemap, terrainBounds, w, h);
+        tagUnregistered += AppendTagsFromTilemap(tags, _actorsTilemap, terrainBounds, w, h);
 
         // ── 创建 SO ──
         var levelData = ScriptableObject.CreateInstance<LevelData>();
@@ -186,5 +152,57 @@ public class LevelBakerWindow : EditorWindow
 
         Selection.activeObject = levelData;
         EditorGUIUtility.PingObject(levelData);
+    }
+
+    private void DrawTagTilemapPreview(string label, Tilemap tilemap)
+    {
+        if (tilemap == null)
+            return;
+
+        tilemap.CompressBounds();
+        var b = tilemap.cellBounds;
+        int count = 0;
+        for (int y = b.yMin; y < b.yMax; y++)
+            for (int x = b.xMin; x < b.xMax; x++)
+                if (tilemap.GetTile(new Vector3Int(x, y, 0)) != null)
+                    count++;
+
+        EditorGUILayout.HelpBox(
+            $"{label}: {b.size.x} x {b.size.y}, 有效标记: {count}", MessageType.Info);
+    }
+
+    private int AppendTagsFromTilemap(List<LevelTagEntry> tags, Tilemap tilemap, BoundsInt terrainBounds, int w, int h)
+    {
+        if (tilemap == null)
+            return 0;
+
+        int tagUnregistered = 0;
+        tilemap.CompressBounds();
+        BoundsInt bounds = tilemap.cellBounds;
+
+        for (int y = bounds.yMin; y < bounds.yMax; y++)
+        {
+            for (int x = bounds.xMin; x < bounds.xMax; x++)
+            {
+                Vector3Int wp = new Vector3Int(x, y, 0);
+                TileBase tile = tilemap.GetTile(wp);
+                if (tile == null) continue;
+
+                int tagId = _mappingConfig.GetTagID(tile);
+                if (tagId == 0)
+                {
+                    tagUnregistered++;
+                    Debug.LogWarning($"<color=yellow>【未注册 Tag Tile】</color> {tile.name} @ {wp}");
+                    continue;
+                }
+
+                int lx = x - terrainBounds.xMin;
+                int ly = y - terrainBounds.yMin;
+                if (lx >= 0 && lx < w && ly >= 0 && ly < h)
+                    tags.Add(new LevelTagEntry { tagID = tagId, x = lx, y = ly });
+            }
+        }
+
+        return tagUnregistered;
     }
 }

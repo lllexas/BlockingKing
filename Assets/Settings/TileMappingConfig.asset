@@ -29,9 +29,25 @@ MonoBehaviour:
   - editorTile: {fileID: 11400000, guid: f727d35ae89fed442aa629fa0429bf69, type: 2}
     tagID: 1
     tagName: Player
+    entityBP: {fileID: 11400000, guid: 283a9579837d1794ca6664e1870d74d8, type: 2}
+    color: {r: 0.050943315, g: 1, b: 0.8385974, a: 1}
   - editorTile: {fileID: 11400000, guid: 498390bb3419ed748915bc98d2c16c09, type: 2}
     tagID: 2
     tagName: Box
+    entityBP: {fileID: 0}
+    color: {r: 1, g: 0.46003264, b: 0, a: 1}
   - editorTile: {fileID: 11400000, guid: 1c0b16d2a49956c4393713a3190de7c3, type: 2}
     tagID: 3
     tagName: Target
+    entityBP: {fileID: 0}
+    color: {r: 0.89433956, g: 0.59276664, b: 0.2075542, a: 1}
+  - editorTile: {fileID: 11400000, guid: 030fa1c7fe2cde14dab1a36ba2e9a7b9, type: 2}
+    tagID: 4
+    tagName: Enemy.Go
+    entityBP: {fileID: 11400000, guid: 9fefed5420345a64584ac08dcaf5070e, type: 2}
+    color: {r: 1, g: 1, b: 1, a: 1}
+  - editorTile: {fileID: 11400000, guid: 4ee898a906c516843a374390565dc39e, type: 2}
+    tagID: 5
+    tagName: Box.Core
+    entityBP: {fileID: 11400000, guid: 395e7902f404fd548b8eacbe5ebf30a4, type: 2}
+    color: {r: 1, g: 1, b: 1, a: 1}
