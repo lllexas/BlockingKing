@@ -1,0 +1,6 @@
+[submodule "Assets/NekoGraph"]
+	path = Assets/NekoGraph
+	url = https://github.com/lllexas/NekoGraph.git
+[submodule "Sokoban_Classic_Reference"]
+	path = Sokoban_Classic_Reference
+	url = https://github.com/OMerkel/Sokoban.git
