@@ -63,6 +63,9 @@ Shader "BlockingKing/LevelGeometric"
 
         Pass
         {
+            Name "UniversalForward"
+            Tags { "LightMode" = "UniversalForward" }
+
             Cull Back
 
             HLSLPROGRAM
@@ -70,9 +73,12 @@ Shader "BlockingKing/LevelGeometric"
             #pragma fragment frag
 
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile _ _SHADOWS_SOFT
             #pragma multi_compile_fog
+            #pragma multi_compile_instancing
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Noise.hlsl"
             #include "Breath.hlsl"
@@ -82,6 +88,7 @@ Shader "BlockingKing/LevelGeometric"
                 float4 positionOS : POSITION;
                 float3 normalOS   : NORMAL;
                 float4 color      : COLOR;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct Varyings
@@ -90,6 +97,7 @@ Shader "BlockingKing/LevelGeometric"
                 float3 positionWS : TEXCOORD0;
                 float3 normalWS   : TEXCOORD1;
                 float4 color      : COLOR;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             float _GridSize, _SubDivisions, _LineWidth, _SubLineWidth, _LineGlow;
@@ -106,6 +114,8 @@ Shader "BlockingKing/LevelGeometric"
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
+                UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
                 OUT.positionCS = TransformObjectToHClip(IN.positionOS.xyz);
                 OUT.positionWS = TransformObjectToWorld(IN.positionOS.xyz);
                 OUT.normalWS   = TransformObjectToWorldNormal(IN.normalOS);
@@ -158,13 +168,15 @@ Shader "BlockingKing/LevelGeometric"
 
             float4 ApplyLighting(float3 albedo, float3 emission, float3 ws, float3 nrm)
             {
-                Light mainLight = GetMainLight();
+                float4 shadowCoord = TransformWorldToShadowCoord(ws);
+                Light mainLight = GetMainLight(shadowCoord);
                 float3 lightDir = mainLight.direction;
                 float3 lightCol = mainLight.color;
+                float shadow = mainLight.shadowAttenuation;
 
                 // 漫反射
                 float NdotL = saturate(dot(nrm, lightDir));
-                float3 diffuse = albedo * lightCol * NdotL;
+                float3 diffuse = albedo * lightCol * NdotL * shadow;
 
                 // Blinn-Phong 高光
                 float3 viewDir = GetWorldSpaceNormalizeViewDir(ws);
@@ -264,6 +276,56 @@ Shader "BlockingKing/LevelGeometric"
                 float3 floorEmission = _FloorNeon.rgb    * (majorLineF + majorGlowF * 0.5 + scanF) * _EmissionScale
                                      + _FloorSubNeon.rgb * (subLineF + subGlowF * 0.3) * _EmissionScale * 0.3;
                 return ApplyLighting(floorAlbedo, floorEmission, ws, nrm);
+            }
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags { "LightMode" = "ShadowCaster" }
+
+            Cull Back
+            ZWrite On
+            ZTest LEqual
+            ColorMask 0
+
+            HLSLPROGRAM
+            #pragma vertex ShadowPassVertex
+            #pragma fragment ShadowPassFragment
+            #pragma multi_compile_instancing
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            struct ShadowAttributes
+            {
+                float4 positionOS : POSITION;
+                float4 color : COLOR;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct ShadowVaryings
+            {
+                float4 positionCS : SV_POSITION;
+                float alpha : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            ShadowVaryings ShadowPassVertex(ShadowAttributes input)
+            {
+                ShadowVaryings output;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.alpha = input.color.a;
+                return output;
+            }
+
+            half4 ShadowPassFragment(ShadowVaryings input) : SV_TARGET
+            {
+                clip(input.alpha - 0.5);
+                clip(1.5 - input.alpha);
+                return 0;
             }
             ENDHLSL
         }

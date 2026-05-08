@@ -15,17 +15,21 @@ public class DrawSystem : MonoBehaviour
     [SerializeField] private Mesh playerMesh;
     [SerializeField] private Mesh boxMesh;
     [SerializeField] private Mesh enemyMesh;
+    [SerializeField] private Mesh wallMesh;
 
     [Header("Material")]
     [SerializeField] private Material playerMaterial;
     [SerializeField] private Material boxMaterial;
     [SerializeField] private Material enemyMaterial;
+    [SerializeField] private Material wallMaterial;
 
     [Header("Transform")]
     [SerializeField] private float cellSize = 1f;
     [SerializeField] private Vector3 playerScale = new(0.7f, 1f, 0.7f);
     [SerializeField] private Vector3 boxScale = new(0.85f, 0.85f, 0.85f);
     [SerializeField] private Vector3 enemyScale = new(0.75f, 0.35f, 0.75f);
+    [SerializeField] private Vector3 wallScale = new(0.95f, 0.95f, 0.95f);
+    [SerializeField] private float wallY = -0.2f;
 
     [Header("Stats Text")]
     [SerializeField] private bool showStatsText = true;
@@ -46,10 +50,12 @@ public class DrawSystem : MonoBehaviour
     private readonly Matrix4x4[] _playerMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _boxMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _enemyMatrices = new Matrix4x4[BatchSize];
+    private readonly Matrix4x4[] _wallMatrices = new Matrix4x4[BatchSize];
     private readonly List<StatTextPair> _statTexts = new();
     private int _playerCount;
     private int _boxCount;
     private int _enemyCount;
+    private int _wallCount;
     private int _statTextCount;
     private Material _runtimeStatsVisibleMaterial;
     private Material _runtimeStatsOccludedMaterial;
@@ -86,6 +92,15 @@ public class DrawSystem : MonoBehaviour
         DrawEntities();
     }
 
+    public void SetWallMaterial(Material material)
+    {
+        if (material == null)
+            return;
+
+        wallMaterial = material;
+        wallMaterial.enableInstancing = true;
+    }
+
     private void DrawEntities()
     {
         var entitySystem = EntitySystem.Instance;
@@ -95,6 +110,7 @@ public class DrawSystem : MonoBehaviour
         _playerCount = 0;
         _boxCount = 0;
         _enemyCount = 0;
+        _wallCount = 0;
 
         var entities = entitySystem.entities;
         for (int i = 0; i < entities.entityCount; i++)
@@ -115,6 +131,7 @@ public class DrawSystem : MonoBehaviour
                     AddStatsText(core.Position, entities.propertyComponents[i].Attack, core.Health);
                     break;
                 case EntityType.Wall:
+                    AddWall(core.Position);
                     AddStatsText(core.Position, entities.propertyComponents[i].Attack, core.Health);
                     break;
             }
@@ -123,6 +140,7 @@ public class DrawSystem : MonoBehaviour
         FlushPlayers();
         FlushBoxes();
         FlushEnemies();
+        FlushWalls();
         HideUnusedStatTexts();
     }
 
@@ -145,6 +163,13 @@ public class DrawSystem : MonoBehaviour
         _enemyMatrices[_enemyCount++] = Matrix4x4.TRS(ToEnemyWorld(gridPos), Quaternion.identity, enemyScale);
         if (_enemyCount == BatchSize)
             FlushEnemies();
+    }
+
+    private void AddWall(Vector2Int gridPos)
+    {
+        _wallMatrices[_wallCount++] = Matrix4x4.TRS(ToWallWorld(gridPos), Quaternion.identity, wallScale);
+        if (_wallCount == BatchSize)
+            FlushWalls();
     }
 
     private void FlushPlayers()
@@ -190,6 +215,21 @@ public class DrawSystem : MonoBehaviour
 
         Graphics.DrawMeshInstanced(enemyMesh, 0, enemyMaterial, _enemyMatrices, _enemyCount);
         _enemyCount = 0;
+    }
+
+    private void FlushWalls()
+    {
+        if (_wallCount == 0)
+            return;
+
+        if (wallMesh == null || wallMaterial == null)
+        {
+            _wallCount = 0;
+            return;
+        }
+
+        Graphics.DrawMeshInstanced(wallMesh, 0, wallMaterial, _wallMatrices, _wallCount);
+        _wallCount = 0;
     }
 
     private void AddStatsText(Vector2Int gridPos, int attack, int health)
@@ -372,6 +412,11 @@ public class DrawSystem : MonoBehaviour
         return new Vector3((gridPos.x + 0.5f) * cellSize, 0.25f * cellSize, (gridPos.y + 0.5f) * cellSize);
     }
 
+    private Vector3 ToWallWorld(Vector2Int gridPos)
+    {
+        return new Vector3((gridPos.x + 0.5f) * cellSize, wallY * cellSize, (gridPos.y + 0.5f) * cellSize);
+    }
+
     private void EnsureResources()
     {
         if (playerMesh == null)
@@ -380,6 +425,8 @@ public class DrawSystem : MonoBehaviour
             boxMesh = CreatePrimitiveMesh(PrimitiveType.Cube);
         if (enemyMesh == null)
             enemyMesh = CreatePrimitiveMesh(PrimitiveType.Sphere);
+        if (wallMesh == null)
+            wallMesh = CreatePrimitiveMesh(PrimitiveType.Cube);
 
         if (playerMaterial == null)
             playerMaterial = CreateMaterial(new Color(0.2f, 0.55f, 1f));
@@ -387,13 +434,14 @@ public class DrawSystem : MonoBehaviour
             boxMaterial = CreateMaterial(new Color(0.9f, 0.65f, 0.25f));
         if (enemyMaterial == null)
             enemyMaterial = CreateMaterial(new Color(0.92f, 0.88f, 0.78f));
-
         if (playerMaterial != null)
             playerMaterial.enableInstancing = true;
         if (boxMaterial != null)
             boxMaterial.enableInstancing = true;
         if (enemyMaterial != null)
             enemyMaterial.enableInstancing = true;
+        if (wallMaterial != null)
+            wallMaterial.enableInstancing = true;
     }
 
     private static Mesh CreatePrimitiveMesh(PrimitiveType primitiveType)

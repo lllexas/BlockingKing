@@ -19,12 +19,6 @@ MonoBehaviour:
   - tileAsset: {fileID: 11400000, guid: 36802b43ed933fb4e827a4d57b197634, type: 2}
     tileID: 2
     isWall: 0
-  - tileAsset: {fileID: 11400000, guid: ad8771a21e3b0594d8be0132700e3f64, type: 2}
-    tileID: 3
-    isWall: 0
-  - tileAsset: {fileID: 11400000, guid: 53f0411119e50de408a51d0aebc8e9c9, type: 2}
-    tileID: 4
-    isWall: 0
   tagDefinitions:
   - editorTile: {fileID: 11400000, guid: f727d35ae89fed442aa629fa0429bf69, type: 2}
     tagID: 1
@@ -50,4 +44,9 @@ MonoBehaviour:
     tagID: 5
     tagName: Box.Core
     entityBP: {fileID: 11400000, guid: 395e7902f404fd548b8eacbe5ebf30a4, type: 2}
+    color: {r: 1, g: 1, b: 1, a: 1}
+  - editorTile: {fileID: 11400000, guid: ad8771a21e3b0594d8be0132700e3f64, type: 2}
+    tagID: 6
+    tagName: Wall.Unstable
+    entityBP: {fileID: 11400000, guid: 0bca8e3c9e505964fa4c4cefb988c323, type: 2}
     color: {r: 1, g: 1, b: 1, a: 1}

@@ -112,12 +112,7 @@ public class LevelPlayer : MonoBehaviour
         _meshGO.transform.SetParent(transform);
         _meshGO.AddComponent<MeshFilter>().mesh = mesh;
 
-        // 材质：优先用 Inspector 拖入的 asset，其次复用已有实例，最后新建
-        if (material != null)
-            _materialInstance = material;
-        else if (_materialInstance == null)
-            _materialInstance = new Material(Shader.Find("BlockingKing/LevelGeometric")
-                                          ?? Shader.Find("Universal Render Pipeline/Lit"));
+        EnsureLevelMaterial();
 
         _meshGO.AddComponent<MeshRenderer>().sharedMaterial = _materialInstance;
 
@@ -150,6 +145,8 @@ public class LevelPlayer : MonoBehaviour
             return;
         }
 
+        EnsureLevelMaterial();
+
         var entitySystem = EntitySystem.Instance;
         if (entitySystem == null)
             entitySystem = gameObject.AddComponent<EntitySystem>();
@@ -158,8 +155,9 @@ public class LevelPlayer : MonoBehaviour
         EnsureRuntimeSystem<MoveSystem>();
         EnsureRuntimeSystem<AttackSystem>();
         EnsureRuntimeSystem<EnemyAutoAISystem>();
-        EnsureRuntimeSystem<DrawSystem>();
+        var drawSystem = EnsureRuntimeSystem<DrawSystem>();
         EnsureRuntimeSystem<UserInputReader>();
+        drawSystem.SetWallMaterial(_materialInstance);
 
         entitySystem.Initialize(maxEntityCount, _level.width, _level.height);
         entitySystem.SetTerrain(_level.GetMap2D());
@@ -170,6 +168,7 @@ public class LevelPlayer : MonoBehaviour
         int boxCoreTagID = ResolveTagID("Box.Core", -1);
         int targetTagID = ResolveTagID("target", 1);
         int enemyGoTagID = ResolveTagID("Enemy.Go", 4);
+        int unstableWallTagID = ResolveTagID("Wall.Unstable", -1);
 
         foreach (var tag in _level.tags)
         {
@@ -184,6 +183,8 @@ public class LevelPlayer : MonoBehaviour
                 CreateTaggedEntity(entitySystem, EntityType.Target, pos, tag.tagID, false);
             else if (tag.tagID == enemyGoTagID)
                 CreateTaggedEntity(entitySystem, EntityType.Enemy, pos, tag.tagID);
+            else if (unstableWallTagID > 0 && tag.tagID == unstableWallTagID)
+                CreateUnstableWall(entitySystem, pos, tag.tagID);
         }
 
         Debug.Log($"[LevelPlayer] ECS 已初始化，实体数={entitySystem.entities.entityCount}");
@@ -211,6 +212,20 @@ public class LevelPlayer : MonoBehaviour
         return system;
     }
 
+    private void EnsureLevelMaterial()
+    {
+        // 材质：优先用 Inspector 拖入的 asset，其次复用已有实例，最后新建
+        if (material != null)
+        {
+            _materialInstance = material;
+            return;
+        }
+
+        if (_materialInstance == null)
+            _materialInstance = new Material(Shader.Find("BlockingKing/LevelGeometric")
+                                          ?? Shader.Find("Universal Render Pipeline/Lit"));
+    }
+
     private EntityHandle CreateTaggedEntity(
         EntitySystem entitySystem,
         EntityType entityType,
@@ -229,6 +244,12 @@ public class LevelPlayer : MonoBehaviour
         int index = entitySystem.GetIndex(handle);
         if (index >= 0)
             entitySystem.entities.propertyComponents[index].IsCore = true;
+    }
+
+    private void CreateUnstableWall(EntitySystem entitySystem, Vector2Int pos, int tagId)
+    {
+        CreateTaggedEntity(entitySystem, EntityType.Wall, pos, tagId);
+        entitySystem.SetTerrain(pos, GetDefaultFloorTerrainId());
     }
 
     private void ApplyEntityBP(EntitySystem entitySystem, EntityHandle handle, int tagId)

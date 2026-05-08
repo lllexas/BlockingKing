@@ -298,7 +298,7 @@ public class EntitySystem : MonoBehaviour
         _defaultFloorTerrainId = defaultFloorTerrainId;
     }
 
-    public EntityHandle TryMaterializeWall(Vector2Int pos, int health = 1)
+    public EntityHandle TryMaterializeWall(Vector2Int pos, int health)
     {
         if (!IsInsideMap(pos)) return EntityHandle.None;
 
@@ -320,10 +320,16 @@ public class EntitySystem : MonoBehaviour
         var handle = CreateEntity(EntityType.Wall, pos);
         int entityIndex = GetIndex(handle);
         if (entityIndex >= 0)
-            entities.coreComponents[entityIndex].Health = health;
+            entities.coreComponents[entityIndex].Health = Mathf.Max(1, health);
 
         entities.groundMap[idx] = _defaultFloorTerrainId;
         return handle;
+    }
+
+    public void SetTerrain(Vector2Int pos, int terrainId)
+    {
+        if (!IsInsideMap(pos)) return;
+        entities.groundMap[ToMapIndex(pos)] = terrainId;
     }
 
     public void SetTerrain(int[][] map)

@@ -148,7 +148,7 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
             if (IsCrossAdjacent(core.Position, corePosition))
             {
                 var attackIntent = intentSystem.Request<AttackIntent>();
-                attackIntent.Setup(coreHandle);
+                attackIntent.Setup(corePosition);
                 intentSystem.SetIntent(enemyHandle, IntentType.Attack, attackIntent);
                 continue;
             }

@@ -11,6 +11,7 @@ public class IntentSystem : MonoBehaviour
 
     private readonly Dictionary<Type, Stack<Intent>> _pools = new();
     private readonly List<EntityHandle> _activeIntentEntities = new();
+    private EntityHandle _playerIntentActor = EntityHandle.None;
 
     private void Awake()
     {
@@ -29,33 +30,20 @@ public class IntentSystem : MonoBehaviour
         if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
             return;
 
-        var entities = entitySystem.entities;
+        if (_playerIntentActor != EntityHandle.None)
+            ExecuteIntent(entitySystem, _playerIntentActor);
+
         for (int i = 0; i < _activeIntentEntities.Count; i++)
         {
             var actor = _activeIntentEntities[i];
-            int entityIndex = entitySystem.GetIndex(actor);
-            if (entityIndex < 0)
+            if (actor == _playerIntentActor)
                 continue;
 
-            ref var intentComponent = ref entities.intentComponents[entityIndex];
-            if (intentComponent.Type == IntentType.None || intentComponent.Intent == null)
-                continue;
-
-            switch (intentComponent.Type)
-            {
-                case IntentType.Move:
-                    MoveSystem.Instance?.Execute(actor, intentComponent.Intent as MoveIntent);
-                    break;
-                case IntentType.Attack:
-                    break;
-            }
-
-            Return(intentComponent.Intent);
-            intentComponent.Type = IntentType.None;
-            intentComponent.Intent = null;
+            ExecuteIntent(entitySystem, actor);
         }
 
         _activeIntentEntities.Clear();
+        _playerIntentActor = EntityHandle.None;
     }
 
     // ──────── 对象池 ────────
@@ -112,6 +100,43 @@ public class IntentSystem : MonoBehaviour
         return true;
     }
 
+    public bool SetPlayerIntent(EntityHandle actor, IntentType intentType, Intent intent)
+    {
+        if (!SetIntent(actor, intentType, intent))
+            return false;
+
+        _playerIntentActor = actor;
+        return true;
+    }
+
+    private void ExecuteIntent(EntitySystem entitySystem, EntityHandle actor)
+    {
+        if (entitySystem == null || !entitySystem.IsValid(actor))
+            return;
+
+        int entityIndex = entitySystem.GetIndex(actor);
+        if (entityIndex < 0)
+            return;
+
+        ref var intentComponent = ref entitySystem.entities.intentComponents[entityIndex];
+        if (intentComponent.Type == IntentType.None || intentComponent.Intent == null)
+            return;
+
+        switch (intentComponent.Type)
+        {
+            case IntentType.Move:
+                MoveSystem.Instance?.Execute(actor, intentComponent.Intent as MoveIntent);
+                break;
+            case IntentType.Attack:
+                AttackSystem.Instance?.Execute(actor, intentComponent.Intent as AttackIntent);
+                break;
+        }
+
+        Return(intentComponent.Intent);
+        intentComponent.Type = IntentType.None;
+        intentComponent.Intent = null;
+    }
+
     public void ForEachActiveIntent(System.Action<EntityHandle, IntentComponent> visitor)
     {
         if (visitor == null)
@@ -142,5 +167,6 @@ public class IntentSystem : MonoBehaviour
             stack.Clear();
         _pools.Clear();
         _activeIntentEntities.Clear();
+        _playerIntentActor = EntityHandle.None;
     }
 }
