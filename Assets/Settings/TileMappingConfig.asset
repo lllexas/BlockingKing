@@ -50,3 +50,8 @@ MonoBehaviour:
     tagName: Wall.Unstable
     entityBP: {fileID: 11400000, guid: 0bca8e3c9e505964fa4c4cefb988c323, type: 2}
     color: {r: 1, g: 1, b: 1, a: 1}
+  - editorTile: {fileID: 11400000, guid: 8891ff86204b2004988d24db83eb0175, type: 2}
+    tagID: 7
+    tagName: Target.Core
+    entityBP: {fileID: 0}
+    color: {r: 1, g: 1, b: 1, a: 1}

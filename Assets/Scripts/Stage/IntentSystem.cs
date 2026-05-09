@@ -131,7 +131,10 @@ public class IntentSystem : MonoBehaviour
                 AttackSystem.Instance?.Execute(actor, intentComponent.Intent as AttackIntent);
                 break;
             case IntentType.Card:
-                CardEffectSystem.Instance?.Execute(actor, intentComponent.Intent as CardIntent);
+                if (CardEffectSystem.Instance != null)
+                    CardEffectSystem.Instance.Execute(actor, intentComponent.Intent as CardIntent);
+                else
+                    Debug.LogWarning("[IntentSystem] Card intent was submitted, but CardEffectSystem is missing.");
                 break;
         }
 

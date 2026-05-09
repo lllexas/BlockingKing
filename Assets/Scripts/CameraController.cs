@@ -132,7 +132,6 @@ public class CameraController : MonoBehaviour
         {
             _targetHeight -= scroll * zoomSensitivity;
             _targetHeight = Mathf.Clamp(_targetHeight, minHeight, maxHeight);
-            UpdateMovementBounds();
         }
 
         // ── 5. 边界限制 ──
@@ -187,114 +186,12 @@ public class CameraController : MonoBehaviour
 
     void UpdateMovementBounds()
     {
-        Rect mapRect = new Rect(
-            mapCenter.x - mapSize.x * 0.5f,
-            mapCenter.y - mapSize.y * 0.5f,
-            mapSize.x,
-            mapSize.y);
-
-        if (!TryBuildPerspectiveMovementBounds(mapRect, out _movementBounds))
-        {
-            // 回退：简单矩形 + padding
-            float halfW = mapSize.x * 0.5f + boundsPadding;
-            float halfH = mapSize.y * 0.5f + boundsPadding;
-            _movementBounds = new Rect(
-                mapCenter.x - halfW,
-                mapCenter.y - halfH,
-                halfW * 2f,
-                halfH * 2f);
-        }
-    }
-
-    /// <summary>
-    /// 精密几何计算：将视口四角投影到 Y=0 地面，
-    /// 反算注视点 _targetFlatPos 的合法活动矩形，
-    /// 保证视锥边缘绝不超出地图。
-    /// </summary>
-    bool TryBuildPerspectiveMovementBounds(Rect mapRect, out Rect bounds)
-    {
-        bounds = mapRect;
-
-        if (_cam == null) return false;
-
-        float pitch = transform.eulerAngles.x;
-        if (Mathf.Abs(pitch) < 0.01f || Mathf.Abs(pitch - 180f) < 0.01f)
-            return false; // 俯仰角平行于地面
-
-        float zOffset = _targetHeight / Mathf.Tan(pitch * Mathf.Deg2Rad);
-        Vector3 camPos = new Vector3(
-            _targetFlatPos.x, _targetHeight, _targetFlatPos.z - zOffset);
-
-        // 临时摆放相机到目标位置以正确计算视口射线
-        Vector3 savedPos = _cam.transform.position;
-        _cam.transform.position = camPos;
-
-        Vector2[] viewportCorners = {
-            new Vector2(0f, 0f), new Vector2(0f, 1f),
-            new Vector2(1f, 0f), new Vector2(1f, 1f)
-        };
-
-        bool hasOffset = false;
-        float minOffsetX = 0f, maxOffsetX = 0f;
-        float minOffsetZ = 0f, maxOffsetZ = 0f;
-
-        for (int i = 0; i < viewportCorners.Length; i++)
-        {
-            Ray ray = _cam.ViewportPointToRay(viewportCorners[i]);
-
-            if (Mathf.Abs(ray.direction.y) < 0.0001f)
-            {
-                _cam.transform.position = savedPos;
-                return false; // 射线平行于地面
-            }
-
-            float t = -ray.origin.y / ray.direction.y;
-            if (t <= 0f)
-            {
-                _cam.transform.position = savedPos;
-                return false; // 交点在相机后方
-            }
-
-            Vector3 worldPoint = ray.origin + ray.direction * t;
-            Vector2 offset = new Vector2(
-                worldPoint.x - _targetFlatPos.x,
-                worldPoint.z - _targetFlatPos.z);
-
-            if (!hasOffset)
-            {
-                minOffsetX = maxOffsetX = offset.x;
-                minOffsetZ = maxOffsetZ = offset.y;
-                hasOffset = true;
-            }
-            else
-            {
-                minOffsetX = Mathf.Min(minOffsetX, offset.x);
-                maxOffsetX = Mathf.Max(maxOffsetX, offset.x);
-                minOffsetZ = Mathf.Min(minOffsetZ, offset.y);
-                maxOffsetZ = Mathf.Max(maxOffsetZ, offset.y);
-            }
-        }
-
-        _cam.transform.position = savedPos;
-
-        // 应用安全边距
-        float margin = Mathf.Max(0f, boundsPadding);
-        Rect safeRect = new Rect(
-            mapRect.xMin + margin,
-            mapRect.yMin + margin,
-            Mathf.Max(0f, mapRect.width - margin * 2f),
-            Mathf.Max(0f, mapRect.height - margin * 2f));
-
-        float minX = safeRect.xMin - minOffsetX;
-        float maxX = safeRect.xMax - maxOffsetX;
-        float minZ = safeRect.yMin - minOffsetZ;
-        float maxZ = safeRect.yMax - maxOffsetZ;
-
-        // 如果地图比当前视野还小，锁定在地图中心
-        if (minX > maxX) minX = maxX = safeRect.center.x;
-        if (minZ > maxZ) minZ = maxZ = safeRect.center.y;
-
-        bounds = Rect.MinMaxRect(minX, minZ, maxX, maxZ);
-        return true;
+        float halfW = mapSize.x * 0.5f + boundsPadding;
+        float halfH = mapSize.y * 0.5f + boundsPadding;
+        _movementBounds = new Rect(
+            mapCenter.x - halfW,
+            mapCenter.y - halfH,
+            halfW * 2f,
+            halfH * 2f);
     }
 }

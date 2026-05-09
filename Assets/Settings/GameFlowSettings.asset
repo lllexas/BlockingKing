@@ -19,22 +19,14 @@ MonoBehaviour:
   - stageId: 
     stageType: 
     weight: 1
-    levelData: {fileID: 11400000, guid: bfd36c7a25e350e4fbfd78deefed71d6, type: 2}
-  - stageId: 
-    stageType: 
-    weight: 1
-    levelData: {fileID: 11400000, guid: b7eb34b226413f343b97dd0e227d5b69, type: 2}
-  - stageId: 
-    stageType: 
-    weight: 1
-    levelData: {fileID: 11400000, guid: e1457ea790f55f74483aa2dbb940b811, type: 2}
-  - stageId: 
-    stageType: 
-    weight: 1
-    levelData: {fileID: 11400000, guid: 89b07574112b71b4ba7af0814bba18dd, type: 2}
+    levelData: {fileID: 11400000, guid: 11945009df593fd4383dd940327933f8, type: 2}
   encounters:
   - stageId: 
     stageType: Encounter
     weight: 1
     stagePack: {fileID: 9027929339269108002, guid: 0882665189f29da4a83a8c705ac67096,
       type: 3}
+  escorts:
+  - stageId: Escort
+    stageType: Escort
+    weight: 1

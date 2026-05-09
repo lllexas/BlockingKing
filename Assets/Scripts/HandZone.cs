@@ -1150,8 +1150,14 @@ public class HandZone : MonoBehaviour
 
         if (EntitySystem.Instance.IsValid(_playerHandle))
         {
-            playerHandle = _playerHandle;
-            return true;
+            int idx = EntitySystem.Instance.GetIndex(_playerHandle);
+            if (idx >= 0 && EntitySystem.Instance.entities.coreComponents[idx].EntityType == EntityType.Player)
+            {
+                playerHandle = _playerHandle;
+                return true;
+            }
+            // 句柄有效但指向了非玩家实体 → 缓存失效，重新遍历
+            _playerHandle = EntityHandle.None;
         }
 
         var entities = EntitySystem.Instance.entities;

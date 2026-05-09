@@ -31,6 +31,7 @@ public class GridOverlayDrawSystem : MonoBehaviour
     [SerializeField] private Material defaultMaterial;
     [SerializeField] private Vector2 cellSize = Vector2.one;
     [SerializeField] private float priorityHeightStep = 0.0005f;
+    [SerializeField] private float wallSurfaceHeight = 0.3f;
 
     [Header("Styles")]
     [TableList(AlwaysExpanded = true)]
@@ -66,6 +67,11 @@ public class GridOverlayDrawSystem : MonoBehaviour
     }
 
     // ──────── 公开 API ────────
+
+    public void ConfigureSurfaceHeights(float wallHeight)
+    {
+        wallSurfaceHeight = Mathf.Max(0f, wallHeight);
+    }
 
     /// <summary>设置一组叠加层格子。同 ID 重复调用会覆盖。</summary>
     public void SetOverlay(
@@ -548,12 +554,12 @@ public class GridOverlayDrawSystem : MonoBehaviour
         if (material == null)
             return;
 
-        float y = overlay.Height + overlay.Priority * priorityHeightStep;
         int count = 0;
 
         for (int i = 0; i < overlay.Cells.Count; i++)
         {
             Vector2Int cell = overlay.Cells[i];
+            float y = ResolveSurfaceHeight(cell) + overlay.Height + overlay.Priority * priorityHeightStep;
             var position = new Vector3(cell.x + 0.5f, y, cell.y + 0.5f);
             var scale = new Vector3(cellSize.x, 1f, cellSize.y);
             _matrices[count++] = Matrix4x4.TRS(position, Quaternion.identity, scale);
@@ -567,6 +573,31 @@ public class GridOverlayDrawSystem : MonoBehaviour
 
         if (count > 0)
             Graphics.DrawMeshInstanced(mesh, 0, material, _matrices, count);
+    }
+
+    private float ResolveSurfaceHeight(Vector2Int cell)
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+            return 0f;
+
+        if (!entitySystem.IsInsideMap(cell))
+            return 0f;
+
+        if (entitySystem.IsWall(cell))
+            return wallSurfaceHeight;
+
+        EntityHandle occupant = entitySystem.GetOccupant(cell);
+        if (!entitySystem.IsValid(occupant))
+            return 0f;
+
+        int occupantIndex = entitySystem.GetIndex(occupant);
+        if (occupantIndex < 0)
+            return 0f;
+
+        return entitySystem.entities.coreComponents[occupantIndex].EntityType == EntityType.Wall
+            ? wallSurfaceHeight
+            : 0f;
     }
 
     // ──────── 几何工具 ────────

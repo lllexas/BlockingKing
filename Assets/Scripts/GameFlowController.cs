@@ -126,10 +126,20 @@ public class GameFlowController : MonoBehaviour
 
     public void OnRouteClassicLevelCompleted()
     {
+        OnRouteClassicLevelSettled(LevelPlayResult.Success);
+    }
+
+    public void OnRouteClassicLevelSettled(LevelPlayResult result)
+    {
         ExitLevel();
         var routeFacade = GraphHub.Instance?.GetFacade<RunRouteFacade>();
         if (routeFacade != null && routeFacade.ActiveRouteNodeIsClassicLevel)
-            routeFacade.CompleteActiveRouteNode();
+        {
+            if (result == LevelPlayResult.Success)
+                routeFacade.CompleteActiveRouteNode();
+            else
+                routeFacade.FailActiveRouteNode();
+        }
 
         SetRouteVisible(true);
     }

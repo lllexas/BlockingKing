@@ -5,7 +5,8 @@ using UnityEngine;
 public enum LevelPlayMode
 {
     Classic,
-    StepLimit
+    StepLimit,
+    Escort
 }
 
 public enum LevelDataSource
@@ -14,6 +15,14 @@ public enum LevelDataSource
     Inspector,
     QuickPlaySession,
     RuntimeRequest
+}
+
+public enum LevelPlayResult
+{
+    None,
+    Success,
+    Failure,
+    Cancelled
 }
 
 public sealed class LevelPlayRequest
@@ -35,6 +44,7 @@ public class LevelPlayer : MonoBehaviour
     private const int DefaultPlayerTagID = 1;
     private const int DefaultBoxTagID = 2;
     private const int DefaultTargetTagID = 3;
+    private const int DefaultTargetCoreTagID = 7;
 
     [Header("关卡数据")]
     [SerializeField, Tooltip("直接拖入 LevelData SO（QuickPlaySession 激活时会覆盖它）")]
@@ -53,6 +63,9 @@ public class LevelPlayer : MonoBehaviour
     [Tooltip("拖入预设材质。留空则自动创建（重建时复用，属性不丢失）。")]
     public Material material;
 
+    [SerializeField, Tooltip("B版地形渲染：用 GPU Instancing 绘制格子地形，支持 groundMap 变化自动刷新。")]
+    private bool useInstancedTerrain = true;
+
     [Header("ECS")]
     [SerializeField] private int maxEntityCount = 256;
 
@@ -69,13 +82,18 @@ public class LevelPlayer : MonoBehaviour
     private bool _isPlaying;
     private bool _isSettled;
     private LevelPlayMode _playMode;
+    private LevelPlayResult _lastResult;
     private int _remainingSteps = -1;
+    private GUIStyle _stepLimitStyle;
+    private GUIStyle _stepLimitShadowStyle;
     private readonly HashSet<Vector2Int> _targetCells = new();
+    private readonly HashSet<Vector2Int> _coreTargetCells = new();
 
     public LevelData CurrentLevel => _level;
     public TileMappingConfig CurrentConfig => _config;
     public LevelDataSource CurrentLevelSource => _levelSource;
     public LevelPlayMode PlayMode => _playMode;
+    public LevelPlayResult LastResult => _lastResult;
     public int RemainingSteps => _remainingSteps;
     public bool IsPlaying => _isPlaying;
 
@@ -86,12 +104,31 @@ public class LevelPlayer : MonoBehaviour
             return;
 
         if (LoadConfiguredLevel())
+        {
             RebuildWorld();
+            flow?.EnterLevel();
+        }
     }
 
     private void OnDestroy()
     {
         StopPlayback();
+    }
+
+    private void OnGUI()
+    {
+        if (!_isPlaying || _playMode != LevelPlayMode.StepLimit)
+            return;
+
+        EnsureStepLimitStyles();
+
+        string text = $"Steps: {Mathf.Max(0, _remainingSteps)}";
+        float width = Mathf.Min(460f, Screen.width - 32f);
+        var rect = new Rect((Screen.width - width) * 0.5f, 18f, width, 58f);
+        var shadowRect = new Rect(rect.x + 2f, rect.y + 2f, rect.width, rect.height);
+
+        GUI.Label(shadowRect, text, _stepLimitShadowStyle);
+        GUI.Label(rect, text, _stepLimitStyle);
     }
 
     public bool PlayLevel(LevelData level)
@@ -190,9 +227,9 @@ public class LevelPlayer : MonoBehaviour
             return;
         }
 
-        BuildMeshInternal();
         BuildEntitiesInternal();
         CacheTargetCells();
+        RebuildTerrainVisualsInternal();
     }
 
     public void StartPlayback(LevelPlayRequest request)
@@ -207,6 +244,7 @@ public class LevelPlayer : MonoBehaviour
         _playRule = CreatePlayRule(_playMode);
         _isPlaying = true;
         _isSettled = false;
+        _lastResult = LevelPlayResult.None;
 
         _playRule.Begin(this, request);
 
@@ -240,7 +278,18 @@ public class LevelPlayer : MonoBehaviour
         if (_level == null && !LoadConfiguredLevel())
             return;
 
-        BuildMeshInternal();
+        if (useInstancedTerrain)
+        {
+            if (EntitySystem.Instance == null || !EntitySystem.Instance.IsInitialized)
+                BuildEntitiesInternal();
+
+            CacheTargetCells();
+            RebuildTerrainVisualsInternal();
+        }
+        else
+        {
+            BuildMeshInternal();
+        }
     }
 
     [Button("Restart Level", ButtonSizes.Medium), HorizontalGroup("Buttons")]
@@ -268,9 +317,10 @@ public class LevelPlayer : MonoBehaviour
     public void ClearMesh()
     {
         int removedCount = ClearLevelMeshObjects();
+        DisableInstancedTerrainRenderer();
         if (removedCount == 0)
         {
-            Debug.LogWarning("[LevelPlayer] 没有可清除的 Mesh。");
+            Debug.LogWarning("[LevelPlayer] 没有可清除的 LevelMesh。Instanced terrain renderer was disabled if present.");
             return;
         }
 
@@ -301,30 +351,76 @@ public class LevelPlayer : MonoBehaviour
         return hasBox;
     }
 
+    internal bool IsAnyCoreBoxAlive()
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+            return false;
+
+        var entities = entitySystem.entities;
+        for (int i = 0; i < entities.entityCount; i++)
+        {
+            if (entities.coreComponents[i].EntityType == EntityType.Box &&
+                entities.propertyComponents[i].IsCore)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    internal bool IsAnyCoreBoxOnTarget()
+    {
+        if (_coreTargetCells.Count == 0)
+            return false;
+
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+            return false;
+
+        var entities = entitySystem.entities;
+        for (int i = 0; i < entities.entityCount; i++)
+        {
+            if (entities.coreComponents[i].EntityType != EntityType.Box ||
+                !entities.propertyComponents[i].IsCore)
+            {
+                continue;
+            }
+
+            if (_coreTargetCells.Contains(entities.coreComponents[i].Position))
+                return true;
+        }
+
+        return false;
+    }
+
     internal void SetRemainingSteps(int value)
     {
         _remainingSteps = value;
     }
 
-    internal void SettleLevel(bool success, string reason)
+    internal void SettleLevel(LevelPlayResult result, string reason)
     {
         if (_isSettled)
             return;
 
         _isSettled = true;
+        _lastResult = result;
         StopPlayback();
 
-        Debug.Log($"[LevelPlayer] Level settled: success={success}, reason={reason}");
+        Debug.Log($"[LevelPlayer] Level settled: result={result}, reason={reason}");
 
         var stageFacade = NekoGraph.GraphHub.Instance?.GetFacade<RunStageFacade>();
         if (stageFacade != null && stageFacade.HasWaitingStage())
-            stageFacade.ResumeWaitingStage(success ? 0 : 1);
+            stageFacade.ResumeWaitingStage(result == LevelPlayResult.Success ? 0 : 1);
 
-        GameFlowController.Instance?.OnRouteClassicLevelCompleted();
+        GameFlowController.Instance?.OnRouteClassicLevelSettled(result);
     }
 
     private void BuildMeshInternal()
     {
+        DisableInstancedTerrainRenderer();
         Debug.Log($"[LevelPlayer] 开始构建: {_level.levelName}, size={_level.width}x{_level.height}, wallHeight={wallHeight}");
 
         ClearLevelMeshObjects();
@@ -361,6 +457,55 @@ public class LevelPlayer : MonoBehaviour
         Debug.Log($"[LevelPlayer] {_level.levelName} 已构建, 顶点={mesh.vertexCount}, wallHeight={wallHeight}");
     }
 
+    private void RebuildTerrainVisualsInternal()
+    {
+        EnsureLevelMaterial();
+
+        if (!useInstancedTerrain)
+        {
+            DisableInstancedTerrainRenderer();
+            BuildMeshInternal();
+            return;
+        }
+
+        ClearLevelMeshObjects();
+
+        var terrainDrawSystem = EnsureRuntimeSystem<TerrainDrawSystem>();
+        terrainDrawSystem.enabled = true;
+        terrainDrawSystem.Configure(
+            _config,
+            _materialInstance,
+            cellSize,
+            wallHeight,
+            tagMarkerSize,
+            tagYOffset,
+            GetLevelMarkerTags());
+
+        var overlayDrawSystem = GridOverlayDrawSystem.Instance != null
+            ? GridOverlayDrawSystem.Instance
+            : EnsureRuntimeSystem<GridOverlayDrawSystem>();
+        overlayDrawSystem.ConfigureSurfaceHeights(wallHeight);
+
+        var camCtrl = Camera.main?.GetComponent<CameraController>();
+        if (camCtrl != null)
+        {
+            camCtrl.SetMapBounds(_level.width, _level.height);
+            camCtrl.ResetView();
+        }
+
+        Debug.Log($"[LevelPlayer] Instanced terrain ready: {_level.levelName}, size={_level.width}x{_level.height}");
+    }
+
+    private void DisableInstancedTerrainRenderer()
+    {
+        var terrainDrawSystem = GetComponent<TerrainDrawSystem>();
+        if (terrainDrawSystem == null)
+            return;
+
+        terrainDrawSystem.Clear();
+        terrainDrawSystem.enabled = false;
+    }
+
     private void BuildEntitiesInternal()
     {
         EnsureLevelMaterial();
@@ -372,12 +517,14 @@ public class LevelPlayer : MonoBehaviour
         EnsureRuntimeSystem<IntentSystem>();
         EnsureRuntimeSystem<MoveSystem>();
         EnsureRuntimeSystem<AttackSystem>();
+        var cardEffectSystem = EnsureRuntimeSystem<CardEffectSystem>();
         EnsureRuntimeSystem<EnemyAutoAISystem>();
         var drawSystem = EnsureRuntimeSystem<DrawSystem>();
         EnsureRuntimeSystem<UserInputReader>();
         drawSystem.SetWallMaterial(_materialInstance);
 
         entitySystem.Initialize(maxEntityCount, _level.width, _level.height);
+        IntentSystem.Instance?.Clear();
         entitySystem.SetTerrain(_level.GetMap2D());
         entitySystem.SetWallTerrainIds(GetWallTerrainIds(), GetDefaultFloorTerrainId());
 
@@ -385,8 +532,10 @@ public class LevelPlayer : MonoBehaviour
         int boxTagID = ResolveTagID("box", DefaultBoxTagID);
         int boxCoreTagID = ResolveTagID("Box.Core", -1);
         int targetTagID = ResolveTagID("target", DefaultTargetTagID);
+        int targetCoreTagID = ResolveTagID("Target.Core", DefaultTargetCoreTagID);
         int enemyGoTagID = ResolveTagID("Enemy.Go", 4);
         int unstableWallTagID = ResolveTagID("Wall.Unstable", -1);
+        ConfigureCardWallHealth(cardEffectSystem, unstableWallTagID);
 
         foreach (var tag in _level.tags)
         {
@@ -398,6 +547,8 @@ public class LevelPlayer : MonoBehaviour
             else if (boxCoreTagID > 0 && tag.tagID == boxCoreTagID)
                 CreateCoreBox(entitySystem, pos, tag.tagID);
             else if (tag.tagID == targetTagID)
+                CreateTaggedEntity(entitySystem, EntityType.Target, pos, tag.tagID, false);
+            else if (targetCoreTagID > 0 && tag.tagID == targetCoreTagID)
                 CreateTaggedEntity(entitySystem, EntityType.Target, pos, tag.tagID, false);
             else if (tag.tagID == enemyGoTagID)
                 CreateTaggedEntity(entitySystem, EntityType.Enemy, pos, tag.tagID);
@@ -422,7 +573,24 @@ public class LevelPlayer : MonoBehaviour
         return mode switch
         {
             LevelPlayMode.StepLimit => new StepLimitPlayRule(),
+            LevelPlayMode.Escort => new EscortPlayRule(),
             _ => new ClassicPlayRule()
+        };
+    }
+
+    private void EnsureStepLimitStyles()
+    {
+        _stepLimitStyle ??= new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = 42,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = new Color(1f, 0.92f, 0.45f, 1f) }
+        };
+
+        _stepLimitShadowStyle ??= new GUIStyle(_stepLimitStyle)
+        {
+            normal = { textColor = new Color(0f, 0f, 0f, 0.72f) }
         };
     }
 
@@ -536,6 +704,18 @@ public class LevelPlayer : MonoBehaviour
         properties.Attack = Mathf.Max(0, bp.attack);
     }
 
+    private void ConfigureCardWallHealth(CardEffectSystem cardEffectSystem, int unstableWallTagID)
+    {
+        if (cardEffectSystem == null || unstableWallTagID <= 0 || _config == null)
+            return;
+
+        EntityBP wallBP = _config.GetTagEntityBP(unstableWallTagID);
+        if (wallBP == null)
+            return;
+
+        cardEffectSystem.ConfigureMaterializedTerrainWallHealth(wallBP.health);
+    }
+
     private List<LevelTagEntry> GetLevelMarkerTags()
     {
         var result = new List<LevelTagEntry>();
@@ -543,9 +723,10 @@ public class LevelPlayer : MonoBehaviour
             return result;
 
         int targetTagID = ResolveTagID("target", DefaultTargetTagID);
+        int targetCoreTagID = ResolveTagID("Target.Core", DefaultTargetCoreTagID);
         foreach (var tag in _level.tags)
         {
-            if (tag.tagID == targetTagID)
+            if (tag.tagID == targetTagID || tag.tagID == targetCoreTagID)
                 result.Add(tag);
         }
 
@@ -555,15 +736,19 @@ public class LevelPlayer : MonoBehaviour
     private void CacheTargetCells()
     {
         _targetCells.Clear();
+        _coreTargetCells.Clear();
 
         if (_level?.tags == null)
             return;
 
         int targetTagID = ResolveTagID("target", DefaultTargetTagID);
+        int targetCoreTagID = ResolveTagID("Target.Core", DefaultTargetCoreTagID);
         foreach (var tag in _level.tags)
         {
             if (tag.tagID == targetTagID)
                 _targetCells.Add(new Vector2Int(tag.x, tag.y));
+            else if (tag.tagID == targetCoreTagID)
+                _coreTargetCells.Add(new Vector2Int(tag.x, tag.y));
         }
     }
 
@@ -634,7 +819,7 @@ public class LevelPlayer : MonoBehaviour
         public void Evaluate(LevelPlayer player)
         {
             if (player.AreAllBoxesOnTargets())
-                player.SettleLevel(true, "all boxes are on targets");
+                player.SettleLevel(LevelPlayResult.Success, "all boxes are on targets");
         }
     }
 
@@ -655,12 +840,36 @@ public class LevelPlayer : MonoBehaviour
         {
             if (player.AreAllBoxesOnTargets())
             {
-                player.SettleLevel(true, "all boxes are on targets");
+                player.SettleLevel(LevelPlayResult.Success, "all boxes are on targets");
                 return;
             }
 
             if (player.RemainingSteps <= 0)
-                player.SettleLevel(false, "step limit reached");
+                player.SettleLevel(LevelPlayResult.Failure, "step limit reached");
+        }
+    }
+
+    private sealed class EscortPlayRule : ILevelPlayRule
+    {
+        public void Begin(LevelPlayer player, LevelPlayRequest request)
+        {
+            player.SetRemainingSteps(-1);
+        }
+
+        public void OnTick(LevelPlayer player)
+        {
+        }
+
+        public void Evaluate(LevelPlayer player)
+        {
+            if (player.IsAnyCoreBoxOnTarget())
+            {
+                player.SettleLevel(LevelPlayResult.Success, "core box reached a target");
+                return;
+            }
+
+            if (!player.IsAnyCoreBoxAlive())
+                player.SettleLevel(LevelPlayResult.Failure, "core box destroyed");
         }
     }
 }

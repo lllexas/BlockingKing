@@ -58,6 +58,9 @@ public class AttackSystem : MonoBehaviour
             return;
 
         ref var core = ref entitySystem.entities.coreComponents[targetIndex];
+        if (core.EntityType != EntityType.Enemy && core.EntityType != EntityType.Wall)
+            return;
+
         core.Health -= damage;
         Debug.Log($"[AttackSystem] Hit {core.EntityType} at {targetPosition}, damage={damage}, health={core.Health}");
 

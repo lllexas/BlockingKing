@@ -8,6 +8,8 @@ public class CardEffectSystem : MonoBehaviour
 {
     public static CardEffectSystem Instance { get; private set; }
 
+    [SerializeField, Min(1)] private int materializedTerrainWallHealth = 3;
+
     private void Awake()
     {
         Instance = this;
@@ -17,6 +19,11 @@ public class CardEffectSystem : MonoBehaviour
     {
         if (Instance == this)
             Instance = null;
+    }
+
+    public void ConfigureMaterializedTerrainWallHealth(int health)
+    {
+        materializedTerrainWallHealth = Mathf.Max(1, health);
     }
 
     public bool Execute(EntityHandle actor, CardIntent intent)
@@ -100,7 +107,7 @@ public class CardEffectSystem : MonoBehaviour
 
             if (entitySystem.IsWall(next))
             {
-                BreakWall(entitySystem, next);
+                AttackTerrainWall(entitySystem, actor, next);
                 acted = true;
                 break;
             }
@@ -141,7 +148,7 @@ public class CardEffectSystem : MonoBehaviour
 
             if (occupantType == EntityType.Wall)
             {
-                entitySystem.DestroyEntity(occupant);
+                DamageEntity(entitySystem, actor, occupant);
                 acted = true;
             }
 
@@ -166,8 +173,11 @@ public class CardEffectSystem : MonoBehaviour
 
         Vector2Int current = entitySystem.entities.coreComponents[actorIndex].Position;
         Vector2Int next = current + direction;
-        if (!entitySystem.IsInsideMap(next) || entitySystem.IsWall(next))
+        if (!entitySystem.IsInsideMap(next))
             return false;
+
+        if (entitySystem.IsWall(next))
+            return AttackTerrainWall(entitySystem, actor, next);
 
         EntityHandle occupant = entitySystem.GetOccupant(next);
         if (!entitySystem.IsValid(occupant))
@@ -180,7 +190,14 @@ public class CardEffectSystem : MonoBehaviour
         if (occupantIndex < 0)
             return false;
 
-        if (entitySystem.entities.coreComponents[occupantIndex].EntityType != EntityType.Enemy)
+        EntityType occupantType = entitySystem.entities.coreComponents[occupantIndex].EntityType;
+        if (occupantType == EntityType.Wall)
+        {
+            DamageEntity(entitySystem, actor, occupant);
+            return true;
+        }
+
+        if (occupantType != EntityType.Enemy)
             return false;
 
         if (!DamageEntity(entitySystem, actor, occupant))
@@ -213,12 +230,23 @@ public class CardEffectSystem : MonoBehaviour
                 if (!entitySystem.IsInsideMap(pos))
                     continue;
 
+                if (entitySystem.IsWall(pos))
+                {
+                    AttackTerrainWall(entitySystem, actor, pos);
+                    acted = true;
+                    continue;
+                }
+
                 EntityHandle target = entitySystem.GetOccupant(pos);
                 if (!entitySystem.IsValid(target))
                     continue;
 
                 int targetIndex = entitySystem.GetIndex(target);
-                if (targetIndex < 0 || entitySystem.entities.coreComponents[targetIndex].EntityType != EntityType.Enemy)
+                if (targetIndex < 0)
+                    continue;
+
+                EntityType targetType = entitySystem.entities.coreComponents[targetIndex].EntityType;
+                if (targetType != EntityType.Enemy && targetType != EntityType.Wall)
                     continue;
 
                 DamageEntity(entitySystem, actor, target);
@@ -246,8 +274,11 @@ public class CardEffectSystem : MonoBehaviour
         if (!((absX == 1 && absY == 2) || (absX == 2 && absY == 1)))
             return false;
 
-        if (!entitySystem.IsInsideMap(targetCell) || entitySystem.IsWall(targetCell))
+        if (!entitySystem.IsInsideMap(targetCell))
             return false;
+
+        if (entitySystem.IsWall(targetCell))
+            return AttackTerrainWall(entitySystem, actor, targetCell);
 
         EntityHandle occupant = entitySystem.GetOccupant(targetCell);
         if (!entitySystem.IsValid(occupant))
@@ -260,7 +291,14 @@ public class CardEffectSystem : MonoBehaviour
         if (occupantIndex < 0)
             return false;
 
-        if (entitySystem.entities.coreComponents[occupantIndex].EntityType != EntityType.Enemy)
+        EntityType occupantType = entitySystem.entities.coreComponents[occupantIndex].EntityType;
+        if (occupantType == EntityType.Wall)
+        {
+            DamageEntity(entitySystem, actor, occupant);
+            return true;
+        }
+
+        if (occupantType != EntityType.Enemy)
             return false;
 
         if (!DamageEntity(entitySystem, actor, occupant))
@@ -293,8 +331,15 @@ public class CardEffectSystem : MonoBehaviour
 
             Vector2Int current = entitySystem.entities.coreComponents[actorIndex].Position;
             Vector2Int next = current + direction;
-            if (!entitySystem.IsInsideMap(next) || entitySystem.IsWall(next))
+            if (!entitySystem.IsInsideMap(next))
                 break;
+
+            if (entitySystem.IsWall(next))
+            {
+                AttackTerrainWall(entitySystem, actor, next);
+                acted = true;
+                break;
+            }
 
             EntityHandle occupant = entitySystem.GetOccupant(next);
             if (!entitySystem.IsValid(occupant))
@@ -345,6 +390,13 @@ public class CardEffectSystem : MonoBehaviour
                 break;
             }
 
+            if (occupantType == EntityType.Wall)
+            {
+                DamageEntity(entitySystem, actor, occupant);
+                acted = true;
+                break;
+            }
+
             break;
         }
 
@@ -388,11 +440,18 @@ public class CardEffectSystem : MonoBehaviour
         return true;
     }
 
-    private static void BreakWall(EntitySystem entitySystem, Vector2Int position)
+    private bool AttackTerrainWall(EntitySystem entitySystem, EntityHandle actor, Vector2Int position)
     {
-        EntityHandle wall = entitySystem.TryMaterializeWall(position, 1);
-        if (entitySystem.IsValid(wall))
-            entitySystem.DestroyEntity(wall);
+        bool hadWallEntity = entitySystem.IsValid(entitySystem.GetOccupant(position));
+        EntityHandle wall = entitySystem.TryMaterializeWall(position, materializedTerrainWallHealth);
+        if (!entitySystem.IsValid(wall))
+            return false;
+
+        if (!hadWallEntity)
+            Debug.Log($"[CardEffectSystem] Materialized terrain wall at {position}, health={materializedTerrainWallHealth}");
+
+        DamageEntity(entitySystem, actor, wall);
+        return true;
     }
 
     private static void MoveEntity(EntitySystem entitySystem, EntityHandle actor, Vector2Int next)

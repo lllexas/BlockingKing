@@ -88,6 +88,7 @@ public class RunRouteFacade : PackFacadeBase
         for (int layer = 0; layer < byLayer.Count - 1; layer++)
             ConnectLayers(byLayer[layer], byLayer[layer + 1]);
 
+        GenerateEscortLevelsForRoute(pack);
         return pack;
     }
 
@@ -263,6 +264,15 @@ public class RunRouteFacade : PackFacadeBase
         return MarkNodeCompleted(nodeId);
     }
 
+    public bool FailActiveRouteNode()
+    {
+        if (!IsRouteNodeRunning)
+            return false;
+
+        ClearActiveRouteNode();
+        return true;
+    }
+
     public void ClearActiveRouteNode()
     {
         ActiveRouteNodeId = null;
@@ -289,6 +299,29 @@ public class RunRouteFacade : PackFacadeBase
         return content?.GetUnityObject<LevelData>();
     }
 
+    private void GenerateEscortLevelsForRoute(BasePackData pack)
+    {
+        if (pack == null)
+            return;
+
+        foreach (var rawNode in pack.Nodes.Values)
+        {
+            if (rawNode is not VFSNodeData node ||
+                !string.Equals(node.Extension, ".stage", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var side = ReadSide(node);
+            if (!IsEscortStage(side.stageType))
+                continue;
+
+            LevelData level = EscortLevelGenerator.CreateFromRandomClassicMap(BuildEscortRequest(node, side));
+            if (level != null)
+                _runtimeLevelObjects[node.NodeID] = level;
+        }
+    }
+
     private static LevelPlayMode ResolveLevelPlayMode(string stageType)
     {
         if (string.IsNullOrWhiteSpace(stageType))
@@ -299,11 +332,98 @@ public class RunRouteFacade : PackFacadeBase
         if (separator >= 0)
             normalized = normalized[..separator];
 
+        if (IsEscortStage(normalized))
+            return LevelPlayMode.Escort;
+
         return string.Equals(normalized, "steplimit", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(normalized, "step_limit", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(normalized, "step-limit", StringComparison.OrdinalIgnoreCase)
             ? LevelPlayMode.StepLimit
             : LevelPlayMode.Classic;
+    }
+
+    private static bool IsEscortStage(string stageType)
+    {
+        if (string.IsNullOrWhiteSpace(stageType))
+            return false;
+
+        string normalized = stageType.Trim();
+        int separator = normalized.IndexOf(':');
+        if (separator >= 0)
+            normalized = normalized[..separator];
+
+        return string.Equals(normalized, "escort", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(normalized, "escort_ball", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(normalized, "ball", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(normalized, "带球", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(normalized, "押送", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private EscortLevelBuildRequest BuildEscortRequest(VFSNodeData node, RunRouteNodeSideData side)
+    {
+        Vector2Int from = ResolveParentRoutePoint(node, side);
+        Vector2Int to = new Vector2Int(side.layer, side.lane);
+        int dx = Mathf.Max(1, Mathf.Abs(to.x - from.x)) * 8;
+        int dy = Mathf.Abs(to.y - from.y) * 4;
+        float slope = dy <= 0 ? 0.001f : dy / (float)dx;
+
+        return new EscortLevelBuildRequest
+        {
+            Seed = StableSeed(node?.NodeID),
+            ManhattanDistance = Mathf.Clamp(dx + dy, 8, 28),
+            LogSlope = Mathf.Log(slope),
+            DifficultyOffset = ResolveEscortDifficultyOffset(side.stageType)
+        };
+    }
+
+    private Vector2Int ResolveParentRoutePoint(VFSNodeData node, RunRouteNodeSideData side)
+    {
+        var pack = EnsureRoutePack();
+        if (pack != null &&
+            !string.IsNullOrWhiteSpace(node?.ParentNodeID) &&
+            pack.Nodes.TryGetValue(node.ParentNodeID, out var parentRaw) &&
+            parentRaw is VFSNodeData parent)
+        {
+            var parentSide = ReadSide(parent);
+            return new Vector2Int(parentSide.layer, parentSide.lane);
+        }
+
+        return new Vector2Int(Mathf.Max(0, side.layer - 1), side.lane);
+    }
+
+    private static int ResolveEscortDifficultyOffset(string stageType)
+    {
+        if (string.IsNullOrWhiteSpace(stageType))
+            return 0;
+
+        int separator = stageType.IndexOf(':');
+        if (separator < 0 || separator >= stageType.Length - 1)
+            return 0;
+
+        string token = stageType[(separator + 1)..].Trim();
+        return token.ToLowerInvariant() switch
+        {
+            "easy" => -1,
+            "normal" => 0,
+            "hard" => 1,
+            "boss" => 3,
+            _ => int.TryParse(token, out int value) ? value : 0
+        };
+    }
+
+    private static int StableSeed(string value)
+    {
+        unchecked
+        {
+            int hash = 17;
+            if (!string.IsNullOrEmpty(value))
+            {
+                for (int i = 0; i < value.Length; i++)
+                    hash = hash * 31 + value[i];
+            }
+
+            return hash;
+        }
     }
 
     private static int ResolveStepLimit(string stageType, int fallback)

@@ -20,6 +20,7 @@ public class DrawSystem : MonoBehaviour
     [Header("Material")]
     [SerializeField] private Material playerMaterial;
     [SerializeField] private Material boxMaterial;
+    [SerializeField] private Material coreBoxMaterial;
     [SerializeField] private Material enemyMaterial;
     [SerializeField] private Material wallMaterial;
 
@@ -49,11 +50,13 @@ public class DrawSystem : MonoBehaviour
 
     private readonly Matrix4x4[] _playerMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _boxMatrices = new Matrix4x4[BatchSize];
+    private readonly Matrix4x4[] _coreBoxMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _enemyMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _wallMatrices = new Matrix4x4[BatchSize];
     private readonly List<StatTextPair> _statTexts = new();
     private int _playerCount;
     private int _boxCount;
+    private int _coreBoxCount;
     private int _enemyCount;
     private int _wallCount;
     private int _statTextCount;
@@ -109,6 +112,7 @@ public class DrawSystem : MonoBehaviour
 
         _playerCount = 0;
         _boxCount = 0;
+        _coreBoxCount = 0;
         _enemyCount = 0;
         _wallCount = 0;
 
@@ -123,8 +127,9 @@ public class DrawSystem : MonoBehaviour
                     AddStatsText(core.Position, entities.propertyComponents[i].Attack, core.Health);
                     break;
                 case EntityType.Box:
-                    AddBox(core.Position);
-                    AddStatsText(core.Position, entities.propertyComponents[i].Attack, core.Health);
+                    AddBox(core.Position, entities.propertyComponents[i].IsCore);
+                    if (entities.propertyComponents[i].IsCore)
+                        AddStatsText(core.Position, entities.propertyComponents[i].Attack, core.Health);
                     break;
                 case EntityType.Enemy:
                     AddEnemy(core.Position);
@@ -139,6 +144,7 @@ public class DrawSystem : MonoBehaviour
 
         FlushPlayers();
         FlushBoxes();
+        FlushCoreBoxes();
         FlushEnemies();
         FlushWalls();
         HideUnusedStatTexts();
@@ -151,8 +157,16 @@ public class DrawSystem : MonoBehaviour
             FlushPlayers();
     }
 
-    private void AddBox(Vector2Int gridPos)
+    private void AddBox(Vector2Int gridPos, bool isCore)
     {
+        if (isCore)
+        {
+            _coreBoxMatrices[_coreBoxCount++] = Matrix4x4.TRS(ToWorld(gridPos), Quaternion.identity, boxScale);
+            if (_coreBoxCount == BatchSize)
+                FlushCoreBoxes();
+            return;
+        }
+
         _boxMatrices[_boxCount++] = Matrix4x4.TRS(ToWorld(gridPos), Quaternion.identity, boxScale);
         if (_boxCount == BatchSize)
             FlushBoxes();
@@ -202,6 +216,21 @@ public class DrawSystem : MonoBehaviour
         _boxCount = 0;
     }
 
+    private void FlushCoreBoxes()
+    {
+        if (_coreBoxCount == 0)
+            return;
+
+        if (boxMesh == null || coreBoxMaterial == null)
+        {
+            _coreBoxCount = 0;
+            return;
+        }
+
+        Graphics.DrawMeshInstanced(boxMesh, 0, coreBoxMaterial, _coreBoxMatrices, _coreBoxCount);
+        _coreBoxCount = 0;
+    }
+
     private void FlushEnemies()
     {
         if (_enemyCount == 0)
@@ -239,7 +268,10 @@ public class DrawSystem : MonoBehaviour
 
         var pair = GetStatTextPair(_statTextCount++);
         pair.Root.SetActive(true);
-        pair.SetAttackText(attack.ToString());
+        pair.SetAttackVisible(attack > 0);
+        if (attack > 0)
+            pair.SetAttackText(attack.ToString());
+
         pair.SetHealthText(health.ToString());
 
         float y = statsTextHeight * cellSize;
@@ -367,6 +399,8 @@ public class DrawSystem : MonoBehaviour
 
         ConfigureStatsMaterial(_runtimeStatsVisibleMaterial, font, 4f, 0f, 1f);
         ConfigureStatsMaterial(_runtimeStatsOccludedMaterial, font, 5f, statsOccludedGrayMix, statsOccludedAlpha);
+        _runtimeStatsVisibleMaterial.renderQueue = 3201;
+        _runtimeStatsOccludedMaterial.renderQueue = 3200;
         _runtimeStatsVisibleMaterial.SetFloat("_OutlineWidth", 0f);
         _runtimeStatsVisibleMaterial.SetFloat("_OutlineAlpha", 0f);
         UpdateStatsMaterialProperties();
@@ -432,12 +466,16 @@ public class DrawSystem : MonoBehaviour
             playerMaterial = CreateMaterial(new Color(0.2f, 0.55f, 1f));
         if (boxMaterial == null)
             boxMaterial = CreateMaterial(new Color(0.9f, 0.65f, 0.25f));
+        if (coreBoxMaterial == null)
+            coreBoxMaterial = CreateMaterial(new Color(0.12f, 0.55f, 1f));
         if (enemyMaterial == null)
             enemyMaterial = CreateMaterial(new Color(0.92f, 0.88f, 0.78f));
         if (playerMaterial != null)
             playerMaterial.enableInstancing = true;
         if (boxMaterial != null)
             boxMaterial.enableInstancing = true;
+        if (coreBoxMaterial != null)
+            coreBoxMaterial.enableInstancing = true;
         if (enemyMaterial != null)
             enemyMaterial.enableInstancing = true;
         if (wallMaterial != null)
@@ -486,6 +524,11 @@ public class DrawSystem : MonoBehaviour
         {
             _attackVisible.text = text;
             _attackOccluded.text = text;
+        }
+
+        public void SetAttackVisible(bool visible)
+        {
+            AttackRoot.SetActive(visible);
         }
 
         public void SetHealthText(string text)

@@ -6,17 +6,18 @@ using UnityEngine;
 public class UserInputReader : MonoBehaviour
 {
     private const int MoveDistance = 1;
+    private const string AttackRangeOverlayId = "player_attack_range";
+    private const string AttackHoverOverlayId = "player_attack_hover";
 
     [Header("Attack Select")]
-    [SerializeField] private Color attackRangeColor = new(1f, 0.15f, 0.08f, 0.24f);
-    [SerializeField] private Color attackHoverColor = new(1f, 0.9f, 0.15f, 0.45f);
-    [SerializeField] private float attackHighlightHeight = 0.006f;
+    [SerializeField] private Color attackRangeColor = new(1f, 0.15f, 0.08f, 0.32f);
+    [SerializeField] private Color attackHoverColor = new(1f, 0.9f, 0.15f, 0.58f);
+    [SerializeField] private float attackHighlightHeight = 0.012f;
 
     private EntityHandle _playerHandle = EntityHandle.None;
     private bool _attackPending;
-    private Mesh _attackHighlightMesh;
-    private Material _attackRangeMaterial;
-    private Material _attackHoverMaterial;
+    private readonly System.Collections.Generic.List<Vector2Int> _attackRangeCells = new();
+    private readonly System.Collections.Generic.List<Vector2Int> _attackHoverCells = new();
 
     private static readonly Vector2Int[] CrossDirections =
     {
@@ -26,27 +27,6 @@ public class UserInputReader : MonoBehaviour
         Vector2Int.right
     };
 
-    private void OnDestroy()
-    {
-        if (_attackHighlightMesh != null)
-        {
-            Destroy(_attackHighlightMesh);
-            _attackHighlightMesh = null;
-        }
-
-        if (_attackRangeMaterial != null)
-        {
-            Destroy(_attackRangeMaterial);
-            _attackRangeMaterial = null;
-        }
-
-        if (_attackHoverMaterial != null)
-        {
-            Destroy(_attackHoverMaterial);
-            _attackHoverMaterial = null;
-        }
-    }
-
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.Q))
@@ -55,7 +35,10 @@ public class UserInputReader : MonoBehaviour
         if (_attackPending)
         {
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1))
+            {
                 _attackPending = false;
+                ClearAttackOverlay();
+            }
 
             if (Input.GetMouseButtonDown(0))
                 TrySubmitAttackAtMouse();
@@ -79,18 +62,29 @@ public class UserInputReader : MonoBehaviour
     private void LateUpdate()
     {
         if (!_attackPending)
+        {
+            ClearAttackOverlay();
             return;
+        }
 
         if (!TryResolvePlayer(out var playerHandle))
+        {
+            ClearAttackOverlay();
             return;
+        }
 
         var entitySystem = EntitySystem.Instance;
         int playerIndex = entitySystem.GetIndex(playerHandle);
         if (playerIndex < 0)
+        {
+            ClearAttackOverlay();
             return;
+        }
 
         Vector2Int playerPosition = entitySystem.entities.coreComponents[playerIndex].Position;
         TryGetMouseGridPosition(out var hoverPosition);
+        _attackRangeCells.Clear();
+        _attackHoverCells.Clear();
 
         for (int i = 0; i < CrossDirections.Length; i++)
         {
@@ -99,8 +93,31 @@ public class UserInputReader : MonoBehaviour
                 continue;
 
             bool isHover = targetPosition == hoverPosition;
-            DrawAttackHighlight(targetPosition, isHover);
+            if (isHover)
+                _attackHoverCells.Add(targetPosition);
+            else
+                _attackRangeCells.Add(targetPosition);
         }
+
+        var overlay = GridOverlayDrawSystem.Instance;
+        if (overlay == null)
+            return;
+
+        overlay.SetOverlay(
+            AttackRangeOverlayId,
+            _attackRangeCells,
+            GridOverlayStyle.Danger,
+            attackRangeColor,
+            attackHighlightHeight,
+            10);
+
+        overlay.SetOverlay(
+            AttackHoverOverlayId,
+            _attackHoverCells,
+            GridOverlayStyle.SoftGlow,
+            attackHoverColor,
+            attackHighlightHeight,
+            11);
     }
 
     private void OnGUI()
@@ -114,6 +131,11 @@ public class UserInputReader : MonoBehaviour
 
         var mouse = Event.current.mousePosition;
         GUI.Label(new Rect(mouse.x + 14f, mouse.y + 12f, 80f, 22f), "+ 攻击");
+    }
+
+    private void OnDisable()
+    {
+        ClearAttackOverlay();
     }
 
     private static bool TryReadMoveDirection(out Vector2Int direction)
@@ -174,6 +196,7 @@ public class UserInputReader : MonoBehaviour
             return false;
 
         _attackPending = false;
+        ClearAttackOverlay();
         TickSystem.PushTick();
         return true;
     }
@@ -200,77 +223,14 @@ public class UserInputReader : MonoBehaviour
         return true;
     }
 
-    private void DrawAttackHighlight(Vector2Int gridPosition, bool isHover)
+    private void ClearAttackOverlay()
     {
-        EnsureAttackHighlightResources();
-        if (_attackHighlightMesh == null)
+        var overlay = GridOverlayDrawSystem.Instance;
+        if (overlay == null)
             return;
 
-        var material = isHover ? _attackHoverMaterial : _attackRangeMaterial;
-        if (material == null)
-            return;
-
-        var position = new Vector3(gridPosition.x + 0.5f, attackHighlightHeight, gridPosition.y + 0.5f);
-        Graphics.DrawMesh(_attackHighlightMesh, Matrix4x4.TRS(position, Quaternion.identity, Vector3.one), material, 0);
-    }
-
-    private void EnsureAttackHighlightResources()
-    {
-        if (_attackHighlightMesh == null)
-            _attackHighlightMesh = CreateGroundQuadMesh();
-
-        if (_attackRangeMaterial == null)
-            _attackRangeMaterial = CreateTransparentMaterial(attackRangeColor);
-
-        if (_attackHoverMaterial == null)
-            _attackHoverMaterial = CreateTransparentMaterial(attackHoverColor);
-    }
-
-    private static Mesh CreateGroundQuadMesh()
-    {
-        var mesh = new Mesh
-        {
-            name = "AttackSelectGroundQuad"
-        };
-
-        mesh.vertices = new[]
-        {
-            new Vector3(-0.5f, 0f, -0.5f),
-            new Vector3(0.5f, 0f, -0.5f),
-            new Vector3(0.5f, 0f, 0.5f),
-            new Vector3(-0.5f, 0f, 0.5f)
-        };
-        mesh.uv = new[]
-        {
-            new Vector2(0f, 0f),
-            new Vector2(1f, 0f),
-            new Vector2(1f, 1f),
-            new Vector2(0f, 1f)
-        };
-        mesh.triangles = new[] { 0, 2, 1, 0, 3, 2 };
-        mesh.RecalculateBounds();
-        return mesh;
-    }
-
-    private static Material CreateTransparentMaterial(Color color)
-    {
-        var shader = Shader.Find("Universal Render Pipeline/Unlit")
-            ?? Shader.Find("Unlit/Color")
-            ?? Shader.Find("Sprites/Default");
-        var material = new Material(shader)
-        {
-            color = color,
-            renderQueue = 3000
-        };
-
-        material.SetColor("_BaseColor", color);
-        material.SetColor("_Color", color);
-        material.SetFloat("_Surface", 1f);
-        material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
-        material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-        material.SetFloat("_ZWrite", 0f);
-        material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-        return material;
+        overlay.RemoveOverlay(AttackRangeOverlayId);
+        overlay.RemoveOverlay(AttackHoverOverlayId);
     }
 
     private bool TryResolvePlayer(out EntityHandle playerHandle)
@@ -283,8 +243,14 @@ public class UserInputReader : MonoBehaviour
 
         if (EntitySystem.Instance.IsValid(_playerHandle))
         {
-            playerHandle = _playerHandle;
-            return true;
+            int idx = EntitySystem.Instance.GetIndex(_playerHandle);
+            if (idx >= 0 && EntitySystem.Instance.entities.coreComponents[idx].EntityType == EntityType.Player)
+            {
+                playerHandle = _playerHandle;
+                return true;
+            }
+            // 句柄有效但指向了非玩家实体 → 缓存失效，重新遍历
+            _playerHandle = EntityHandle.None;
         }
 
         var entities = EntitySystem.Instance.entities;

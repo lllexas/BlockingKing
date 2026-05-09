@@ -1719,13 +1719,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8cc56d7eb69f23d4cb1a853cf2e492ac, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  levelData: {fileID: 11400000, guid: 3c867c2c9555bf94999f146c755fb234, type: 2}
+  levelData: {fileID: 0}
   tileConfig: {fileID: 11400000, guid: a6504b011fb4543449390f3df07b8d89, type: 2}
   cellSize: 1
   wallHeight: 0.3
   tagMarkerSize: 0.35
   tagYOffset: 0.02
   material: {fileID: 2100000, guid: 391fd5930ef59f1489fdef6fc7e9fade, type: 2}
+  useInstancedTerrain: 1
   maxEntityCount: 1024
   defaultPlayMode: 1
   defaultStepLimit: 30
@@ -1801,6 +1802,7 @@ MonoBehaviour:
   defaultMaterial: {fileID: 0}
   cellSize: {x: 1, y: 1}
   priorityHeightStep: 0.0005
+  wallSurfaceHeight: 0.3
   materialSlots:
   - Style: 0
     Material: {fileID: 2100000, guid: 43067182b83a8c443a9f6d9cc94155fd, type: 2}

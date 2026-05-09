@@ -39,6 +39,19 @@ public class GameFlowSettings : ScriptableObject
         public TextAsset stagePack;
     }
 
+    [Serializable]
+    public sealed class EscortStageSource
+    {
+        [TableColumnWidth(140)]
+        public string stageId = "Escort";
+
+        [TableColumnWidth(76)]
+        public string stageType = "Escort";
+
+        [TableColumnWidth(48)]
+        public int weight = 1;
+    }
+
     [Header("Route Generation")]
     public int layerCount = 8;
     public int laneCount = 4;
@@ -52,10 +65,14 @@ public class GameFlowSettings : ScriptableObject
     [TableList(AlwaysExpanded = true, DrawScrollView = true, MinScrollViewHeight = 120)]
     public List<EncounterStageSource> encounters = new List<EncounterStageSource>();
 
+    [Title("带球/押送")]
+    [TableList(AlwaysExpanded = true, DrawScrollView = true, MinScrollViewHeight = 80)]
+    public List<EscortStageSource> escorts = new List<EscortStageSource>();
+
     public List<RunRouteStageSource> BuildRouteStageSources()
     {
         var result = new List<RunRouteStageSource>();
-        foreach (var source in classicLevels)
+        foreach (var source in classicLevels ?? new List<ClassicLevelStageSource>())
         {
             if (source?.levelData == null)
                 continue;
@@ -74,7 +91,7 @@ public class GameFlowSettings : ScriptableObject
             });
         }
 
-        foreach (var source in encounters)
+        foreach (var source in encounters ?? new List<EncounterStageSource>())
         {
             if (source?.stagePack == null)
                 continue;
@@ -88,6 +105,21 @@ public class GameFlowSettings : ScriptableObject
                 contentSource = VFSContentSource.Reference,
                 assetPath = GetAssetPath(source.stagePack),
                 referencePath = GetResourcesPath(source.stagePack)
+            });
+        }
+
+        foreach (var source in escorts ?? new List<EscortStageSource>())
+        {
+            if (source == null)
+                continue;
+
+            result.Add(new RunRouteStageSource
+            {
+                stageId = string.IsNullOrWhiteSpace(source.stageId) ? "Escort" : source.stageId,
+                stageType = string.IsNullOrWhiteSpace(source.stageType) ? "Escort" : source.stageType,
+                weight = Mathf.Max(1, source.weight),
+                contentKind = VFSContentKind.Json,
+                contentSource = VFSContentSource.Inline
             });
         }
 

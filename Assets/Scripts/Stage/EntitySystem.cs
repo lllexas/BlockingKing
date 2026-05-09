@@ -43,8 +43,10 @@ public class EntitySystem : MonoBehaviour
 
     public bool IsInitialized => _initialized;
     public EntityComponents entities;
+    public int TerrainVersion { get; private set; }
 
     private bool _initialized;
+    private int _versionEpoch;
     private int _maxEntityCount;
     private int[] _idToDataIndex;
     private int[] _dataIndexToId;
@@ -59,10 +61,16 @@ public class EntitySystem : MonoBehaviour
 
     public void Initialize(int maxEntityCount, int mapWidth, int mapHeight)
     {
-        bool needsReallocation = !_initialized || _maxEntityCount != maxEntityCount;
-        _maxEntityCount = maxEntityCount;
-
         entities ??= new EntityComponents();
+        int expectedMapSize = Mathf.Max(0, mapWidth * mapHeight);
+        bool needsReallocation = !_initialized ||
+                                 _maxEntityCount != maxEntityCount ||
+                                 entities.groundMap == null ||
+                                 entities.gridMap == null ||
+                                 entities.groundMap.Length != expectedMapSize ||
+                                 entities.gridMap.Length != expectedMapSize;
+
+        _maxEntityCount = maxEntityCount;
 
         entities.entityCount = 0;
         entities.mapWidth = mapWidth;
@@ -85,9 +93,11 @@ public class EntitySystem : MonoBehaviour
             for (int i = 0; i < maxEntityCount; i++)
             {
                 _freeIds.Enqueue(i);
-                _idVersions[i] = 1;
+                _idVersions[i] = _versionEpoch;
                 _idToDataIndex[i] = -1;
             }
+
+            _versionEpoch++;
         }
         else
         {
@@ -114,6 +124,7 @@ public class EntitySystem : MonoBehaviour
         TickSystem.OnTick += UpdateTick;
 
         _initialized = true;
+        TerrainVersion++;
         Debug.Log($"[EntitySystem] 初始化完成，容量={maxEntityCount}，地图={mapWidth}x{mapHeight}");
     }
 
@@ -243,6 +254,8 @@ public class EntitySystem : MonoBehaviour
 
         if (entities.groundMap != null)
             System.Array.Fill(entities.groundMap, 0);
+
+        TerrainVersion++;
     }
 
     #endregion
@@ -323,25 +336,40 @@ public class EntitySystem : MonoBehaviour
             entities.coreComponents[entityIndex].Health = Mathf.Max(1, health);
 
         entities.groundMap[idx] = _defaultFloorTerrainId;
+        TerrainVersion++;
         return handle;
     }
 
     public void SetTerrain(Vector2Int pos, int terrainId)
     {
         if (!IsInsideMap(pos)) return;
-        entities.groundMap[ToMapIndex(pos)] = terrainId;
+        int idx = ToMapIndex(pos);
+        if (entities.groundMap[idx] == terrainId)
+            return;
+
+        entities.groundMap[idx] = terrainId;
+        TerrainVersion++;
     }
 
     public void SetTerrain(int[][] map)
     {
         if (map == null) return;
+        bool changed = false;
         for (int y = 0; y < map.Length; y++)
             for (int x = 0; x < map[y].Length; x++)
             {
                 int idx = y * entities.mapWidth + x;
                 if (idx < entities.groundMap.Length)
+                {
+                    if (entities.groundMap[idx] != map[y][x])
+                        changed = true;
+
                     entities.groundMap[idx] = map[y][x];
+                }
             }
+
+        if (changed)
+            TerrainVersion++;
     }
 
     public bool IsInsideMap(Vector2Int pos)

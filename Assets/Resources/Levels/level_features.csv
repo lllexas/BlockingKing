@@ -1,0 +1,1135 @@
+﻿name,path,width,height,area,wall_count,wall_rate,box_count,box_rate,target_count,box_on_target_count,effective_box_count,effective_box_rate
+"Level_001","Assets/Resources/Levels/Microban1/Level_001.asset",6,7,42,22,0.52381,2,0.047619,2,1,1,0.02381
+"Level_002","Assets/Resources/Levels/Microban1/Level_002.asset",6,7,42,23,0.547619,3,0.071429,3,2,1,0.02381
+"Level_003","Assets/Resources/Levels/Microban1/Level_003.asset",9,6,54,29,0.537037,2,0.037037,2,0,2,0.037037
+"Level_004","Assets/Resources/Levels/Microban1/Level_004.asset",8,6,48,24,0.5,3,0.0625,3,2,1,0.020833
+"Level_005","Assets/Resources/Levels/Microban1/Level_005.asset",8,7,56,26,0.464286,4,0.071429,4,0,4,0.071429
+"Level_006","Assets/Resources/Levels/Microban1/Level_006.asset",12,6,72,36,0.5,3,0.041667,3,0,3,0.041667
+"Level_007","Assets/Resources/Levels/Microban1/Level_007.asset",7,8,56,26,0.464286,6,0.107143,6,0,6,0.107143
+"Level_008","Assets/Resources/Levels/Microban1/Level_008.asset",8,12,96,42,0.4375,2,0.020833,2,0,2,0.020833
+"Level_009","Assets/Resources/Levels/Microban1/Level_009.asset",6,7,42,22,0.52381,2,0.047619,2,0,2,0.047619
+"Level_010","Assets/Resources/Levels/Microban1/Level_010.asset",11,8,88,39,0.443182,3,0.034091,3,0,3,0.034091
+"Level_011","Assets/Resources/Levels/Microban1/Level_011.asset",9,8,72,34,0.472222,2,0.027778,2,0,2,0.027778
+"Level_012","Assets/Resources/Levels/Microban1/Level_012.asset",9,8,72,32,0.444444,2,0.027778,2,0,2,0.027778
+"Level_013","Assets/Resources/Levels/Microban1/Level_013.asset",7,9,63,28,0.444444,3,0.047619,3,0,3,0.047619
+"Level_014","Assets/Resources/Levels/Microban1/Level_014.asset",7,6,42,24,0.571429,2,0.047619,2,1,1,0.02381
+"Level_015","Assets/Resources/Levels/Microban1/Level_015.asset",9,7,63,30,0.476191,2,0.031746,2,1,1,0.015873
+"Level_016","Assets/Resources/Levels/Microban1/Level_016.asset",10,8,80,37,0.4625,3,0.0375,3,0,3,0.0375
+"Level_017","Assets/Resources/Levels/Microban1/Level_017.asset",6,7,42,22,0.52381,3,0.071429,3,0,3,0.071429
+"Level_018","Assets/Resources/Levels/Microban1/Level_018.asset",7,9,63,30,0.476191,2,0.031746,2,0,2,0.031746
+"Level_019","Assets/Resources/Levels/Microban1/Level_019.asset",8,8,64,29,0.453125,2,0.03125,2,0,2,0.03125
+"Level_020","Assets/Resources/Levels/Microban1/Level_020.asset",9,8,72,33,0.458333,2,0.027778,2,0,2,0.027778
+"Level_021","Assets/Resources/Levels/Microban1/Level_021.asset",7,6,42,23,0.547619,2,0.047619,2,0,2,0.047619
+"Level_022","Assets/Resources/Levels/Microban1/Level_022.asset",7,9,63,30,0.476191,2,0.031746,2,0,2,0.031746
+"Level_023","Assets/Resources/Levels/Microban1/Level_023.asset",7,7,49,25,0.510204,2,0.040816,2,1,1,0.020408
+"Level_024","Assets/Resources/Levels/Microban1/Level_024.asset",7,7,49,27,0.55102,2,0.040816,2,0,2,0.040816
+"Level_025","Assets/Resources/Levels/Microban1/Level_025.asset",7,7,49,24,0.489796,3,0.061224,3,0,3,0.061224
+"Level_026","Assets/Resources/Levels/Microban1/Level_026.asset",6,8,48,25,0.520833,3,0.0625,3,0,3,0.0625
+"Level_027","Assets/Resources/Levels/Microban1/Level_027.asset",7,7,49,27,0.55102,2,0.040816,2,0,2,0.040816
+"Level_028","Assets/Resources/Levels/Microban1/Level_028.asset",7,7,49,24,0.489796,2,0.040816,2,0,2,0.040816
+"Level_029","Assets/Resources/Levels/Microban1/Level_029.asset",11,9,99,44,0.444444,2,0.020202,2,0,2,0.020202
+"Level_030","Assets/Resources/Levels/Microban1/Level_030.asset",6,7,42,22,0.52381,3,0.071429,3,0,3,0.071429
+"Level_031","Assets/Resources/Levels/Microban1/Level_031.asset",7,7,49,24,0.489796,3,0.061224,3,0,3,0.061224
+"Level_032","Assets/Resources/Levels/Microban1/Level_032.asset",7,7,49,24,0.489796,3,0.061224,3,2,1,0.020408
+"Level_033","Assets/Resources/Levels/Microban1/Level_033.asset",7,7,49,27,0.55102,3,0.061224,3,0,3,0.061224
+"Level_034","Assets/Resources/Levels/Microban1/Level_034.asset",9,6,54,26,0.481482,4,0.074074,4,3,1,0.018519
+"Level_035","Assets/Resources/Levels/Microban1/Level_035.asset",7,10,70,28,0.4,5,0.071429,5,0,5,0.071429
+"Level_036","Assets/Resources/Levels/Microban1/Level_036.asset",15,5,75,36,0.48,5,0.066667,5,0,5,0.066667
+"Level_037","Assets/Resources/Levels/Microban1/Level_037.asset",9,8,72,34,0.472222,3,0.041667,3,0,3,0.041667
+"Level_038","Assets/Resources/Levels/Microban1/Level_038.asset",10,7,70,38,0.542857,3,0.042857,3,0,3,0.042857
+"Level_039","Assets/Resources/Levels/Microban1/Level_039.asset",10,9,90,41,0.455556,2,0.022222,2,0,2,0.022222
+"Level_040","Assets/Resources/Levels/Microban1/Level_040.asset",7,6,42,22,0.52381,3,0.071429,3,0,3,0.071429
+"Level_041","Assets/Resources/Levels/Microban1/Level_041.asset",8,6,48,25,0.520833,3,0.0625,3,0,3,0.0625
+"Level_042","Assets/Resources/Levels/Microban1/Level_042.asset",7,8,56,27,0.482143,3,0.053571,3,0,3,0.053571
+"Level_043","Assets/Resources/Levels/Microban1/Level_043.asset",9,9,81,33,0.407407,3,0.037037,3,0,3,0.037037
+"Level_044","Assets/Resources/Levels/Microban1/Level_044.asset",5,3,15,12,0.8,1,0.066667,1,0,1,0.066667
+"Level_045","Assets/Resources/Levels/Microban1/Level_045.asset",6,7,42,24,0.571429,3,0.071429,3,0,3,0.071429
+"Level_046","Assets/Resources/Levels/Microban1/Level_046.asset",7,8,56,30,0.535714,2,0.035714,2,1,1,0.017857
+"Level_047","Assets/Resources/Levels/Microban1/Level_047.asset",11,7,77,39,0.506494,2,0.025974,2,0,2,0.025974
+"Level_048","Assets/Resources/Levels/Microban1/Level_048.asset",8,8,64,31,0.484375,3,0.046875,3,0,3,0.046875
+"Level_049","Assets/Resources/Levels/Microban1/Level_049.asset",8,10,80,37,0.4625,3,0.0375,3,0,3,0.0375
+"Level_050","Assets/Resources/Levels/Microban1/Level_050.asset",10,7,70,35,0.5,2,0.028571,2,0,2,0.028571
+"Level_051","Assets/Resources/Levels/Microban1/Level_051.asset",8,7,56,27,0.482143,2,0.035714,2,1,1,0.017857
+"Level_052","Assets/Resources/Levels/Microban1/Level_052.asset",6,8,48,24,0.5,4,0.083333,4,2,2,0.041667
+"Level_053","Assets/Resources/Levels/Microban1/Level_053.asset",7,7,49,25,0.510204,4,0.081633,4,2,2,0.040816
+"Level_054","Assets/Resources/Levels/Microban1/Level_054.asset",12,8,96,40,0.416667,4,0.041667,4,0,4,0.041667
+"Level_055","Assets/Resources/Levels/Microban1/Level_055.asset",10,8,80,37,0.4625,2,0.025,2,0,2,0.025
+"Level_056","Assets/Resources/Levels/Microban1/Level_056.asset",7,6,42,22,0.52381,2,0.047619,2,1,1,0.02381
+"Level_057","Assets/Resources/Levels/Microban1/Level_057.asset",8,9,72,31,0.430556,2,0.027778,2,1,1,0.013889
+"Level_058","Assets/Resources/Levels/Microban1/Level_058.asset",7,7,49,25,0.510204,3,0.061224,3,1,2,0.040816
+"Level_059","Assets/Resources/Levels/Microban1/Level_059.asset",13,9,117,56,0.478633,3,0.025641,3,0,3,0.025641
+"Level_060","Assets/Resources/Levels/Microban1/Level_060.asset",10,10,100,54,0.54,4,0.04,4,0,4,0.04
+"Level_061","Assets/Resources/Levels/Microban1/Level_061.asset",9,10,90,44,0.488889,4,0.044444,4,0,4,0.044444
+"Level_062","Assets/Resources/Levels/Microban1/Level_062.asset",13,6,78,38,0.48718,4,0.051282,4,0,4,0.051282
+"Level_063","Assets/Resources/Levels/Microban1/Level_063.asset",19,6,114,54,0.473684,2,0.017544,2,0,2,0.017544
+"Level_064","Assets/Resources/Levels/Microban1/Level_064.asset",10,9,90,36,0.4,4,0.044444,4,0,4,0.044444
+"Level_065","Assets/Resources/Levels/Microban1/Level_065.asset",9,9,81,36,0.444444,4,0.049383,4,0,4,0.049383
+"Level_066","Assets/Resources/Levels/Microban1/Level_066.asset",9,14,126,52,0.412698,3,0.02381,3,0,3,0.02381
+"Level_067","Assets/Resources/Levels/Microban1/Level_067.asset",7,8,56,28,0.5,3,0.053571,3,1,2,0.035714
+"Level_068","Assets/Resources/Levels/Microban1/Level_068.asset",10,7,70,32,0.457143,3,0.042857,3,0,3,0.042857
+"Level_069","Assets/Resources/Levels/Microban1/Level_069.asset",11,8,88,44,0.5,3,0.034091,3,0,3,0.034091
+"Level_070","Assets/Resources/Levels/Microban1/Level_070.asset",8,10,80,37,0.4625,4,0.05,4,0,4,0.05
+"Level_071","Assets/Resources/Levels/Microban1/Level_071.asset",13,9,117,63,0.538462,2,0.017094,2,0,2,0.017094
+"Level_072","Assets/Resources/Levels/Microban1/Level_072.asset",10,11,110,45,0.409091,3,0.027273,3,0,3,0.027273
+"Level_073","Assets/Resources/Levels/Microban1/Level_073.asset",8,10,80,42,0.525,3,0.0375,3,0,3,0.0375
+"Level_074","Assets/Resources/Levels/Microban1/Level_074.asset",11,8,88,39,0.443182,4,0.045455,4,0,4,0.045455
+"Level_075","Assets/Resources/Levels/Microban1/Level_075.asset",10,7,70,34,0.485714,4,0.057143,4,0,4,0.057143
+"Level_076","Assets/Resources/Levels/Microban1/Level_076.asset",10,11,110,47,0.427273,3,0.027273,3,0,3,0.027273
+"Level_077","Assets/Resources/Levels/Microban1/Level_077.asset",11,7,77,37,0.48052,4,0.051948,4,0,4,0.051948
+"Level_078","Assets/Resources/Levels/Microban1/Level_078.asset",11,8,88,38,0.431818,5,0.056818,5,0,5,0.056818
+"Level_079","Assets/Resources/Levels/Microban1/Level_079.asset",10,6,60,32,0.533333,3,0.05,3,0,3,0.05
+"Level_080","Assets/Resources/Levels/Microban1/Level_080.asset",10,11,110,48,0.436364,4,0.036364,4,0,4,0.036364
+"Level_081","Assets/Resources/Levels/Microban1/Level_081.asset",6,9,54,28,0.518519,3,0.055556,3,2,1,0.018519
+"Level_082","Assets/Resources/Levels/Microban1/Level_082.asset",8,8,64,33,0.515625,3,0.046875,3,1,2,0.03125
+"Level_083","Assets/Resources/Levels/Microban1/Level_083.asset",8,10,80,36,0.45,4,0.05,4,0,4,0.05
+"Level_084","Assets/Resources/Levels/Microban1/Level_084.asset",12,10,120,52,0.433333,3,0.025,3,0,3,0.025
+"Level_085","Assets/Resources/Levels/Microban1/Level_085.asset",11,11,121,50,0.413223,3,0.024793,3,0,3,0.024793
+"Level_086","Assets/Resources/Levels/Microban1/Level_086.asset",9,8,72,32,0.444444,4,0.055556,4,0,4,0.055556
+"Level_087","Assets/Resources/Levels/Microban1/Level_087.asset",9,10,90,41,0.455556,4,0.044444,4,0,4,0.044444
+"Level_088","Assets/Resources/Levels/Microban1/Level_088.asset",11,12,132,57,0.431818,3,0.022727,3,0,3,0.022727
+"Level_089","Assets/Resources/Levels/Microban1/Level_089.asset",10,9,90,43,0.477778,4,0.044444,4,0,4,0.044444
+"Level_090","Assets/Resources/Levels/Microban1/Level_090.asset",10,7,70,34,0.485714,4,0.057143,4,0,4,0.057143
+"Level_091","Assets/Resources/Levels/Microban1/Level_091.asset",11,5,55,32,0.581818,4,0.072727,4,0,4,0.072727
+"Level_092","Assets/Resources/Levels/Microban1/Level_092.asset",15,10,150,59,0.393333,3,0.02,3,0,3,0.02
+"Level_093","Assets/Resources/Levels/Microban1/Level_093.asset",11,11,121,52,0.429752,8,0.066116,8,4,4,0.033058
+"Level_094","Assets/Resources/Levels/Microban1/Level_094.asset",9,8,72,37,0.513889,3,0.041667,3,0,3,0.041667
+"Level_095","Assets/Resources/Levels/Microban1/Level_095.asset",8,8,64,28,0.4375,8,0.125,8,0,8,0.125
+"Level_096","Assets/Resources/Levels/Microban1/Level_096.asset",11,11,121,49,0.404959,3,0.024793,3,0,3,0.024793
+"Level_097","Assets/Resources/Levels/Microban1/Level_097.asset",14,10,140,49,0.35,5,0.035714,5,0,5,0.035714
+"Level_098","Assets/Resources/Levels/Microban1/Level_098.asset",16,10,160,64,0.4,5,0.03125,5,0,5,0.03125
+"Level_099","Assets/Resources/Levels/Microban1/Level_099.asset",22,10,220,79,0.359091,4,0.018182,4,0,4,0.018182
+"Level_100","Assets/Resources/Levels/Microban1/Level_100.asset",8,8,64,33,0.515625,4,0.0625,4,0,4,0.0625
+"Level_101","Assets/Resources/Levels/Microban1/Level_101.asset",13,13,169,65,0.384615,5,0.029586,5,4,1,0.005917
+"Level_102","Assets/Resources/Levels/Microban1/Level_102.asset",11,8,88,40,0.454546,4,0.045455,4,0,4,0.045455
+"Level_103","Assets/Resources/Levels/Microban1/Level_103.asset",8,8,64,30,0.46875,4,0.0625,4,0,4,0.0625
+"Level_104","Assets/Resources/Levels/Microban1/Level_104.asset",9,9,81,35,0.432099,3,0.037037,3,0,3,0.037037
+"Level_105","Assets/Resources/Levels/Microban1/Level_105.asset",11,11,121,56,0.46281,8,0.066116,8,4,4,0.033058
+"Level_106","Assets/Resources/Levels/Microban1/Level_106.asset",10,9,90,39,0.433333,5,0.055556,5,0,5,0.055556
+"Level_107","Assets/Resources/Levels/Microban1/Level_107.asset",8,8,64,28,0.4375,11,0.171875,11,10,1,0.015625
+"Level_108","Assets/Resources/Levels/Microban1/Level_108.asset",15,8,120,52,0.433333,4,0.033333,4,0,4,0.033333
+"Level_109","Assets/Resources/Levels/Microban1/Level_109.asset",9,13,117,64,0.547009,5,0.042735,5,0,5,0.042735
+"Level_110","Assets/Resources/Levels/Microban1/Level_110.asset",9,9,81,33,0.407407,4,0.049383,4,0,4,0.049383
+"Level_111","Assets/Resources/Levels/Microban1/Level_111.asset",9,12,108,44,0.407407,6,0.055556,6,0,6,0.055556
+"Level_112","Assets/Resources/Levels/Microban1/Level_112.asset",10,13,130,56,0.430769,5,0.038462,5,0,5,0.038462
+"Level_113","Assets/Resources/Levels/Microban1/Level_113.asset",14,13,182,57,0.313187,4,0.021978,4,0,4,0.021978
+"Level_114","Assets/Resources/Levels/Microban1/Level_114.asset",11,9,99,42,0.424242,6,0.060606,6,0,6,0.060606
+"Level_115","Assets/Resources/Levels/Microban1/Level_115.asset",12,8,96,41,0.427083,5,0.052083,5,0,5,0.052083
+"Level_116","Assets/Resources/Levels/Microban1/Level_116.asset",10,7,70,31,0.442857,5,0.071429,5,0,5,0.071429
+"Level_117","Assets/Resources/Levels/Microban1/Level_117.asset",11,10,110,48,0.436364,5,0.045455,5,0,5,0.045455
+"Level_118","Assets/Resources/Levels/Microban1/Level_118.asset",10,10,100,43,0.43,4,0.04,4,0,4,0.04
+"Level_119","Assets/Resources/Levels/Microban1/Level_119.asset",9,10,90,42,0.466667,3,0.033333,3,0,3,0.033333
+"Level_120","Assets/Resources/Levels/Microban1/Level_120.asset",11,11,121,51,0.421488,4,0.033058,4,0,4,0.033058
+"Level_121","Assets/Resources/Levels/Microban1/Level_121.asset",11,11,121,55,0.454546,5,0.041322,5,1,4,0.033058
+"Level_122","Assets/Resources/Levels/Microban1/Level_122.asset",11,12,132,50,0.378788,5,0.037879,5,0,5,0.037879
+"Level_123","Assets/Resources/Levels/Microban1/Level_123.asset",15,11,165,58,0.351515,5,0.030303,5,0,5,0.030303
+"Level_124","Assets/Resources/Levels/Microban1/Level_124.asset",14,9,126,65,0.515873,3,0.02381,3,0,3,0.02381
+"Level_125","Assets/Resources/Levels/Microban1/Level_125.asset",13,8,104,44,0.423077,4,0.038462,4,0,4,0.038462
+"Level_126","Assets/Resources/Levels/Microban1/Level_126.asset",12,7,84,39,0.464286,7,0.083333,7,0,7,0.083333
+"Level_127","Assets/Resources/Levels/Microban1/Level_127.asset",10,9,90,42,0.466667,4,0.044444,4,0,4,0.044444
+"Level_128","Assets/Resources/Levels/Microban1/Level_128.asset",11,8,88,40,0.454546,4,0.045455,4,2,2,0.022727
+"Level_129","Assets/Resources/Levels/Microban1/Level_129.asset",11,8,88,39,0.443182,5,0.056818,5,3,2,0.022727
+"Level_130","Assets/Resources/Levels/Microban1/Level_130.asset",12,7,84,42,0.5,4,0.047619,4,0,4,0.047619
+"Level_131","Assets/Resources/Levels/Microban1/Level_131.asset",7,11,77,34,0.441559,4,0.051948,4,0,4,0.051948
+"Level_132","Assets/Resources/Levels/Microban1/Level_132.asset",10,8,80,36,0.45,4,0.05,4,1,3,0.0375
+"Level_133","Assets/Resources/Levels/Microban1/Level_133.asset",10,8,80,37,0.4625,5,0.0625,5,0,5,0.0625
+"Level_134","Assets/Resources/Levels/Microban1/Level_134.asset",12,10,120,52,0.433333,4,0.033333,4,0,4,0.033333
+"Level_135","Assets/Resources/Levels/Microban1/Level_135.asset",11,7,77,38,0.493507,4,0.051948,4,0,4,0.051948
+"Level_136","Assets/Resources/Levels/Microban1/Level_136.asset",9,8,72,36,0.5,4,0.055556,4,0,4,0.055556
+"Level_137","Assets/Resources/Levels/Microban1/Level_137.asset",13,10,130,52,0.4,4,0.030769,4,0,4,0.030769
+"Level_138","Assets/Resources/Levels/Microban1/Level_138.asset",12,11,132,48,0.363636,5,0.037879,5,0,5,0.037879
+"Level_139","Assets/Resources/Levels/Microban1/Level_139.asset",16,12,192,64,0.333333,6,0.03125,6,0,6,0.03125
+"Level_140","Assets/Resources/Levels/Microban1/Level_140.asset",14,9,126,55,0.436508,4,0.031746,4,0,4,0.031746
+"Level_141","Assets/Resources/Levels/Microban1/Level_141.asset",10,9,90,43,0.477778,6,0.066667,6,2,4,0.044444
+"Level_142","Assets/Resources/Levels/Microban1/Level_142.asset",9,9,81,32,0.395062,4,0.049383,4,0,4,0.049383
+"Level_143","Assets/Resources/Levels/Microban1/Level_143.asset",9,15,135,57,0.422222,6,0.044444,6,0,6,0.044444
+"Level_144","Assets/Resources/Levels/Microban1/Level_144.asset",12,12,144,52,0.361111,16,0.111111,16,4,12,0.083333
+"Level_145","Assets/Resources/Levels/Microban1/Level_145.asset",11,11,121,41,0.338843,12,0.099174,12,0,12,0.099174
+"Level_146","Assets/Resources/Levels/Microban1/Level_146.asset",9,9,81,32,0.395062,12,0.148148,12,0,12,0.148148
+"Level_147","Assets/Resources/Levels/Microban1/Level_147.asset",12,10,120,47,0.391667,3,0.025,3,0,3,0.025
+"Level_148","Assets/Resources/Levels/Microban1/Level_148.asset",15,7,105,48,0.457143,4,0.038095,4,0,4,0.038095
+"Level_149","Assets/Resources/Levels/Microban1/Level_149.asset",10,12,120,47,0.391667,4,0.033333,4,0,4,0.033333
+"Level_150","Assets/Resources/Levels/Microban1/Level_150.asset",15,8,120,48,0.4,5,0.041667,5,0,5,0.041667
+"Level_151","Assets/Resources/Levels/Microban1/Level_151.asset",12,10,120,46,0.383333,4,0.033333,4,0,4,0.033333
+"Level_152","Assets/Resources/Levels/Microban1/Level_152.asset",15,9,135,62,0.459259,4,0.02963,4,1,3,0.022222
+"Level_153","Assets/Resources/Levels/Microban1/Level_153.asset",13,10,130,62,0.476923,10,0.076923,10,0,10,0.076923
+"Level_154","Assets/Resources/Levels/Microban1/Level_154.asset",29,17,493,262,0.53144,1,0.002028,1,0,1,0.002028
+"Level_155","Assets/Resources/Levels/Microban1/Level_155.asset",30,17,510,246,0.482353,11,0.021569,11,10,1,0.001961
+"Microban II_001","Assets/Resources/Levels/Microban2/Microban II_001.asset",6,8,48,24,0.5,2,0.041667,2,0,2,0.041667
+"Microban II_002","Assets/Resources/Levels/Microban2/Microban II_002.asset",6,8,48,26,0.541667,2,0.041667,2,1,1,0.020833
+"Microban II_003","Assets/Resources/Levels/Microban2/Microban II_003.asset",7,8,56,28,0.5,2,0.035714,2,0,2,0.035714
+"Microban II_004","Assets/Resources/Levels/Microban2/Microban II_004.asset",10,8,80,35,0.4375,2,0.025,2,0,2,0.025
+"Microban II_005","Assets/Resources/Levels/Microban2/Microban II_005.asset",8,7,56,26,0.464286,2,0.035714,2,0,2,0.035714
+"Microban II_006","Assets/Resources/Levels/Microban2/Microban II_006.asset",9,8,72,32,0.444444,2,0.027778,2,1,1,0.013889
+"Microban II_007","Assets/Resources/Levels/Microban2/Microban II_007.asset",7,7,49,27,0.55102,2,0.040816,2,0,2,0.040816
+"Microban II_008","Assets/Resources/Levels/Microban2/Microban II_008.asset",8,7,56,27,0.482143,3,0.053571,3,2,1,0.017857
+"Microban II_009","Assets/Resources/Levels/Microban2/Microban II_009.asset",6,7,42,24,0.571429,3,0.071429,3,1,2,0.047619
+"Microban II_010","Assets/Resources/Levels/Microban2/Microban II_010.asset",7,6,42,22,0.52381,3,0.071429,3,0,3,0.071429
+"Microban II_011","Assets/Resources/Levels/Microban2/Microban II_011.asset",6,6,36,21,0.583333,3,0.083333,3,0,3,0.083333
+"Microban II_012","Assets/Resources/Levels/Microban2/Microban II_012.asset",8,9,72,34,0.472222,3,0.041667,3,1,2,0.027778
+"Microban II_013","Assets/Resources/Levels/Microban2/Microban II_013.asset",7,8,56,30,0.535714,3,0.053571,3,1,2,0.035714
+"Microban II_014","Assets/Resources/Levels/Microban2/Microban II_014.asset",7,7,49,24,0.489796,3,0.061224,3,0,3,0.061224
+"Microban II_015","Assets/Resources/Levels/Microban2/Microban II_015.asset",7,7,49,25,0.510204,3,0.061224,3,2,1,0.020408
+"Microban II_016","Assets/Resources/Levels/Microban2/Microban II_016.asset",8,8,64,30,0.46875,3,0.046875,3,0,3,0.046875
+"Microban II_017","Assets/Resources/Levels/Microban2/Microban II_017.asset",6,8,48,26,0.541667,3,0.0625,3,1,2,0.041667
+"Microban II_018","Assets/Resources/Levels/Microban2/Microban II_018.asset",7,8,56,29,0.517857,3,0.053571,3,0,3,0.053571
+"Microban II_019","Assets/Resources/Levels/Microban2/Microban II_019.asset",7,8,56,29,0.517857,3,0.053571,3,0,3,0.053571
+"Microban II_020","Assets/Resources/Levels/Microban2/Microban II_020.asset",7,8,56,27,0.482143,3,0.053571,3,1,2,0.035714
+"Microban II_021","Assets/Resources/Levels/Microban2/Microban II_021.asset",9,11,99,41,0.414141,2,0.020202,2,0,2,0.020202
+"Microban II_022","Assets/Resources/Levels/Microban2/Microban II_022.asset",11,9,99,49,0.49495,2,0.020202,2,0,2,0.020202
+"Microban II_023","Assets/Resources/Levels/Microban2/Microban II_023.asset",12,8,96,47,0.489583,2,0.020833,2,0,2,0.020833
+"Microban II_024","Assets/Resources/Levels/Microban2/Microban II_024.asset",12,12,144,61,0.423611,2,0.013889,2,0,2,0.013889
+"Microban II_025","Assets/Resources/Levels/Microban2/Microban II_025.asset",7,8,56,27,0.482143,4,0.071429,4,0,4,0.071429
+"Microban II_026","Assets/Resources/Levels/Microban2/Microban II_026.asset",8,8,64,36,0.5625,4,0.0625,4,1,3,0.046875
+"Microban II_027","Assets/Resources/Levels/Microban2/Microban II_027.asset",7,10,70,36,0.514286,5,0.071429,5,2,3,0.042857
+"Microban II_028","Assets/Resources/Levels/Microban2/Microban II_028.asset",9,8,72,33,0.458333,3,0.041667,3,1,2,0.027778
+"Microban II_029","Assets/Resources/Levels/Microban2/Microban II_029.asset",8,8,64,31,0.484375,3,0.046875,3,1,2,0.03125
+"Microban II_030","Assets/Resources/Levels/Microban2/Microban II_030.asset",14,9,126,56,0.444444,3,0.02381,3,0,3,0.02381
+"Microban II_031","Assets/Resources/Levels/Microban2/Microban II_031.asset",10,9,90,42,0.466667,3,0.033333,3,0,3,0.033333
+"Microban II_032","Assets/Resources/Levels/Microban2/Microban II_032.asset",8,10,80,36,0.45,3,0.0375,3,0,3,0.0375
+"Microban II_033","Assets/Resources/Levels/Microban2/Microban II_033.asset",11,7,77,47,0.61039,3,0.038961,3,0,3,0.038961
+"Microban II_034","Assets/Resources/Levels/Microban2/Microban II_034.asset",9,11,99,41,0.414141,3,0.030303,3,0,3,0.030303
+"Microban II_035","Assets/Resources/Levels/Microban2/Microban II_035.asset",12,11,132,56,0.424242,3,0.022727,3,0,3,0.022727
+"Microban II_036","Assets/Resources/Levels/Microban2/Microban II_036.asset",11,8,88,41,0.465909,3,0.034091,3,2,1,0.011364
+"Microban II_037","Assets/Resources/Levels/Microban2/Microban II_037.asset",8,10,80,35,0.4375,3,0.0375,3,0,3,0.0375
+"Microban II_038","Assets/Resources/Levels/Microban2/Microban II_038.asset",8,9,72,34,0.472222,3,0.041667,3,0,3,0.041667
+"Microban II_039","Assets/Resources/Levels/Microban2/Microban II_039.asset",8,9,72,35,0.486111,3,0.041667,3,1,2,0.027778
+"Microban II_040","Assets/Resources/Levels/Microban2/Microban II_040.asset",6,9,54,28,0.518519,3,0.055556,3,2,1,0.018519
+"Microban II_041","Assets/Resources/Levels/Microban2/Microban II_041.asset",8,7,56,29,0.517857,3,0.053571,3,1,2,0.035714
+"Microban II_042","Assets/Resources/Levels/Microban2/Microban II_042.asset",10,8,80,38,0.475,3,0.0375,3,0,3,0.0375
+"Microban II_043","Assets/Resources/Levels/Microban2/Microban II_043.asset",11,8,88,37,0.420455,3,0.034091,3,0,3,0.034091
+"Microban II_044","Assets/Resources/Levels/Microban2/Microban II_044.asset",11,10,110,49,0.445455,3,0.027273,3,0,3,0.027273
+"Microban II_045","Assets/Resources/Levels/Microban2/Microban II_045.asset",13,7,91,43,0.472528,4,0.043956,4,0,4,0.043956
+"Microban II_046","Assets/Resources/Levels/Microban2/Microban II_046.asset",12,10,120,53,0.441667,3,0.025,3,0,3,0.025
+"Microban II_047","Assets/Resources/Levels/Microban2/Microban II_047.asset",9,11,99,44,0.444444,4,0.040404,4,0,4,0.040404
+"Microban II_048","Assets/Resources/Levels/Microban2/Microban II_048.asset",10,7,70,33,0.471429,4,0.057143,4,0,4,0.057143
+"Microban II_049","Assets/Resources/Levels/Microban2/Microban II_049.asset",7,9,63,29,0.460318,4,0.063492,4,0,4,0.063492
+"Microban II_050","Assets/Resources/Levels/Microban2/Microban II_050.asset",9,7,63,32,0.507937,4,0.063492,4,2,2,0.031746
+"Microban II_051","Assets/Resources/Levels/Microban2/Microban II_051.asset",8,7,56,30,0.535714,4,0.071429,4,0,4,0.071429
+"Microban II_052","Assets/Resources/Levels/Microban2/Microban II_052.asset",8,9,72,32,0.444444,3,0.041667,3,1,2,0.027778
+"Microban II_053","Assets/Resources/Levels/Microban2/Microban II_053.asset",8,7,56,27,0.482143,3,0.053571,3,0,3,0.053571
+"Microban II_054","Assets/Resources/Levels/Microban2/Microban II_054.asset",11,12,132,49,0.371212,3,0.022727,3,0,3,0.022727
+"Microban II_055","Assets/Resources/Levels/Microban2/Microban II_055.asset",9,13,117,51,0.435897,3,0.025641,3,0,3,0.025641
+"Microban II_056","Assets/Resources/Levels/Microban2/Microban II_056.asset",8,8,64,31,0.484375,3,0.046875,3,1,2,0.03125
+"Microban II_057","Assets/Resources/Levels/Microban2/Microban II_057.asset",8,8,64,29,0.453125,4,0.0625,4,3,1,0.015625
+"Microban II_058","Assets/Resources/Levels/Microban2/Microban II_058.asset",9,9,81,35,0.432099,4,0.049383,4,0,4,0.049383
+"Microban II_059","Assets/Resources/Levels/Microban2/Microban II_059.asset",10,8,80,40,0.5,3,0.0375,3,0,3,0.0375
+"Microban II_060","Assets/Resources/Levels/Microban2/Microban II_060.asset",17,7,119,60,0.504202,3,0.02521,3,0,3,0.02521
+"Microban II_061","Assets/Resources/Levels/Microban2/Microban II_061.asset",10,6,60,28,0.466667,5,0.083333,5,0,5,0.083333
+"Microban II_062","Assets/Resources/Levels/Microban2/Microban II_062.asset",9,8,72,30,0.416667,4,0.055556,4,0,4,0.055556
+"Microban II_063","Assets/Resources/Levels/Microban2/Microban II_063.asset",12,9,108,39,0.361111,4,0.037037,4,0,4,0.037037
+"Microban II_064","Assets/Resources/Levels/Microban2/Microban II_064.asset",10,7,70,35,0.5,4,0.057143,4,1,3,0.042857
+"Microban II_065","Assets/Resources/Levels/Microban2/Microban II_065.asset",9,10,90,43,0.477778,5,0.055556,5,4,1,0.011111
+"Microban II_066","Assets/Resources/Levels/Microban2/Microban II_066.asset",14,14,196,60,0.306123,8,0.040816,8,0,8,0.040816
+"Microban II_067","Assets/Resources/Levels/Microban2/Microban II_067.asset",10,10,100,36,0.36,8,0.08,8,4,4,0.04
+"Microban II_068","Assets/Resources/Levels/Microban2/Microban II_068.asset",11,11,121,20,0.165289,12,0.099174,12,8,4,0.033058
+"Microban II_069","Assets/Resources/Levels/Microban2/Microban II_069.asset",7,7,49,24,0.489796,8,0.163265,8,0,8,0.163265
+"Microban II_070","Assets/Resources/Levels/Microban2/Microban II_070.asset",8,8,64,32,0.5,5,0.078125,5,0,5,0.078125
+"Microban II_071","Assets/Resources/Levels/Microban2/Microban II_071.asset",8,8,64,32,0.5,6,0.09375,6,0,6,0.09375
+"Microban II_072","Assets/Resources/Levels/Microban2/Microban II_072.asset",9,9,81,32,0.395062,16,0.197531,16,8,8,0.098765
+"Microban II_073","Assets/Resources/Levels/Microban2/Microban II_073.asset",9,9,81,32,0.395062,12,0.148148,12,0,12,0.148148
+"Microban II_074","Assets/Resources/Levels/Microban2/Microban II_074.asset",9,9,81,34,0.419753,12,0.148148,12,0,12,0.148148
+"Microban II_075","Assets/Resources/Levels/Microban2/Microban II_075.asset",9,9,81,36,0.444444,12,0.148148,12,0,12,0.148148
+"Microban II_076","Assets/Resources/Levels/Microban2/Microban II_076.asset",9,9,81,32,0.395062,12,0.148148,12,4,8,0.098765
+"Microban II_077","Assets/Resources/Levels/Microban2/Microban II_077.asset",11,11,121,48,0.396694,8,0.066116,8,0,8,0.066116
+"Microban II_078","Assets/Resources/Levels/Microban2/Microban II_078.asset",9,9,81,38,0.469136,8,0.098765,8,0,8,0.098765
+"Microban II_079","Assets/Resources/Levels/Microban2/Microban II_079.asset",9,9,81,37,0.45679,4,0.049383,4,0,4,0.049383
+"Microban II_080","Assets/Resources/Levels/Microban2/Microban II_080.asset",11,9,99,43,0.434343,4,0.040404,4,1,3,0.030303
+"Microban II_081","Assets/Resources/Levels/Microban2/Microban II_081.asset",12,11,132,60,0.454546,4,0.030303,4,0,4,0.030303
+"Microban II_082","Assets/Resources/Levels/Microban2/Microban II_082.asset",11,8,88,44,0.5,5,0.056818,5,1,4,0.045455
+"Microban II_083","Assets/Resources/Levels/Microban2/Microban II_083.asset",12,10,120,44,0.366667,5,0.041667,5,0,5,0.041667
+"Microban II_084","Assets/Resources/Levels/Microban2/Microban II_084.asset",8,12,96,49,0.510417,4,0.041667,4,0,4,0.041667
+"Microban II_085","Assets/Resources/Levels/Microban2/Microban II_085.asset",13,13,169,58,0.343195,4,0.023669,4,0,4,0.023669
+"Microban II_086","Assets/Resources/Levels/Microban2/Microban II_086.asset",10,13,130,49,0.376923,4,0.030769,4,0,4,0.030769
+"Microban II_087","Assets/Resources/Levels/Microban2/Microban II_087.asset",12,13,156,50,0.320513,4,0.025641,4,0,4,0.025641
+"Microban II_088","Assets/Resources/Levels/Microban2/Microban II_088.asset",8,7,56,27,0.482143,4,0.071429,4,1,3,0.053571
+"Microban II_089","Assets/Resources/Levels/Microban2/Microban II_089.asset",8,9,72,34,0.472222,5,0.069444,5,3,2,0.027778
+"Microban II_090","Assets/Resources/Levels/Microban2/Microban II_090.asset",7,10,70,30,0.428571,6,0.085714,6,2,4,0.057143
+"Microban II_091","Assets/Resources/Levels/Microban2/Microban II_091.asset",9,13,117,46,0.393162,4,0.034188,4,0,4,0.034188
+"Microban II_092","Assets/Resources/Levels/Microban2/Microban II_092.asset",15,8,120,53,0.441667,4,0.033333,4,0,4,0.033333
+"Microban II_093","Assets/Resources/Levels/Microban2/Microban II_093.asset",8,13,104,48,0.461539,4,0.038462,4,0,4,0.038462
+"Microban II_094","Assets/Resources/Levels/Microban2/Microban II_094.asset",18,10,180,72,0.4,5,0.027778,5,0,5,0.027778
+"Microban II_095","Assets/Resources/Levels/Microban2/Microban II_095.asset",13,8,104,47,0.451923,5,0.048077,5,0,5,0.048077
+"Microban II_096","Assets/Resources/Levels/Microban2/Microban II_096.asset",11,11,121,47,0.38843,5,0.041322,5,1,4,0.033058
+"Microban II_097","Assets/Resources/Levels/Microban2/Microban II_097.asset",14,12,168,69,0.410714,5,0.029762,5,0,5,0.029762
+"Microban II_098","Assets/Resources/Levels/Microban2/Microban II_098.asset",9,10,90,42,0.466667,4,0.044444,4,0,4,0.044444
+"Microban II_099","Assets/Resources/Levels/Microban2/Microban II_099.asset",12,11,132,53,0.401515,5,0.037879,5,0,5,0.037879
+"Microban II_100","Assets/Resources/Levels/Microban2/Microban II_100.asset",12,13,156,71,0.455128,5,0.032051,5,0,5,0.032051
+"Microban II_101","Assets/Resources/Levels/Microban2/Microban II_101.asset",10,8,80,32,0.4,6,0.075,6,0,6,0.075
+"Microban II_102","Assets/Resources/Levels/Microban2/Microban II_102.asset",12,14,168,63,0.375,5,0.029762,5,0,5,0.029762
+"Microban II_103","Assets/Resources/Levels/Microban2/Microban II_103.asset",14,12,168,71,0.422619,4,0.02381,4,0,4,0.02381
+"Microban II_104","Assets/Resources/Levels/Microban2/Microban II_104.asset",10,14,140,63,0.45,7,0.05,7,0,7,0.05
+"Microban II_105","Assets/Resources/Levels/Microban2/Microban II_105.asset",8,8,64,28,0.4375,6,0.09375,6,3,3,0.046875
+"Microban II_106","Assets/Resources/Levels/Microban2/Microban II_106.asset",7,10,70,34,0.485714,4,0.057143,4,1,3,0.042857
+"Microban II_107","Assets/Resources/Levels/Microban2/Microban II_107.asset",9,11,99,45,0.454546,5,0.050505,5,0,5,0.050505
+"Microban II_108","Assets/Resources/Levels/Microban2/Microban II_108.asset",11,11,121,40,0.330579,8,0.066116,8,0,8,0.066116
+"Microban II_109","Assets/Resources/Levels/Microban2/Microban II_109.asset",10,10,100,36,0.36,12,0.12,12,0,12,0.12
+"Microban II_110","Assets/Resources/Levels/Microban2/Microban II_110.asset",10,16,160,69,0.43125,4,0.025,4,0,4,0.025
+"Microban II_111","Assets/Resources/Levels/Microban2/Microban II_111.asset",12,12,144,57,0.395833,6,0.041667,6,0,6,0.041667
+"Microban II_112","Assets/Resources/Levels/Microban2/Microban II_112.asset",9,7,63,30,0.476191,8,0.126984,8,2,6,0.095238
+"Microban II_113","Assets/Resources/Levels/Microban2/Microban II_113.asset",11,7,77,35,0.454546,10,0.12987,10,8,2,0.025974
+"Microban II_114","Assets/Resources/Levels/Microban2/Microban II_114.asset",15,15,225,76,0.337778,8,0.035556,8,0,8,0.035556
+"Microban II_115","Assets/Resources/Levels/Microban2/Microban II_115.asset",13,13,169,24,0.142012,16,0.094675,16,0,16,0.094675
+"Microban II_116","Assets/Resources/Levels/Microban2/Microban II_116.asset",16,11,176,74,0.420455,4,0.022727,4,0,4,0.022727
+"Microban II_117","Assets/Resources/Levels/Microban2/Microban II_117.asset",11,11,121,50,0.413223,4,0.033058,4,0,4,0.033058
+"Microban II_118","Assets/Resources/Levels/Microban2/Microban II_118.asset",13,12,156,59,0.378205,6,0.038462,6,0,6,0.038462
+"Microban II_119","Assets/Resources/Levels/Microban2/Microban II_119.asset",10,14,140,59,0.421429,6,0.042857,6,0,6,0.042857
+"Microban II_120","Assets/Resources/Levels/Microban2/Microban II_120.asset",15,12,180,86,0.477778,6,0.033333,6,0,6,0.033333
+"Microban II_121","Assets/Resources/Levels/Microban2/Microban II_121.asset",10,14,140,58,0.414286,6,0.042857,6,1,5,0.035714
+"Microban II_122","Assets/Resources/Levels/Microban2/Microban II_122.asset",8,7,56,27,0.482143,4,0.071429,4,3,1,0.017857
+"Microban II_123","Assets/Resources/Levels/Microban2/Microban II_123.asset",12,11,132,46,0.348485,4,0.030303,4,0,4,0.030303
+"Microban II_124","Assets/Resources/Levels/Microban2/Microban II_124.asset",9,11,99,44,0.444444,12,0.121212,12,2,10,0.10101
+"Microban II_125","Assets/Resources/Levels/Microban2/Microban II_125.asset",16,14,224,79,0.352679,5,0.022321,5,0,5,0.022321
+"Microban II_126","Assets/Resources/Levels/Microban2/Microban II_126.asset",14,15,210,73,0.347619,8,0.038095,8,0,8,0.038095
+"Microban II_127","Assets/Resources/Levels/Microban2/Microban II_127.asset",10,7,70,31,0.442857,5,0.071429,5,2,3,0.042857
+"Microban II_128","Assets/Resources/Levels/Microban2/Microban II_128.asset",11,9,99,45,0.454546,4,0.040404,4,3,1,0.010101
+"Microban II_129","Assets/Resources/Levels/Microban2/Microban II_129.asset",11,11,121,56,0.46281,4,0.033058,4,0,4,0.033058
+"Microban II_130","Assets/Resources/Levels/Microban2/Microban II_130.asset",18,17,306,66,0.215686,24,0.078431,24,23,1,0.003268
+"Microban II_131","Assets/Resources/Levels/Microban2/Microban II_131.asset",18,17,306,66,0.215686,44,0.143791,44,0,44,0.143791
+"Microban II_132","Assets/Resources/Levels/Microban2/Microban II_132.asset",27,27,729,272,0.373114,1,0.001372,1,0,1,0.001372
+"Microban II_133","Assets/Resources/Levels/Microban2/Microban II_133.asset",34,34,1156,500,0.432526,1,0.000865,1,0,1,0.000865
+"Microban II_134","Assets/Resources/Levels/Microban2/Microban II_134.asset",37,37,1369,491,0.358656,1,0.00073,1,0,1,0.00073
+"Microban II_135","Assets/Resources/Levels/Microban2/Microban II_135.asset",47,41,1927,671,0.34821,1,0.000519,1,0,1,0.000519
+"Microban III_001","Assets/Resources/Levels/Microban3/Microban III_001.asset",8,8,64,28,0.4375,3,0.046875,3,0,3,0.046875
+"Microban III_002","Assets/Resources/Levels/Microban3/Microban III_002.asset",7,6,42,22,0.52381,3,0.071429,3,2,1,0.02381
+"Microban III_003","Assets/Resources/Levels/Microban3/Microban III_003.asset",7,8,56,30,0.535714,3,0.053571,3,0,3,0.053571
+"Microban III_004","Assets/Resources/Levels/Microban3/Microban III_004.asset",6,9,54,29,0.537037,4,0.074074,4,2,2,0.037037
+"Microban III_005","Assets/Resources/Levels/Microban3/Microban III_005.asset",10,6,60,28,0.466667,3,0.05,3,0,3,0.05
+"Microban III_006","Assets/Resources/Levels/Microban3/Microban III_006.asset",8,7,56,33,0.589286,4,0.071429,4,2,2,0.035714
+"Microban III_007","Assets/Resources/Levels/Microban3/Microban III_007.asset",9,9,81,37,0.45679,4,0.049383,4,0,4,0.049383
+"Microban III_008","Assets/Resources/Levels/Microban3/Microban III_008.asset",16,8,128,64,0.5,4,0.03125,4,2,2,0.015625
+"Microban III_009","Assets/Resources/Levels/Microban3/Microban III_009.asset",15,8,120,54,0.45,4,0.033333,4,0,4,0.033333
+"Microban III_010","Assets/Resources/Levels/Microban3/Microban III_010.asset",9,7,63,31,0.492064,5,0.079365,5,0,5,0.079365
+"Microban III_011","Assets/Resources/Levels/Microban3/Microban III_011.asset",13,8,104,48,0.461539,3,0.028846,3,0,3,0.028846
+"Microban III_012","Assets/Resources/Levels/Microban3/Microban III_012.asset",8,8,64,30,0.46875,4,0.0625,4,0,4,0.0625
+"Microban III_013","Assets/Resources/Levels/Microban3/Microban III_013.asset",7,8,56,27,0.482143,4,0.071429,4,3,1,0.017857
+"Microban III_014","Assets/Resources/Levels/Microban3/Microban III_014.asset",8,8,64,32,0.5,4,0.0625,4,0,4,0.0625
+"Microban III_015","Assets/Resources/Levels/Microban3/Microban III_015.asset",8,8,64,30,0.46875,4,0.0625,4,0,4,0.0625
+"Microban III_016","Assets/Resources/Levels/Microban3/Microban III_016.asset",8,10,80,36,0.45,4,0.05,4,0,4,0.05
+"Microban III_017","Assets/Resources/Levels/Microban3/Microban III_017.asset",9,8,72,38,0.527778,4,0.055556,4,1,3,0.041667
+"Microban III_018","Assets/Resources/Levels/Microban3/Microban III_018.asset",9,7,63,30,0.476191,6,0.095238,6,4,2,0.031746
+"Microban III_019","Assets/Resources/Levels/Microban3/Microban III_019.asset",9,8,72,30,0.416667,8,0.111111,8,0,8,0.111111
+"Microban III_020","Assets/Resources/Levels/Microban3/Microban III_020.asset",11,9,99,40,0.40404,6,0.060606,6,5,1,0.010101
+"Microban III_021","Assets/Resources/Levels/Microban3/Microban III_021.asset",9,10,90,39,0.433333,3,0.033333,3,0,3,0.033333
+"Microban III_022","Assets/Resources/Levels/Microban3/Microban III_022.asset",11,14,154,65,0.422078,3,0.019481,3,0,3,0.019481
+"Microban III_023","Assets/Resources/Levels/Microban3/Microban III_023.asset",15,15,225,72,0.32,8,0.035556,8,4,4,0.017778
+"Microban III_024","Assets/Resources/Levels/Microban3/Microban III_024.asset",15,15,225,76,0.337778,8,0.035556,8,4,4,0.017778
+"Microban III_025","Assets/Resources/Levels/Microban3/Microban III_025.asset",8,12,96,44,0.458333,6,0.0625,6,0,6,0.0625
+"Microban III_026","Assets/Resources/Levels/Microban3/Microban III_026.asset",13,11,143,54,0.377622,3,0.020979,3,0,3,0.020979
+"Microban III_027","Assets/Resources/Levels/Microban3/Microban III_027.asset",13,10,130,52,0.4,4,0.030769,4,0,4,0.030769
+"Microban III_028","Assets/Resources/Levels/Microban3/Microban III_028.asset",10,7,70,32,0.457143,6,0.085714,6,0,6,0.085714
+"Microban III_029","Assets/Resources/Levels/Microban3/Microban III_029.asset",12,8,96,40,0.416667,8,0.083333,8,0,8,0.083333
+"Microban III_030","Assets/Resources/Levels/Microban3/Microban III_030.asset",11,8,88,39,0.443182,6,0.068182,6,3,3,0.034091
+"Microban III_031","Assets/Resources/Levels/Microban3/Microban III_031.asset",12,11,132,51,0.386364,5,0.037879,5,0,5,0.037879
+"Microban III_032","Assets/Resources/Levels/Microban3/Microban III_032.asset",16,11,176,66,0.375,4,0.022727,4,0,4,0.022727
+"Microban III_033","Assets/Resources/Levels/Microban3/Microban III_033.asset",19,12,228,78,0.342105,6,0.026316,6,0,6,0.026316
+"Microban III_034","Assets/Resources/Levels/Microban3/Microban III_034.asset",9,7,63,28,0.444444,5,0.079365,5,0,5,0.079365
+"Microban III_035","Assets/Resources/Levels/Microban3/Microban III_035.asset",8,8,64,24,0.375,6,0.09375,6,2,4,0.0625
+"Microban III_036","Assets/Resources/Levels/Microban3/Microban III_036.asset",11,11,121,60,0.495868,8,0.066116,8,0,8,0.066116
+"Microban III_037","Assets/Resources/Levels/Microban3/Microban III_037.asset",10,8,80,32,0.4,4,0.05,4,0,4,0.05
+"Microban III_038","Assets/Resources/Levels/Microban3/Microban III_038.asset",8,10,80,34,0.425,5,0.0625,5,0,5,0.0625
+"Microban III_039","Assets/Resources/Levels/Microban3/Microban III_039.asset",10,12,120,44,0.366667,5,0.041667,5,0,5,0.041667
+"Microban III_040","Assets/Resources/Levels/Microban3/Microban III_040.asset",11,14,154,72,0.467533,4,0.025974,4,0,4,0.025974
+"Microban III_041","Assets/Resources/Levels/Microban3/Microban III_041.asset",10,11,110,51,0.463636,4,0.036364,4,0,4,0.036364
+"Microban III_042","Assets/Resources/Levels/Microban3/Microban III_042.asset",11,10,110,47,0.427273,6,0.054545,6,0,6,0.054545
+"Microban III_043","Assets/Resources/Levels/Microban3/Microban III_043.asset",11,11,121,40,0.330579,8,0.066116,8,0,8,0.066116
+"Microban III_044","Assets/Resources/Levels/Microban3/Microban III_044.asset",8,9,72,30,0.416667,12,0.166667,12,6,6,0.083333
+"Microban III_045","Assets/Resources/Levels/Microban3/Microban III_045.asset",11,12,132,62,0.469697,4,0.030303,4,0,4,0.030303
+"Microban III_046","Assets/Resources/Levels/Microban3/Microban III_046.asset",14,14,196,104,0.530612,12,0.061224,12,0,12,0.061224
+"Microban III_047","Assets/Resources/Levels/Microban3/Microban III_047.asset",15,13,195,86,0.441026,12,0.061538,12,4,8,0.041026
+"Microban III_048","Assets/Resources/Levels/Microban3/Microban III_048.asset",9,7,63,34,0.539683,4,0.063492,4,2,2,0.031746
+"Microban III_049","Assets/Resources/Levels/Microban3/Microban III_049.asset",8,8,64,34,0.53125,4,0.0625,4,2,2,0.03125
+"Microban III_050","Assets/Resources/Levels/Microban3/Microban III_050.asset",8,8,64,35,0.546875,4,0.0625,4,2,2,0.03125
+"Microban III_051","Assets/Resources/Levels/Microban3/Microban III_051.asset",9,9,81,35,0.432099,4,0.049383,4,2,2,0.024691
+"Microban III_052","Assets/Resources/Levels/Microban3/Microban III_052.asset",9,10,90,37,0.411111,5,0.055556,5,3,2,0.022222
+"Microban III_053","Assets/Resources/Levels/Microban3/Microban III_053.asset",9,10,90,37,0.411111,6,0.066667,6,4,2,0.022222
+"Microban III_054","Assets/Resources/Levels/Microban3/Microban III_054.asset",16,12,192,66,0.34375,5,0.026042,5,0,5,0.026042
+"Microban III_055","Assets/Resources/Levels/Microban3/Microban III_055.asset",11,11,121,56,0.46281,12,0.099174,12,0,12,0.099174
+"Microban III_056","Assets/Resources/Levels/Microban3/Microban III_056.asset",11,11,121,44,0.363636,12,0.099174,12,0,12,0.099174
+"Microban III_057","Assets/Resources/Levels/Microban3/Microban III_057.asset",13,13,169,64,0.378698,20,0.118343,20,0,20,0.118343
+"Microban III_058","Assets/Resources/Levels/Microban3/Microban III_058.asset",15,15,225,76,0.337778,40,0.177778,40,0,40,0.177778
+"Microban III_059","Assets/Resources/Levels/Microban3/Microban III_059.asset",17,11,187,92,0.491979,13,0.069519,13,0,13,0.069519
+"Microban III_060","Assets/Resources/Levels/Microban3/Microban III_060.asset",8,10,80,43,0.5375,3,0.0375,3,0,3,0.0375
+"Microban III_061","Assets/Resources/Levels/Microban3/Microban III_061.asset",8,7,56,28,0.5,3,0.053571,3,0,3,0.053571
+"Microban III_062","Assets/Resources/Levels/Microban3/Microban III_062.asset",9,7,63,26,0.412698,3,0.047619,3,0,3,0.047619
+"Microban III_063","Assets/Resources/Levels/Microban3/Microban III_063.asset",7,8,56,27,0.482143,3,0.053571,3,0,3,0.053571
+"Microban III_064","Assets/Resources/Levels/Microban3/Microban III_064.asset",10,8,80,45,0.5625,3,0.0375,3,0,3,0.0375
+"Microban III_065","Assets/Resources/Levels/Microban3/Microban III_065.asset",8,8,64,30,0.46875,3,0.046875,3,0,3,0.046875
+"Microban III_066","Assets/Resources/Levels/Microban3/Microban III_066.asset",8,9,72,37,0.513889,3,0.041667,3,0,3,0.041667
+"Microban III_067","Assets/Resources/Levels/Microban3/Microban III_067.asset",8,7,56,29,0.517857,3,0.053571,3,0,3,0.053571
+"Microban III_068","Assets/Resources/Levels/Microban3/Microban III_068.asset",8,8,64,32,0.5,3,0.046875,3,0,3,0.046875
+"Microban III_069","Assets/Resources/Levels/Microban3/Microban III_069.asset",7,9,63,28,0.444444,3,0.047619,3,2,1,0.015873
+"Microban III_070","Assets/Resources/Levels/Microban3/Microban III_070.asset",8,9,72,33,0.458333,3,0.041667,3,2,1,0.013889
+"Microban III_071","Assets/Resources/Levels/Microban3/Microban III_071.asset",6,8,48,24,0.5,4,0.083333,4,3,1,0.020833
+"Microban III_072","Assets/Resources/Levels/Microban3/Microban III_072.asset",7,10,70,32,0.457143,4,0.057143,4,3,1,0.014286
+"Microban III_073","Assets/Resources/Levels/Microban3/Microban III_073.asset",8,9,72,39,0.541667,3,0.041667,3,1,2,0.027778
+"Microban III_074","Assets/Resources/Levels/Microban3/Microban III_074.asset",8,9,72,34,0.472222,3,0.041667,3,1,2,0.027778
+"Microban III_075","Assets/Resources/Levels/Microban3/Microban III_075.asset",6,9,54,27,0.5,3,0.055556,3,1,2,0.037037
+"Microban III_076","Assets/Resources/Levels/Microban3/Microban III_076.asset",7,10,70,38,0.542857,3,0.042857,3,1,2,0.028571
+"Microban III_077","Assets/Resources/Levels/Microban3/Microban III_077.asset",8,10,80,36,0.45,3,0.0375,3,0,3,0.0375
+"Microban III_078","Assets/Resources/Levels/Microban3/Microban III_078.asset",8,7,56,28,0.5,3,0.053571,3,0,3,0.053571
+"Microban III_079","Assets/Resources/Levels/Microban3/Microban III_079.asset",8,7,56,28,0.5,3,0.053571,3,0,3,0.053571
+"Microban III_080","Assets/Resources/Levels/Microban3/Microban III_080.asset",7,9,63,31,0.492064,3,0.047619,3,0,3,0.047619
+"Microban III_081","Assets/Resources/Levels/Microban3/Microban III_081.asset",7,8,56,28,0.5,3,0.053571,3,1,2,0.035714
+"Microban III_082","Assets/Resources/Levels/Microban3/Microban III_082.asset",6,8,48,26,0.541667,3,0.0625,3,1,2,0.041667
+"Microban III_083","Assets/Resources/Levels/Microban3/Microban III_083.asset",9,9,81,36,0.444444,3,0.037037,3,1,2,0.024691
+"Microban III_084","Assets/Resources/Levels/Microban3/Microban III_084.asset",9,7,63,40,0.634921,3,0.047619,3,1,2,0.031746
+"Microban III_085","Assets/Resources/Levels/Microban3/Microban III_085.asset",8,8,64,32,0.5,3,0.046875,3,1,2,0.03125
+"Microban III_086","Assets/Resources/Levels/Microban3/Microban III_086.asset",8,8,64,31,0.484375,3,0.046875,3,1,2,0.03125
+"Microban III_087","Assets/Resources/Levels/Microban3/Microban III_087.asset",10,8,80,43,0.5375,3,0.0375,3,1,2,0.025
+"Microban III_088","Assets/Resources/Levels/Microban3/Microban III_088.asset",10,10,100,46,0.46,3,0.03,3,1,2,0.02
+"Microban III_089","Assets/Resources/Levels/Microban3/Microban III_089.asset",7,8,56,30,0.535714,3,0.053571,3,2,1,0.017857
+"Microban III_090","Assets/Resources/Levels/Microban3/Microban III_090.asset",7,7,49,25,0.510204,3,0.061224,3,2,1,0.020408
+"Microban III_091","Assets/Resources/Levels/Microban3/Microban III_091.asset",7,7,49,27,0.55102,3,0.061224,3,2,1,0.020408
+"Microban III_092","Assets/Resources/Levels/Microban3/Microban III_092.asset",8,9,72,34,0.472222,3,0.041667,3,2,1,0.013889
+"Microban III_093","Assets/Resources/Levels/Microban3/Microban III_093.asset",8,8,64,30,0.46875,3,0.046875,3,2,1,0.015625
+"Microban III_094","Assets/Resources/Levels/Microban3/Microban III_094.asset",9,7,63,29,0.460318,3,0.047619,3,2,1,0.015873
+"Microban III_095","Assets/Resources/Levels/Microban3/Microban III_095.asset",8,8,64,28,0.4375,3,0.046875,3,2,1,0.015625
+"Microban III_096","Assets/Resources/Levels/Microban3/Microban III_096.asset",9,8,72,33,0.458333,3,0.041667,3,2,1,0.013889
+"Microban III_097","Assets/Resources/Levels/Microban3/Microban III_097.asset",8,6,48,28,0.583333,3,0.0625,3,0,3,0.0625
+"Microban III_098","Assets/Resources/Levels/Microban3/Microban III_098.asset",7,9,63,29,0.460318,3,0.047619,3,0,3,0.047619
+"Microban III_099","Assets/Resources/Levels/Microban3/Microban III_099.asset",7,7,49,24,0.489796,3,0.061224,3,0,3,0.061224
+"Microban III_100","Assets/Resources/Levels/Microban3/Microban III_100.asset",7,6,42,23,0.547619,3,0.071429,3,0,3,0.071429
+"Microban III_101","Assets/Resources/Levels/Microban3/Microban III_101.asset",47,42,1974,614,0.311044,1,0.000507,1,0,1,0.000507
+"Microban IV_001","Assets/Resources/Levels/Microban4/Microban IV_001.asset",8,6,48,25,0.520833,2,0.041667,2,1,1,0.020833
+"Microban IV_002","Assets/Resources/Levels/Microban4/Microban IV_002.asset",11,7,77,33,0.428571,4,0.051948,4,2,2,0.025974
+"Microban IV_003","Assets/Resources/Levels/Microban4/Microban IV_003.asset",8,7,56,28,0.5,6,0.107143,6,2,4,0.071429
+"Microban IV_004","Assets/Resources/Levels/Microban4/Microban IV_004.asset",9,6,54,27,0.5,7,0.12963,7,0,7,0.12963
+"Microban IV_005","Assets/Resources/Levels/Microban4/Microban IV_005.asset",15,7,105,44,0.419048,3,0.028571,3,0,3,0.028571
+"Microban IV_006","Assets/Resources/Levels/Microban4/Microban IV_006.asset",16,8,128,52,0.40625,4,0.03125,4,0,4,0.03125
+"Microban IV_007","Assets/Resources/Levels/Microban4/Microban IV_007.asset",9,10,90,48,0.533333,4,0.044444,4,0,4,0.044444
+"Microban IV_008","Assets/Resources/Levels/Microban4/Microban IV_008.asset",8,8,64,28,0.4375,12,0.1875,12,0,12,0.1875
+"Microban IV_009","Assets/Resources/Levels/Microban4/Microban IV_009.asset",11,11,121,40,0.330579,10,0.082645,10,6,4,0.033058
+"Microban IV_010","Assets/Resources/Levels/Microban4/Microban IV_010.asset",14,12,168,54,0.321429,6,0.035714,6,2,4,0.02381
+"Microban IV_011","Assets/Resources/Levels/Microban4/Microban IV_011.asset",7,8,56,28,0.5,6,0.107143,6,0,6,0.107143
+"Microban IV_012","Assets/Resources/Levels/Microban4/Microban IV_012.asset",7,9,63,33,0.52381,6,0.095238,6,1,5,0.079365
+"Microban IV_013","Assets/Resources/Levels/Microban4/Microban IV_013.asset",7,9,63,31,0.492064,4,0.063492,4,1,3,0.047619
+"Microban IV_014","Assets/Resources/Levels/Microban4/Microban IV_014.asset",8,9,72,34,0.472222,3,0.041667,3,0,3,0.041667
+"Microban IV_015","Assets/Resources/Levels/Microban4/Microban IV_015.asset",11,7,77,38,0.493507,4,0.051948,4,3,1,0.012987
+"Microban IV_016","Assets/Resources/Levels/Microban4/Microban IV_016.asset",9,7,63,32,0.507937,3,0.047619,3,2,1,0.015873
+"Microban IV_017","Assets/Resources/Levels/Microban4/Microban IV_017.asset",7,8,56,27,0.482143,5,0.089286,5,2,3,0.053571
+"Microban IV_018","Assets/Resources/Levels/Microban4/Microban IV_018.asset",10,9,90,40,0.444444,6,0.066667,6,4,2,0.022222
+"Microban IV_019","Assets/Resources/Levels/Microban4/Microban IV_019.asset",8,8,64,34,0.53125,3,0.046875,3,0,3,0.046875
+"Microban IV_020","Assets/Resources/Levels/Microban4/Microban IV_020.asset",8,7,56,28,0.5,4,0.071429,4,2,2,0.035714
+"Microban IV_021","Assets/Resources/Levels/Microban4/Microban IV_021.asset",8,9,72,37,0.513889,4,0.055556,4,1,3,0.041667
+"Microban IV_022","Assets/Resources/Levels/Microban4/Microban IV_022.asset",9,7,63,29,0.460318,4,0.063492,4,2,2,0.031746
+"Microban IV_023","Assets/Resources/Levels/Microban4/Microban IV_023.asset",9,11,99,36,0.363636,6,0.060606,6,4,2,0.020202
+"Microban IV_024","Assets/Resources/Levels/Microban4/Microban IV_024.asset",11,10,110,45,0.409091,4,0.036364,4,1,3,0.027273
+"Microban IV_025","Assets/Resources/Levels/Microban4/Microban IV_025.asset",15,8,120,60,0.5,4,0.033333,4,0,4,0.033333
+"Microban IV_026","Assets/Resources/Levels/Microban4/Microban IV_026.asset",8,9,72,34,0.472222,4,0.055556,4,0,4,0.055556
+"Microban IV_027","Assets/Resources/Levels/Microban4/Microban IV_027.asset",10,8,80,35,0.4375,4,0.05,4,2,2,0.025
+"Microban IV_028","Assets/Resources/Levels/Microban4/Microban IV_028.asset",11,9,99,40,0.40404,7,0.070707,7,6,1,0.010101
+"Microban IV_029","Assets/Resources/Levels/Microban4/Microban IV_029.asset",13,9,117,44,0.376068,9,0.076923,9,8,1,0.008547
+"Microban IV_030","Assets/Resources/Levels/Microban4/Microban IV_030.asset",13,17,221,74,0.334842,6,0.027149,6,0,6,0.027149
+"Microban IV_031","Assets/Resources/Levels/Microban4/Microban IV_031.asset",8,8,64,29,0.453125,4,0.0625,4,1,3,0.046875
+"Microban IV_032","Assets/Resources/Levels/Microban4/Microban IV_032.asset",10,10,100,49,0.49,6,0.06,6,0,6,0.06
+"Microban IV_033","Assets/Resources/Levels/Microban4/Microban IV_033.asset",9,9,81,43,0.530864,6,0.074074,6,4,2,0.024691
+"Microban IV_034","Assets/Resources/Levels/Microban4/Microban IV_034.asset",9,8,72,35,0.486111,7,0.097222,7,3,4,0.055556
+"Microban IV_035","Assets/Resources/Levels/Microban4/Microban IV_035.asset",9,9,81,36,0.444444,8,0.098765,8,0,8,0.098765
+"Microban IV_036","Assets/Resources/Levels/Microban4/Microban IV_036.asset",12,12,144,76,0.527778,8,0.055556,8,0,8,0.055556
+"Microban IV_037","Assets/Resources/Levels/Microban4/Microban IV_037.asset",9,9,81,32,0.395062,12,0.148148,12,4,8,0.098765
+"Microban IV_038","Assets/Resources/Levels/Microban4/Microban IV_038.asset",9,9,81,32,0.395062,12,0.148148,12,0,12,0.148148
+"Microban IV_039","Assets/Resources/Levels/Microban4/Microban IV_039.asset",20,12,240,84,0.35,3,0.0125,3,0,3,0.0125
+"Microban IV_040","Assets/Resources/Levels/Microban4/Microban IV_040.asset",22,10,220,80,0.363636,4,0.018182,4,0,4,0.018182
+"Microban IV_041","Assets/Resources/Levels/Microban4/Microban IV_041.asset",18,11,198,79,0.39899,3,0.015152,3,0,3,0.015152
+"Microban IV_042","Assets/Resources/Levels/Microban4/Microban IV_042.asset",27,12,324,117,0.361111,7,0.021605,7,0,7,0.021605
+"Microban IV_043","Assets/Resources/Levels/Microban4/Microban IV_043.asset",12,7,84,39,0.464286,3,0.035714,3,0,3,0.035714
+"Microban IV_044","Assets/Resources/Levels/Microban4/Microban IV_044.asset",13,8,104,46,0.442308,4,0.038462,4,0,4,0.038462
+"Microban IV_045","Assets/Resources/Levels/Microban4/Microban IV_045.asset",11,10,110,45,0.409091,5,0.045455,5,2,3,0.027273
+"Microban IV_046","Assets/Resources/Levels/Microban4/Microban IV_046.asset",15,11,165,75,0.454546,8,0.048485,8,0,8,0.048485
+"Microban IV_047","Assets/Resources/Levels/Microban4/Microban IV_047.asset",9,10,90,43,0.477778,5,0.055556,5,0,5,0.055556
+"Microban IV_048","Assets/Resources/Levels/Microban4/Microban IV_048.asset",9,10,90,42,0.466667,5,0.055556,5,0,5,0.055556
+"Microban IV_049","Assets/Resources/Levels/Microban4/Microban IV_049.asset",9,10,90,41,0.455556,5,0.055556,5,0,5,0.055556
+"Microban IV_050","Assets/Resources/Levels/Microban4/Microban IV_050.asset",14,15,210,112,0.533333,4,0.019048,4,0,4,0.019048
+"Microban IV_051","Assets/Resources/Levels/Microban4/Microban IV_051.asset",7,9,63,38,0.603175,6,0.095238,6,0,6,0.095238
+"Microban IV_052","Assets/Resources/Levels/Microban4/Microban IV_052.asset",7,9,63,35,0.555556,6,0.095238,6,0,6,0.095238
+"Microban IV_053","Assets/Resources/Levels/Microban4/Microban IV_053.asset",7,9,63,36,0.571429,6,0.095238,6,0,6,0.095238
+"Microban IV_054","Assets/Resources/Levels/Microban4/Microban IV_054.asset",7,9,63,37,0.587302,6,0.095238,6,0,6,0.095238
+"Microban IV_055","Assets/Resources/Levels/Microban4/Microban IV_055.asset",11,9,99,47,0.474748,6,0.060606,6,5,1,0.010101
+"Microban IV_056","Assets/Resources/Levels/Microban4/Microban IV_056.asset",11,13,143,74,0.517483,7,0.048951,7,0,7,0.048951
+"Microban IV_057","Assets/Resources/Levels/Microban4/Microban IV_057.asset",16,9,144,60,0.416667,14,0.097222,14,12,2,0.013889
+"Microban IV_058","Assets/Resources/Levels/Microban4/Microban IV_058.asset",15,15,225,60,0.266667,12,0.053333,12,4,8,0.035556
+"Microban IV_059","Assets/Resources/Levels/Microban4/Microban IV_059.asset",13,13,169,56,0.331361,12,0.071006,12,4,8,0.047337
+"Microban IV_060","Assets/Resources/Levels/Microban4/Microban IV_060.asset",13,13,169,49,0.289941,24,0.142012,24,4,20,0.118343
+"Microban IV_061","Assets/Resources/Levels/Microban4/Microban IV_061.asset",11,10,110,46,0.418182,8,0.072727,8,4,4,0.036364
+"Microban IV_062","Assets/Resources/Levels/Microban4/Microban IV_062.asset",13,11,143,53,0.370629,10,0.06993,10,4,6,0.041958
+"Microban IV_063","Assets/Resources/Levels/Microban4/Microban IV_063.asset",11,9,99,44,0.444444,10,0.10101,10,3,7,0.070707
+"Microban IV_064","Assets/Resources/Levels/Microban4/Microban IV_064.asset",11,9,99,44,0.444444,10,0.10101,10,4,6,0.060606
+"Microban IV_065","Assets/Resources/Levels/Microban4/Microban IV_065.asset",9,9,81,36,0.444444,7,0.08642,7,2,5,0.061728
+"Microban IV_066","Assets/Resources/Levels/Microban4/Microban IV_066.asset",9,9,81,34,0.419753,10,0.123457,10,4,6,0.074074
+"Microban IV_067","Assets/Resources/Levels/Microban4/Microban IV_067.asset",8,11,88,38,0.431818,10,0.113636,10,2,8,0.090909
+"Microban IV_068","Assets/Resources/Levels/Microban4/Microban IV_068.asset",9,11,99,39,0.393939,8,0.080808,8,1,7,0.070707
+"Microban IV_069","Assets/Resources/Levels/Microban4/Microban IV_069.asset",11,11,121,45,0.371901,12,0.099174,12,1,11,0.090909
+"Microban IV_070","Assets/Resources/Levels/Microban4/Microban IV_070.asset",11,13,143,53,0.370629,11,0.076923,11,1,10,0.06993
+"Microban IV_071","Assets/Resources/Levels/Microban4/Microban IV_071.asset",8,12,96,42,0.4375,9,0.09375,9,0,9,0.09375
+"Microban IV_072","Assets/Resources/Levels/Microban4/Microban IV_072.asset",11,12,132,47,0.356061,8,0.060606,8,0,8,0.060606
+"Microban IV_073","Assets/Resources/Levels/Microban4/Microban IV_073.asset",10,10,100,40,0.4,10,0.1,10,2,8,0.08
+"Microban IV_074","Assets/Resources/Levels/Microban4/Microban IV_074.asset",9,12,108,44,0.407407,7,0.064815,7,0,7,0.064815
+"Microban IV_075","Assets/Resources/Levels/Microban4/Microban IV_075.asset",17,13,221,80,0.361991,15,0.067873,15,4,11,0.049774
+"Microban IV_076","Assets/Resources/Levels/Microban4/Microban IV_076.asset",13,11,143,66,0.461539,13,0.090909,13,1,12,0.083916
+"Microban IV_077","Assets/Resources/Levels/Microban4/Microban IV_077.asset",9,11,99,41,0.414141,10,0.10101,10,5,5,0.050505
+"Microban IV_078","Assets/Resources/Levels/Microban4/Microban IV_078.asset",10,14,140,52,0.371429,8,0.057143,8,1,7,0.05
+"Microban IV_079","Assets/Resources/Levels/Microban4/Microban IV_079.asset",9,11,99,42,0.424242,10,0.10101,10,3,7,0.070707
+"Microban IV_080","Assets/Resources/Levels/Microban4/Microban IV_080.asset",13,12,156,53,0.339744,12,0.076923,12,1,11,0.070513
+"Microban IV_081","Assets/Resources/Levels/Microban4/Microban IV_081.asset",10,11,110,42,0.381818,10,0.090909,10,2,8,0.072727
+"Microban IV_082","Assets/Resources/Levels/Microban4/Microban IV_082.asset",10,11,110,42,0.381818,9,0.081818,9,0,9,0.081818
+"Microban IV_083","Assets/Resources/Levels/Microban4/Microban IV_083.asset",10,11,110,41,0.372727,10,0.090909,10,1,9,0.081818
+"Microban IV_084","Assets/Resources/Levels/Microban4/Microban IV_084.asset",10,10,100,41,0.41,9,0.09,9,0,9,0.09
+"Microban IV_085","Assets/Resources/Levels/Microban4/Microban IV_085.asset",17,13,221,82,0.371041,13,0.058824,13,1,12,0.054299
+"Microban IV_086","Assets/Resources/Levels/Microban4/Microban IV_086.asset",9,11,99,44,0.444444,9,0.090909,9,1,8,0.080808
+"Microban IV_087","Assets/Resources/Levels/Microban4/Microban IV_087.asset",9,9,81,35,0.432099,7,0.08642,7,4,3,0.037037
+"Microban IV_088","Assets/Resources/Levels/Microban4/Microban IV_088.asset",12,13,156,59,0.378205,9,0.057692,9,4,5,0.032051
+"Microban IV_089","Assets/Resources/Levels/Microban4/Microban IV_089.asset",15,9,135,40,0.296296,17,0.125926,17,1,16,0.118519
+"Microban IV_090","Assets/Resources/Levels/Microban4/Microban IV_090.asset",15,9,135,44,0.325926,18,0.133333,18,6,12,0.088889
+"Microban IV_091","Assets/Resources/Levels/Microban4/Microban IV_091.asset",15,9,135,48,0.355556,15,0.111111,15,5,10,0.074074
+"Microban IV_092","Assets/Resources/Levels/Microban4/Microban IV_092.asset",15,9,135,44,0.325926,17,0.125926,17,13,4,0.02963
+"Microban IV_093","Assets/Resources/Levels/Microban4/Microban IV_093.asset",15,9,135,52,0.385185,19,0.140741,19,5,14,0.103704
+"Microban IV_094","Assets/Resources/Levels/Microban4/Microban IV_094.asset",15,9,135,56,0.414815,16,0.118519,16,3,13,0.096296
+"Microban IV_095","Assets/Resources/Levels/Microban4/Microban IV_095.asset",15,9,135,54,0.4,19,0.140741,19,9,10,0.074074
+"Microban IV_096","Assets/Resources/Levels/Microban4/Microban IV_096.asset",15,9,135,60,0.444444,19,0.140741,19,3,16,0.118519
+"Microban IV_097","Assets/Resources/Levels/Microban4/Microban IV_097.asset",16,10,160,68,0.425,22,0.1375,22,0,22,0.1375
+"Microban IV_098","Assets/Resources/Levels/Microban4/Microban IV_098.asset",16,10,160,64,0.4,26,0.1625,26,14,12,0.075
+"Microban IV_099","Assets/Resources/Levels/Microban4/Microban IV_099.asset",16,10,160,64,0.4,26,0.1625,26,8,18,0.1125
+"Microban IV_100","Assets/Resources/Levels/Microban4/Microban IV_100.asset",16,10,160,72,0.45,22,0.1375,22,0,22,0.1375
+"Microban IV_101","Assets/Resources/Levels/Microban4/Microban IV_101.asset",42,42,1764,752,0.426304,1,0.000567,1,0,1,0.000567
+"Microban IV_102","Assets/Resources/Levels/Microban4/Microban IV_102.asset",49,44,2156,815,0.378015,1,0.000464,1,0,1,0.000464
+"Original_001","Assets/Resources/Levels/Original/Original_001.asset",19,11,209,70,0.334928,6,0.028708,6,0,6,0.028708
+"Original_002","Assets/Resources/Levels/Original/Original_002.asset",14,10,140,62,0.442857,10,0.071429,10,0,10,0.071429
+"Original_003","Assets/Resources/Levels/Original/Original_003.asset",17,10,170,58,0.341177,11,0.064706,11,0,11,0.064706
+"Original_004","Assets/Resources/Levels/Original/Original_004.asset",19,14,266,82,0.308271,20,0.075188,20,0,20,0.075188
+"Original_005","Assets/Resources/Levels/Original/Original_005.asset",17,13,221,71,0.321267,12,0.054299,12,0,12,0.054299
+"Original_006","Assets/Resources/Levels/Original/Original_006.asset",12,11,132,56,0.424242,10,0.075758,10,0,10,0.075758
+"Original_007","Assets/Resources/Levels/Original/Original_007.asset",13,12,156,67,0.429487,11,0.070513,11,0,11,0.070513
+"Original_008","Assets/Resources/Levels/Original/Original_008.asset",16,16,256,79,0.308594,18,0.070313,18,0,18,0.070313
+"Original_009","Assets/Resources/Levels/Original/Original_009.asset",17,14,238,78,0.327731,14,0.058824,14,0,14,0.058824
+"Original_010","Assets/Resources/Levels/Original/Original_010.asset",19,16,304,117,0.384868,32,0.105263,32,0,32,0.105263
+"Original_011","Assets/Resources/Levels/Original/Original_011.asset",19,15,285,89,0.312281,14,0.049123,14,0,14,0.049123
+"Original_012","Assets/Resources/Levels/Original/Original_012.asset",17,13,221,89,0.402715,15,0.067873,15,0,15,0.067873
+"Original_013","Assets/Resources/Levels/Original/Original_013.asset",19,13,247,94,0.380567,16,0.064777,16,0,16,0.064777
+"Original_014","Assets/Resources/Levels/Original/Original_014.asset",18,16,288,105,0.364583,18,0.0625,18,0,18,0.0625
+"Original_015","Assets/Resources/Levels/Original/Original_015.asset",17,16,272,88,0.323529,15,0.055147,15,2,13,0.047794
+"Original_016","Assets/Resources/Levels/Original/Original_016.asset",14,15,210,73,0.347619,15,0.071429,15,1,14,0.066667
+"Original_017","Assets/Resources/Levels/Original/Original_017.asset",16,14,224,88,0.392857,6,0.026786,6,0,6,0.026786
+"Original_018","Assets/Resources/Levels/Original/Original_018.asset",19,13,247,96,0.388664,11,0.044534,11,0,11,0.044534
+"Original_019","Assets/Resources/Levels/Original/Original_019.asset",19,16,304,115,0.37829,15,0.049342,15,0,15,0.049342
+"Original_020","Assets/Resources/Levels/Original/Original_020.asset",19,16,304,122,0.401316,18,0.059211,18,0,18,0.059211
+"Original_021","Assets/Resources/Levels/Original/Original_021.asset",15,15,225,85,0.377778,13,0.057778,13,0,13,0.057778
+"Original_022","Assets/Resources/Levels/Original/Original_022.asset",19,16,304,123,0.404605,27,0.088816,27,0,27,0.088816
+"Original_023","Assets/Resources/Levels/Original/Original_023.asset",19,14,266,99,0.372181,18,0.067669,18,0,18,0.067669
+"Original_024","Assets/Resources/Levels/Original/Original_024.asset",19,16,304,128,0.421053,22,0.072368,22,0,22,0.072368
+"Original_025","Assets/Resources/Levels/Original/Original_025.asset",19,16,304,131,0.430921,19,0.0625,19,0,19,0.0625
+"Original_026","Assets/Resources/Levels/Original/Original_026.asset",15,12,180,70,0.388889,13,0.072222,13,0,13,0.072222
+"Original_027","Assets/Resources/Levels/Original/Original_027.asset",19,13,247,97,0.392713,20,0.080972,20,0,20,0.080972
+"Original_028","Assets/Resources/Levels/Original/Original_028.asset",17,15,255,89,0.34902,20,0.078431,20,0,20,0.078431
+"Original_029","Assets/Resources/Levels/Original/Original_029.asset",19,13,247,108,0.437247,16,0.064777,16,5,11,0.044534
+"Original_030","Assets/Resources/Levels/Original/Original_030.asset",19,14,266,113,0.424812,18,0.067669,18,0,18,0.067669
+"Original_031","Assets/Resources/Levels/Original/Original_031.asset",18,16,288,89,0.309028,20,0.069444,20,0,20,0.069444
+"Original_032","Assets/Resources/Levels/Original/Original_032.asset",13,15,195,63,0.323077,15,0.076923,15,0,15,0.076923
+"Original_033","Assets/Resources/Levels/Original/Original_033.asset",12,15,180,87,0.483333,15,0.083333,15,0,15,0.083333
+"Original_034","Assets/Resources/Levels/Original/Original_034.asset",14,15,210,80,0.380952,14,0.066667,14,0,14,0.066667
+"Original_035","Assets/Resources/Levels/Original/Original_035.asset",19,16,304,125,0.411184,17,0.055921,17,0,17,0.055921
+"Original_036","Assets/Resources/Levels/Original/Original_036.asset",19,16,304,115,0.37829,21,0.069079,21,0,21,0.069079
+"Original_037","Assets/Resources/Levels/Original/Original_037.asset",19,15,285,100,0.350877,20,0.070175,20,0,20,0.070175
+"Original_038","Assets/Resources/Levels/Original/Original_038.asset",11,11,121,48,0.396694,8,0.066116,8,0,8,0.066116
+"Original_039","Assets/Resources/Levels/Original/Original_039.asset",19,16,304,113,0.371711,25,0.082237,25,0,25,0.082237
+"Original_040","Assets/Resources/Levels/Original/Original_040.asset",17,16,272,91,0.334559,16,0.058824,16,0,16,0.058824
+"Original_041","Assets/Resources/Levels/Original/Original_041.asset",19,15,285,95,0.333333,15,0.052632,15,0,15,0.052632
+"Original_042","Assets/Resources/Levels/Original/Original_042.asset",18,13,234,80,0.34188,24,0.102564,24,0,24,0.102564
+"Original_043","Assets/Resources/Levels/Original/Original_043.asset",19,11,209,86,0.411483,9,0.043062,9,0,9,0.043062
+"Original_044","Assets/Resources/Levels/Original/Original_044.asset",19,15,285,105,0.368421,9,0.031579,9,0,9,0.031579
+"Original_045","Assets/Resources/Levels/Original/Original_045.asset",16,14,224,85,0.379464,17,0.075893,17,0,17,0.075893
+"Original_046","Assets/Resources/Levels/Original/Original_046.asset",14,16,224,85,0.379464,14,0.0625,14,0,14,0.0625
+"Original_047","Assets/Resources/Levels/Original/Original_047.asset",18,11,198,72,0.363636,16,0.080808,16,0,16,0.080808
+"Original_048","Assets/Resources/Levels/Original/Original_048.asset",13,16,208,67,0.322115,34,0.163462,34,18,16,0.076923
+"Original_049","Assets/Resources/Levels/Original/Original_049.asset",16,15,240,82,0.341667,12,0.05,12,1,11,0.045833
+"Original_050","Assets/Resources/Levels/Original/Original_050.asset",19,16,304,106,0.348684,16,0.052632,16,3,13,0.042763
+"Original_051","Assets/Resources/Levels/Original/Original_051.asset",14,12,168,67,0.39881,14,0.083333,14,0,14,0.083333
+"Original_052","Assets/Resources/Levels/Original/Original_052.asset",19,17,323,118,0.365325,18,0.055728,18,0,18,0.055728
+"Original_053","Assets/Resources/Levels/Original/Original_053.asset",20,12,240,107,0.445833,15,0.0625,15,0,15,0.0625
+"Original_054","Assets/Resources/Levels/Original/Original_054.asset",20,12,240,105,0.4375,16,0.066667,16,0,16,0.066667
+"Original_055","Assets/Resources/Levels/Original/Original_055.asset",20,12,240,112,0.466667,12,0.05,12,0,12,0.05
+"Original_056","Assets/Resources/Levels/Original/Original_056.asset",20,12,240,117,0.4875,16,0.066667,16,0,16,0.066667
+"Original_057","Assets/Resources/Levels/Original/Original_057.asset",20,12,240,110,0.458333,16,0.066667,16,0,16,0.066667
+"Original_058","Assets/Resources/Levels/Original/Original_058.asset",20,12,240,105,0.4375,15,0.0625,15,0,15,0.0625
+"Original_059","Assets/Resources/Levels/Original/Original_059.asset",20,12,240,118,0.491667,16,0.066667,16,0,16,0.066667
+"Original_060","Assets/Resources/Levels/Original/Original_060.asset",20,12,240,119,0.495833,13,0.054167,13,0,13,0.054167
+"Original_061","Assets/Resources/Levels/Original/Original_061.asset",20,12,240,109,0.454167,20,0.083333,20,0,20,0.083333
+"Original_062","Assets/Resources/Levels/Original/Original_062.asset",20,12,240,114,0.475,16,0.066667,16,0,16,0.066667
+"Original_063","Assets/Resources/Levels/Original/Original_063.asset",20,12,240,100,0.416667,17,0.070833,17,0,17,0.070833
+"Original_064","Assets/Resources/Levels/Original/Original_064.asset",20,12,240,123,0.5125,16,0.066667,16,0,16,0.066667
+"Original_065","Assets/Resources/Levels/Original/Original_065.asset",20,12,240,110,0.458333,15,0.0625,15,0,15,0.0625
+"Original_066","Assets/Resources/Levels/Original/Original_066.asset",20,12,240,96,0.4,18,0.075,18,0,18,0.075
+"Original_067","Assets/Resources/Levels/Original/Original_067.asset",20,12,240,119,0.495833,20,0.083333,20,0,20,0.083333
+"Original_068","Assets/Resources/Levels/Original/Original_068.asset",20,12,240,108,0.45,15,0.0625,15,0,15,0.0625
+"Original_069","Assets/Resources/Levels/Original/Original_069.asset",20,12,240,101,0.420833,18,0.075,18,0,18,0.075
+"Original_070","Assets/Resources/Levels/Original/Original_070.asset",20,12,240,110,0.458333,18,0.075,18,0,18,0.075
+"Original_071","Assets/Resources/Levels/Original/Original_071.asset",20,12,240,105,0.4375,18,0.075,18,0,18,0.075
+"Original_072","Assets/Resources/Levels/Original/Original_072.asset",20,12,240,108,0.45,16,0.066667,16,0,16,0.066667
+"Original_073","Assets/Resources/Levels/Original/Original_073.asset",20,12,240,101,0.420833,14,0.058333,14,0,14,0.058333
+"Original_074","Assets/Resources/Levels/Original/Original_074.asset",20,12,240,114,0.475,16,0.066667,16,0,16,0.066667
+"Original_075","Assets/Resources/Levels/Original/Original_075.asset",20,12,240,110,0.458333,17,0.070833,17,0,17,0.070833
+"Original_076","Assets/Resources/Levels/Original/Original_076.asset",20,12,240,110,0.458333,17,0.070833,17,0,17,0.070833
+"Original_077","Assets/Resources/Levels/Original/Original_077.asset",14,13,182,78,0.428571,10,0.054945,10,0,10,0.054945
+"Original_078","Assets/Resources/Levels/Original/Original_078.asset",19,12,228,87,0.381579,8,0.035088,8,0,8,0.035088
+"Original_079","Assets/Resources/Levels/Original/Original_079.asset",19,12,228,78,0.342105,12,0.052632,12,0,12,0.052632
+"Original_080","Assets/Resources/Levels/Original/Original_080.asset",19,13,247,78,0.31579,12,0.048583,12,0,12,0.048583
+"Original_081","Assets/Resources/Levels/Original/Original_081.asset",19,13,247,82,0.331984,12,0.048583,12,0,12,0.048583
+"Original_082","Assets/Resources/Levels/Original/Original_082.asset",17,13,221,76,0.343891,12,0.054299,12,0,12,0.054299
+"Original_083","Assets/Resources/Levels/Original/Original_083.asset",17,13,221,102,0.461539,10,0.045249,10,0,10,0.045249
+"Original_084","Assets/Resources/Levels/Original/Original_084.asset",16,12,192,79,0.411458,12,0.0625,12,0,12,0.0625
+"Original_085","Assets/Resources/Levels/Original/Original_085.asset",20,16,320,137,0.428125,15,0.046875,15,0,15,0.046875
+"Original_086","Assets/Resources/Levels/Original/Original_086.asset",17,10,170,73,0.429412,10,0.058824,10,0,10,0.058824
+"Original_087","Assets/Resources/Levels/Original/Original_087.asset",16,14,224,95,0.424107,12,0.053571,12,0,12,0.053571
+"Original_088","Assets/Resources/Levels/Original/Original_088.asset",17,16,272,102,0.375,23,0.084559,23,0,23,0.084559
+"Original_089","Assets/Resources/Levels/Original/Original_089.asset",20,17,340,131,0.385294,21,0.061765,21,0,21,0.061765
+"Original_090","Assets/Resources/Levels/Original/Original_090.asset",20,16,320,139,0.434375,25,0.078125,25,3,22,0.06875
+"Sasquatch II_001","Assets/Resources/Levels/Sasquatch II/Sasquatch II_001.asset",10,11,110,49,0.445455,5,0.045455,5,0,5,0.045455
+"Sasquatch II_002","Assets/Resources/Levels/Sasquatch II/Sasquatch II_002.asset",10,11,110,48,0.436364,5,0.045455,5,0,5,0.045455
+"Sasquatch II_003","Assets/Resources/Levels/Sasquatch II/Sasquatch II_003.asset",17,11,187,74,0.395722,6,0.032086,6,0,6,0.032086
+"Sasquatch II_004","Assets/Resources/Levels/Sasquatch II/Sasquatch II_004.asset",16,13,208,83,0.399039,9,0.043269,9,1,8,0.038462
+"Sasquatch II_005","Assets/Resources/Levels/Sasquatch II/Sasquatch II_005.asset",12,12,144,59,0.409722,8,0.055556,8,0,8,0.055556
+"Sasquatch II_006","Assets/Resources/Levels/Sasquatch II/Sasquatch II_006.asset",19,17,323,100,0.309598,15,0.04644,15,1,14,0.043344
+"Sasquatch II_007","Assets/Resources/Levels/Sasquatch II/Sasquatch II_007.asset",18,13,234,76,0.324786,10,0.042735,10,0,10,0.042735
+"Sasquatch II_008","Assets/Resources/Levels/Sasquatch II/Sasquatch II_008.asset",16,13,208,79,0.379808,12,0.057692,12,2,10,0.048077
+"Sasquatch II_009","Assets/Resources/Levels/Sasquatch II/Sasquatch II_009.asset",29,17,493,172,0.348884,23,0.046653,23,1,22,0.044625
+"Sasquatch II_010","Assets/Resources/Levels/Sasquatch II/Sasquatch II_010.asset",20,18,360,130,0.361111,15,0.041667,15,6,9,0.025
+"Sasquatch II_011","Assets/Resources/Levels/Sasquatch II/Sasquatch II_011.asset",20,14,280,95,0.339286,14,0.05,14,2,12,0.042857
+"Sasquatch II_012","Assets/Resources/Levels/Sasquatch II/Sasquatch II_012.asset",11,11,121,32,0.264463,16,0.132231,16,2,14,0.115703
+"Sasquatch II_013","Assets/Resources/Levels/Sasquatch II/Sasquatch II_013.asset",17,17,289,96,0.33218,16,0.055363,16,0,16,0.055363
+"Sasquatch II_014","Assets/Resources/Levels/Sasquatch II/Sasquatch II_014.asset",14,13,182,67,0.368132,10,0.054945,10,1,9,0.049451
+"Sasquatch II_015","Assets/Resources/Levels/Sasquatch II/Sasquatch II_015.asset",27,18,486,158,0.325103,28,0.057613,28,0,28,0.057613
+"Sasquatch II_016","Assets/Resources/Levels/Sasquatch II/Sasquatch II_016.asset",13,13,169,48,0.284024,40,0.236686,40,0,40,0.236686
+"Sasquatch II_017","Assets/Resources/Levels/Sasquatch II/Sasquatch II_017.asset",29,17,493,88,0.178499,162,0.3286,162,0,162,0.3286
+"Sasquatch II_018","Assets/Resources/Levels/Sasquatch II/Sasquatch II_018.asset",25,17,425,148,0.348235,48,0.112941,48,4,44,0.103529
+"Sasquatch II_019","Assets/Resources/Levels/Sasquatch II/Sasquatch II_019.asset",19,15,285,109,0.382456,9,0.031579,9,0,9,0.031579
+"Sasquatch II_020","Assets/Resources/Levels/Sasquatch II/Sasquatch II_020.asset",19,15,285,101,0.354386,19,0.066667,19,1,18,0.063158
+"Sasquatch II_021","Assets/Resources/Levels/Sasquatch II/Sasquatch II_021.asset",19,15,285,106,0.37193,28,0.098246,28,4,24,0.084211
+"Sasquatch II_022","Assets/Resources/Levels/Sasquatch II/Sasquatch II_022.asset",21,18,378,137,0.362434,32,0.084656,32,10,22,0.058201
+"Sasquatch II_023","Assets/Resources/Levels/Sasquatch II/Sasquatch II_023.asset",30,17,510,223,0.437255,12,0.023529,12,9,3,0.005882
+"Sasquatch II_024","Assets/Resources/Levels/Sasquatch II/Sasquatch II_024.asset",25,17,425,142,0.334118,14,0.032941,14,0,14,0.032941
+"Sasquatch II_025","Assets/Resources/Levels/Sasquatch II/Sasquatch II_025.asset",23,18,414,142,0.342995,50,0.120773,50,20,30,0.072464
+"Sasquatch II_026","Assets/Resources/Levels/Sasquatch II/Sasquatch II_026.asset",17,13,221,91,0.411765,14,0.063348,14,0,14,0.063348
+"Sasquatch II_027","Assets/Resources/Levels/Sasquatch II/Sasquatch II_027.asset",16,16,256,124,0.484375,16,0.0625,16,0,16,0.0625
+"Sasquatch II_028","Assets/Resources/Levels/Sasquatch II/Sasquatch II_028.asset",28,17,476,185,0.388656,25,0.052521,25,0,25,0.052521
+"Sasquatch II_029","Assets/Resources/Levels/Sasquatch II/Sasquatch II_029.asset",27,16,432,164,0.37963,28,0.064815,28,4,24,0.055556
+"Sasquatch II_030","Assets/Resources/Levels/Sasquatch II/Sasquatch II_030.asset",19,11,209,92,0.440191,7,0.033493,7,0,7,0.033493
+"Sasquatch II_031","Assets/Resources/Levels/Sasquatch II/Sasquatch II_031.asset",18,15,270,98,0.362963,6,0.022222,6,0,6,0.022222
+"Sasquatch II_032","Assets/Resources/Levels/Sasquatch II/Sasquatch II_032.asset",13,13,169,38,0.224852,17,0.100592,17,0,17,0.100592
+"Sasquatch II_033","Assets/Resources/Levels/Sasquatch II/Sasquatch II_033.asset",24,15,360,100,0.277778,13,0.036111,13,3,10,0.027778
+"Sasquatch II_034","Assets/Resources/Levels/Sasquatch II/Sasquatch II_034.asset",13,7,91,44,0.483517,8,0.087912,8,2,6,0.065934
+"Sasquatch II_035","Assets/Resources/Levels/Sasquatch II/Sasquatch II_035.asset",15,15,225,84,0.373333,16,0.071111,16,0,16,0.071111
+"Sasquatch II_036","Assets/Resources/Levels/Sasquatch II/Sasquatch II_036.asset",17,17,289,98,0.3391,48,0.16609,48,0,48,0.16609
+"Sasquatch II_037","Assets/Resources/Levels/Sasquatch II/Sasquatch II_037.asset",29,17,493,170,0.344828,34,0.068966,34,0,34,0.068966
+"Sasquatch II_038","Assets/Resources/Levels/Sasquatch II/Sasquatch II_038.asset",27,15,405,154,0.380247,32,0.079012,32,2,30,0.074074
+"Sasquatch II_039","Assets/Resources/Levels/Sasquatch II/Sasquatch II_039.asset",19,9,171,70,0.409357,24,0.140351,24,0,24,0.140351
+"Sasquatch II_040","Assets/Resources/Levels/Sasquatch II/Sasquatch II_040.asset",30,18,540,180,0.333333,52,0.096296,52,0,52,0.096296
+"Sasquatch II_041","Assets/Resources/Levels/Sasquatch II/Sasquatch II_041.asset",13,11,143,48,0.335664,29,0.202797,29,9,20,0.13986
+"Sasquatch II_042","Assets/Resources/Levels/Sasquatch II/Sasquatch II_042.asset",23,16,368,134,0.36413,13,0.035326,13,0,13,0.035326
+"Sasquatch II_043","Assets/Resources/Levels/Sasquatch II/Sasquatch II_043.asset",30,15,450,146,0.324444,21,0.046667,21,4,17,0.037778
+"Sasquatch II_044","Assets/Resources/Levels/Sasquatch II/Sasquatch II_044.asset",17,14,238,95,0.39916,17,0.071429,17,7,10,0.042017
+"Sasquatch II_045","Assets/Resources/Levels/Sasquatch II/Sasquatch II_045.asset",22,13,286,88,0.307692,10,0.034965,10,0,10,0.034965
+"Sasquatch II_046","Assets/Resources/Levels/Sasquatch II/Sasquatch II_046.asset",30,18,540,188,0.348148,19,0.035185,19,3,16,0.02963
+"Sasquatch II_047","Assets/Resources/Levels/Sasquatch II/Sasquatch II_047.asset",17,17,289,88,0.304498,24,0.083045,24,8,16,0.055363
+"Sasquatch II_048","Assets/Resources/Levels/Sasquatch II/Sasquatch II_048.asset",17,17,289,48,0.16609,24,0.083045,24,0,24,0.083045
+"Sasquatch II_049","Assets/Resources/Levels/Sasquatch II/Sasquatch II_049.asset",23,18,414,125,0.301932,28,0.067633,28,7,21,0.050725
+"Sasquatch II_050","Assets/Resources/Levels/Sasquatch II/Sasquatch II_050.asset",29,17,493,162,0.3286,94,0.190669,94,0,94,0.190669
+"Sasquatch III_001","Assets/Resources/Levels/Sasquatch III/Sasquatch III_001.asset",8,12,96,45,0.46875,6,0.0625,6,4,2,0.020833
+"Sasquatch III_002","Assets/Resources/Levels/Sasquatch III/Sasquatch III_002.asset",13,10,130,50,0.384615,12,0.092308,12,8,4,0.030769
+"Sasquatch III_003","Assets/Resources/Levels/Sasquatch III/Sasquatch III_003.asset",13,13,169,74,0.43787,8,0.047337,8,4,4,0.023669
+"Sasquatch III_004","Assets/Resources/Levels/Sasquatch III/Sasquatch III_004.asset",18,15,270,108,0.4,17,0.062963,17,2,15,0.055556
+"Sasquatch III_005","Assets/Resources/Levels/Sasquatch III/Sasquatch III_005.asset",15,10,150,65,0.433333,9,0.06,9,4,5,0.033333
+"Sasquatch III_006","Assets/Resources/Levels/Sasquatch III/Sasquatch III_006.asset",19,17,323,92,0.28483,22,0.068111,22,2,20,0.06192
+"Sasquatch III_007","Assets/Resources/Levels/Sasquatch III/Sasquatch III_007.asset",12,13,156,67,0.429487,11,0.070513,11,9,2,0.012821
+"Sasquatch III_008","Assets/Resources/Levels/Sasquatch III/Sasquatch III_008.asset",11,12,132,53,0.401515,11,0.083333,11,1,10,0.075758
+"Sasquatch III_009","Assets/Resources/Levels/Sasquatch III/Sasquatch III_009.asset",13,13,169,58,0.343195,17,0.100592,17,5,12,0.071006
+"Sasquatch III_010","Assets/Resources/Levels/Sasquatch III/Sasquatch III_010.asset",17,11,187,36,0.192513,14,0.074866,14,2,12,0.064171
+"Sasquatch III_011","Assets/Resources/Levels/Sasquatch III/Sasquatch III_011.asset",21,15,315,48,0.152381,29,0.092063,29,1,28,0.088889
+"Sasquatch III_012","Assets/Resources/Levels/Sasquatch III/Sasquatch III_012.asset",10,16,160,63,0.39375,13,0.08125,13,0,13,0.08125
+"Sasquatch III_013","Assets/Resources/Levels/Sasquatch III/Sasquatch III_013.asset",13,13,169,60,0.35503,17,0.100592,17,5,12,0.071006
+"Sasquatch III_014","Assets/Resources/Levels/Sasquatch III/Sasquatch III_014.asset",15,9,135,48,0.355556,18,0.133333,18,2,16,0.118519
+"Sasquatch III_015","Assets/Resources/Levels/Sasquatch III/Sasquatch III_015.asset",23,9,207,82,0.396135,16,0.077295,16,8,8,0.038647
+"Sasquatch III_016","Assets/Resources/Levels/Sasquatch III/Sasquatch III_016.asset",11,11,121,52,0.429752,16,0.132231,16,4,12,0.099174
+"Sasquatch III_017","Assets/Resources/Levels/Sasquatch III/Sasquatch III_017.asset",17,17,289,85,0.294118,24,0.083045,24,8,16,0.055363
+"Sasquatch III_018","Assets/Resources/Levels/Sasquatch III/Sasquatch III_018.asset",15,15,225,92,0.408889,24,0.106667,24,0,24,0.106667
+"Sasquatch III_019","Assets/Resources/Levels/Sasquatch III/Sasquatch III_019.asset",15,15,225,92,0.408889,24,0.106667,24,4,20,0.088889
+"Sasquatch III_020","Assets/Resources/Levels/Sasquatch III/Sasquatch III_020.asset",13,13,169,61,0.360947,20,0.118343,20,0,20,0.118343
+"Sasquatch III_021","Assets/Resources/Levels/Sasquatch III/Sasquatch III_021.asset",15,15,225,64,0.284445,22,0.097778,22,0,22,0.097778
+"Sasquatch III_022","Assets/Resources/Levels/Sasquatch III/Sasquatch III_022.asset",17,17,289,96,0.33218,44,0.152249,44,4,40,0.138408
+"Sasquatch III_023","Assets/Resources/Levels/Sasquatch III/Sasquatch III_023.asset",15,15,225,76,0.337778,32,0.142222,32,24,8,0.035556
+"Sasquatch III_024","Assets/Resources/Levels/Sasquatch III/Sasquatch III_024.asset",17,15,255,88,0.345098,37,0.145098,37,15,22,0.086275
+"Sasquatch III_025","Assets/Resources/Levels/Sasquatch III/Sasquatch III_025.asset",17,17,289,88,0.304498,34,0.117647,34,12,22,0.076125
+"Sasquatch III_026","Assets/Resources/Levels/Sasquatch III/Sasquatch III_026.asset",17,17,289,68,0.235294,88,0.304498,88,16,72,0.249135
+"Sasquatch III_027","Assets/Resources/Levels/Sasquatch III/Sasquatch III_027.asset",17,17,289,64,0.221453,84,0.290657,84,36,48,0.16609
+"Sasquatch III_028","Assets/Resources/Levels/Sasquatch III/Sasquatch III_028.asset",17,17,289,108,0.373702,32,0.110727,32,0,32,0.110727
+"Sasquatch III_029","Assets/Resources/Levels/Sasquatch III/Sasquatch III_029.asset",29,17,493,215,0.436106,36,0.073022,36,16,20,0.040568
+"Sasquatch III_030","Assets/Resources/Levels/Sasquatch III/Sasquatch III_030.asset",30,17,510,192,0.376471,42,0.082353,42,0,42,0.082353
+"Sasquatch III_031","Assets/Resources/Levels/Sasquatch III/Sasquatch III_031.asset",19,17,323,103,0.318885,34,0.105263,34,8,26,0.080495
+"Sasquatch III_032","Assets/Resources/Levels/Sasquatch III/Sasquatch III_032.asset",21,17,357,123,0.344538,21,0.058824,21,0,21,0.058824
+"Sasquatch III_033","Assets/Resources/Levels/Sasquatch III/Sasquatch III_033.asset",18,16,288,115,0.399306,14,0.048611,14,1,13,0.045139
+"Sasquatch III_034","Assets/Resources/Levels/Sasquatch III/Sasquatch III_034.asset",20,18,360,128,0.355556,25,0.069444,25,9,16,0.044444
+"Sasquatch III_035","Assets/Resources/Levels/Sasquatch III/Sasquatch III_035.asset",18,13,234,84,0.358974,18,0.076923,18,2,16,0.068376
+"Sasquatch III_036","Assets/Resources/Levels/Sasquatch III/Sasquatch III_036.asset",27,17,459,124,0.270153,39,0.084967,39,7,32,0.069717
+"Sasquatch III_037","Assets/Resources/Levels/Sasquatch III/Sasquatch III_037.asset",21,16,336,144,0.428571,30,0.089286,30,0,30,0.089286
+"Sasquatch III_038","Assets/Resources/Levels/Sasquatch III/Sasquatch III_038.asset",18,13,234,93,0.397436,23,0.098291,23,20,3,0.012821
+"Sasquatch III_039","Assets/Resources/Levels/Sasquatch III/Sasquatch III_039.asset",19,18,342,132,0.385965,11,0.032164,11,0,11,0.032164
+"Sasquatch III_040","Assets/Resources/Levels/Sasquatch III/Sasquatch III_040.asset",29,17,493,178,0.361055,32,0.064909,32,10,22,0.044625
+"Sasquatch III_041","Assets/Resources/Levels/Sasquatch III/Sasquatch III_041.asset",30,18,540,187,0.346296,22,0.040741,22,4,18,0.033333
+"Sasquatch III_042","Assets/Resources/Levels/Sasquatch III/Sasquatch III_042.asset",25,17,425,176,0.414118,48,0.112941,48,20,28,0.065882
+"Sasquatch III_043","Assets/Resources/Levels/Sasquatch III/Sasquatch III_043.asset",18,16,288,101,0.350694,18,0.0625,18,2,16,0.055556
+"Sasquatch III_044","Assets/Resources/Levels/Sasquatch III/Sasquatch III_044.asset",17,17,289,64,0.221453,48,0.16609,48,16,32,0.110727
+"Sasquatch III_045","Assets/Resources/Levels/Sasquatch III/Sasquatch III_045.asset",17,17,289,64,0.221453,48,0.16609,48,16,32,0.110727
+"Sasquatch III_046","Assets/Resources/Levels/Sasquatch III/Sasquatch III_046.asset",27,15,405,113,0.279012,74,0.182716,74,21,53,0.130864
+"Sasquatch III_047","Assets/Resources/Levels/Sasquatch III/Sasquatch III_047.asset",27,15,405,113,0.279012,68,0.167901,68,26,42,0.103704
+"Sasquatch III_048","Assets/Resources/Levels/Sasquatch III/Sasquatch III_048.asset",27,17,459,186,0.405229,23,0.050109,23,0,23,0.050109
+"Sasquatch III_049","Assets/Resources/Levels/Sasquatch III/Sasquatch III_049.asset",29,17,493,92,0.186613,152,0.308316,152,0,152,0.308316
+"Sasquatch III_050","Assets/Resources/Levels/Sasquatch III/Sasquatch III_050.asset",29,18,522,220,0.421456,18,0.034483,18,0,18,0.034483
+"Sasquatch IV_001","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_001.asset",11,10,110,44,0.4,3,0.027273,3,0,3,0.027273
+"Sasquatch IV_002","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_002.asset",10,9,90,39,0.433333,4,0.044444,4,0,4,0.044444
+"Sasquatch IV_003","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_003.asset",9,9,81,37,0.45679,4,0.049383,4,0,4,0.049383
+"Sasquatch IV_004","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_004.asset",9,10,90,38,0.422222,8,0.088889,8,2,6,0.066667
+"Sasquatch IV_005","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_005.asset",8,10,80,32,0.4,7,0.0875,7,3,4,0.05
+"Sasquatch IV_006","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_006.asset",17,10,170,64,0.376471,6,0.035294,6,0,6,0.035294
+"Sasquatch IV_007","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_007.asset",17,9,153,69,0.45098,10,0.065359,10,6,4,0.026144
+"Sasquatch IV_008","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_008.asset",23,9,207,103,0.497585,4,0.019324,4,0,4,0.019324
+"Sasquatch IV_009","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_009.asset",12,9,108,50,0.462963,6,0.055556,6,0,6,0.055556
+"Sasquatch IV_010","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_010.asset",8,12,96,41,0.427083,7,0.072917,7,4,3,0.03125
+"Sasquatch IV_011","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_011.asset",10,10,100,47,0.47,5,0.05,5,0,5,0.05
+"Sasquatch IV_012","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_012.asset",10,14,140,60,0.428571,6,0.042857,6,1,5,0.035714
+"Sasquatch IV_013","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_013.asset",12,12,144,56,0.388889,12,0.083333,12,4,8,0.055556
+"Sasquatch IV_014","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_014.asset",11,11,121,44,0.363636,16,0.132231,16,12,4,0.033058
+"Sasquatch IV_015","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_015.asset",11,11,121,52,0.429752,20,0.165289,20,8,12,0.099174
+"Sasquatch IV_016","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_016.asset",13,13,169,72,0.426036,28,0.165681,28,8,20,0.118343
+"Sasquatch IV_017","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_017.asset",15,15,225,64,0.284445,52,0.231111,52,0,52,0.231111
+"Sasquatch IV_018","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_018.asset",17,17,289,112,0.387543,40,0.138408,40,20,20,0.069204
+"Sasquatch IV_019","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_019.asset",11,10,110,50,0.454546,7,0.063636,7,3,4,0.036364
+"Sasquatch IV_020","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_020.asset",13,10,130,52,0.4,12,0.092308,12,0,12,0.092308
+"Sasquatch IV_021","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_021.asset",13,9,117,52,0.444444,8,0.068376,8,2,6,0.051282
+"Sasquatch IV_022","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_022.asset",16,10,160,61,0.38125,9,0.05625,9,1,8,0.05
+"Sasquatch IV_023","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_023.asset",12,11,132,49,0.371212,8,0.060606,8,1,7,0.05303
+"Sasquatch IV_024","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_024.asset",16,13,208,67,0.322115,10,0.048077,10,0,10,0.048077
+"Sasquatch IV_025","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_025.asset",17,12,204,84,0.411765,9,0.044118,9,1,8,0.039216
+"Sasquatch IV_026","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_026.asset",14,11,154,61,0.396104,7,0.045455,7,0,7,0.045455
+"Sasquatch IV_027","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_027.asset",13,14,182,68,0.373626,8,0.043956,8,0,8,0.043956
+"Sasquatch IV_028","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_028.asset",15,16,240,84,0.35,15,0.0625,15,2,13,0.054167
+"Sasquatch IV_029","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_029.asset",12,13,156,73,0.467949,9,0.057692,9,7,2,0.012821
+"Sasquatch IV_030","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_030.asset",23,17,391,129,0.329923,17,0.043478,17,0,17,0.043478
+"Sasquatch IV_031","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_031.asset",15,12,180,74,0.411111,24,0.133333,24,20,4,0.022222
+"Sasquatch IV_032","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_032.asset",18,18,324,104,0.320988,28,0.08642,28,4,24,0.074074
+"Sasquatch IV_033","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_033.asset",19,17,323,100,0.309598,32,0.099071,32,18,14,0.043344
+"Sasquatch IV_034","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_034.asset",15,15,225,57,0.253333,20,0.088889,20,8,12,0.053333
+"Sasquatch IV_035","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_035.asset",17,17,289,72,0.249135,40,0.138408,40,16,24,0.083045
+"Sasquatch IV_036","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_036.asset",17,17,289,72,0.249135,40,0.138408,40,8,32,0.110727
+"Sasquatch IV_037","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_037.asset",11,11,121,40,0.330579,12,0.099174,12,4,8,0.066116
+"Sasquatch IV_038","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_038.asset",13,13,169,44,0.260355,20,0.118343,20,8,12,0.071006
+"Sasquatch IV_039","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_039.asset",17,17,289,110,0.380623,36,0.124568,36,20,16,0.055363
+"Sasquatch IV_040","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_040.asset",29,15,435,174,0.4,22,0.050575,22,6,16,0.036782
+"Sasquatch IV_041","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_041.asset",15,15,225,109,0.484444,16,0.071111,16,0,16,0.071111
+"Sasquatch IV_042","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_042.asset",19,15,285,122,0.42807,15,0.052632,15,1,14,0.049123
+"Sasquatch IV_043","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_043.asset",25,17,425,140,0.329412,13,0.030588,13,1,12,0.028235
+"Sasquatch IV_044","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_044.asset",31,16,496,212,0.427419,52,0.104839,52,6,46,0.092742
+"Sasquatch IV_045","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_045.asset",23,15,345,119,0.344928,60,0.173913,60,20,40,0.115942
+"Sasquatch IV_046","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_046.asset",27,17,459,132,0.287582,76,0.165577,76,32,44,0.095861
+"Sasquatch IV_047","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_047.asset",29,17,493,125,0.25355,97,0.196755,97,23,74,0.150101
+"Sasquatch IV_048","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_048.asset",29,17,493,178,0.361055,72,0.146045,72,20,52,0.105477
+"Sasquatch IV_049","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_049.asset",31,17,527,172,0.326376,98,0.185958,98,36,62,0.117647
+"Sasquatch IV_050","Assets/Resources/Levels/Sasquatch IV/Sasquatch IV_050.asset",30,18,540,219,0.405556,60,0.111111,60,0,60,0.111111
+"Sasquatch IX_001","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_001.asset",16,8,128,66,0.515625,5,0.039063,5,1,4,0.03125
+"Sasquatch IX_002","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_002.asset",11,11,121,60,0.495868,8,0.066116,8,2,6,0.049587
+"Sasquatch IX_003","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_003.asset",11,9,99,36,0.363636,10,0.10101,10,6,4,0.040404
+"Sasquatch IX_004","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_004.asset",10,8,80,35,0.4375,6,0.075,6,1,5,0.0625
+"Sasquatch IX_005","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_005.asset",9,9,81,32,0.395062,5,0.061728,5,1,4,0.049383
+"Sasquatch IX_006","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_006.asset",10,10,100,40,0.4,6,0.06,6,1,5,0.05
+"Sasquatch IX_007","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_007.asset",8,12,96,44,0.458333,6,0.0625,6,0,6,0.0625
+"Sasquatch IX_008","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_008.asset",14,14,196,60,0.306123,16,0.081633,16,13,3,0.015306
+"Sasquatch IX_009","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_009.asset",20,9,180,73,0.405556,6,0.033333,6,0,6,0.033333
+"Sasquatch IX_010","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_010.asset",15,10,150,73,0.486667,6,0.04,6,1,5,0.033333
+"Sasquatch IX_011","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_011.asset",14,12,168,73,0.434524,7,0.041667,7,0,7,0.041667
+"Sasquatch IX_012","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_012.asset",11,10,110,46,0.418182,5,0.045455,5,0,5,0.045455
+"Sasquatch IX_013","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_013.asset",17,12,204,81,0.397059,5,0.02451,5,0,5,0.02451
+"Sasquatch IX_014","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_014.asset",12,12,144,62,0.430556,5,0.034722,5,0,5,0.034722
+"Sasquatch IX_015","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_015.asset",15,15,225,72,0.32,12,0.053333,12,4,8,0.035556
+"Sasquatch IX_016","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_016.asset",11,13,143,51,0.356643,7,0.048951,7,1,6,0.041958
+"Sasquatch IX_017","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_017.asset",12,8,96,42,0.4375,8,0.083333,8,0,8,0.083333
+"Sasquatch IX_018","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_018.asset",10,11,110,44,0.4,10,0.090909,10,8,2,0.018182
+"Sasquatch IX_019","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_019.asset",11,11,121,52,0.429752,10,0.082645,10,8,2,0.016529
+"Sasquatch IX_020","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_020.asset",13,13,169,66,0.390533,14,0.08284,14,12,2,0.011834
+"Sasquatch IX_021","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_021.asset",12,16,192,78,0.40625,17,0.088542,17,9,8,0.041667
+"Sasquatch IX_022","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_022.asset",11,11,121,62,0.512397,8,0.066116,8,0,8,0.066116
+"Sasquatch IX_023","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_023.asset",13,14,182,54,0.296703,23,0.126374,23,22,1,0.005495
+"Sasquatch IX_024","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_024.asset",9,15,135,44,0.325926,28,0.207407,28,12,16,0.118519
+"Sasquatch IX_025","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_025.asset",9,9,81,36,0.444444,12,0.148148,12,8,4,0.049383
+"Sasquatch IX_026","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_026.asset",9,9,81,40,0.493827,8,0.098765,8,0,8,0.098765
+"Sasquatch IX_027","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_027.asset",9,9,81,38,0.469136,7,0.08642,7,5,2,0.024691
+"Sasquatch IX_028","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_028.asset",11,11,121,44,0.363636,12,0.099174,12,0,12,0.099174
+"Sasquatch IX_029","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_029.asset",11,11,121,40,0.330579,12,0.099174,12,0,12,0.099174
+"Sasquatch IX_030","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_030.asset",11,11,121,52,0.429752,18,0.14876,18,8,10,0.082645
+"Sasquatch IX_031","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_031.asset",37,11,407,148,0.363636,38,0.093366,38,8,30,0.07371
+"Sasquatch IX_032","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_032.asset",13,13,169,44,0.260355,12,0.071006,12,4,8,0.047337
+"Sasquatch IX_033","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_033.asset",13,13,169,44,0.260355,16,0.094675,16,8,8,0.047337
+"Sasquatch IX_034","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_034.asset",14,14,196,70,0.357143,24,0.122449,24,0,24,0.122449
+"Sasquatch IX_035","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_035.asset",13,13,169,58,0.343195,28,0.165681,28,8,20,0.118343
+"Sasquatch IX_036","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_036.asset",17,17,289,108,0.373702,36,0.124568,36,28,8,0.027682
+"Sasquatch IX_037","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_037.asset",17,17,289,32,0.110727,36,0.124568,36,20,16,0.055363
+"Sasquatch IX_038","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_038.asset",17,17,289,32,0.110727,36,0.124568,36,32,4,0.013841
+"Sasquatch IX_039","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_039.asset",17,17,289,32,0.110727,36,0.124568,36,32,4,0.013841
+"Sasquatch IX_040","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_040.asset",17,17,289,36,0.124568,32,0.110727,32,0,32,0.110727
+"Sasquatch IX_041","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_041.asset",17,17,289,36,0.124568,36,0.124568,36,0,36,0.124568
+"Sasquatch IX_042","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_042.asset",17,17,289,32,0.110727,36,0.124568,36,0,36,0.124568
+"Sasquatch IX_043","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_043.asset",17,17,289,32,0.110727,36,0.124568,36,20,16,0.055363
+"Sasquatch IX_044","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_044.asset",17,17,289,68,0.235294,72,0.249135,72,20,52,0.179931
+"Sasquatch IX_045","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_045.asset",21,21,441,92,0.208617,128,0.290249,128,44,84,0.190476
+"Sasquatch IX_046","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_046.asset",15,15,225,52,0.231111,24,0.106667,24,12,12,0.053333
+"Sasquatch IX_047","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_047.asset",21,21,441,56,0.126984,76,0.172336,76,52,24,0.054422
+"Sasquatch IX_048","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_048.asset",25,25,625,72,0.1152,124,0.1984,124,104,20,0.032
+"Sasquatch IX_049","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_049.asset",27,27,729,120,0.164609,100,0.137174,100,72,28,0.038409
+"Sasquatch IX_050","Assets/Resources/Levels/Sasquatch IX/Sasquatch IX_050.asset",43,43,1849,268,0.144943,232,0.125473,232,188,44,0.023797
+"Sasquatch V_001","Assets/Resources/Levels/Sasquatch V/Sasquatch V_001.asset",7,10,70,33,0.471429,4,0.057143,4,0,4,0.057143
+"Sasquatch V_002","Assets/Resources/Levels/Sasquatch V/Sasquatch V_002.asset",8,8,64,33,0.515625,4,0.0625,4,0,4,0.0625
+"Sasquatch V_003","Assets/Resources/Levels/Sasquatch V/Sasquatch V_003.asset",9,10,90,39,0.433333,4,0.044444,4,0,4,0.044444
+"Sasquatch V_004","Assets/Resources/Levels/Sasquatch V/Sasquatch V_004.asset",10,9,90,40,0.444444,6,0.066667,6,1,5,0.055556
+"Sasquatch V_005","Assets/Resources/Levels/Sasquatch V/Sasquatch V_005.asset",11,10,110,51,0.463636,10,0.090909,10,9,1,0.009091
+"Sasquatch V_006","Assets/Resources/Levels/Sasquatch V/Sasquatch V_006.asset",11,10,110,48,0.436364,7,0.063636,7,3,4,0.036364
+"Sasquatch V_007","Assets/Resources/Levels/Sasquatch V/Sasquatch V_007.asset",13,10,130,48,0.369231,8,0.061538,8,2,6,0.046154
+"Sasquatch V_008","Assets/Resources/Levels/Sasquatch V/Sasquatch V_008.asset",13,12,156,61,0.391026,8,0.051282,8,2,6,0.038462
+"Sasquatch V_009","Assets/Resources/Levels/Sasquatch V/Sasquatch V_009.asset",17,12,204,78,0.382353,10,0.04902,10,6,4,0.019608
+"Sasquatch V_010","Assets/Resources/Levels/Sasquatch V/Sasquatch V_010.asset",10,10,100,49,0.49,5,0.05,5,2,3,0.03
+"Sasquatch V_011","Assets/Resources/Levels/Sasquatch V/Sasquatch V_011.asset",11,12,132,61,0.462121,7,0.05303,7,4,3,0.022727
+"Sasquatch V_012","Assets/Resources/Levels/Sasquatch V/Sasquatch V_012.asset",7,10,70,35,0.5,8,0.114286,8,0,8,0.114286
+"Sasquatch V_013","Assets/Resources/Levels/Sasquatch V/Sasquatch V_013.asset",9,9,81,35,0.432099,8,0.098765,8,2,6,0.074074
+"Sasquatch V_014","Assets/Resources/Levels/Sasquatch V/Sasquatch V_014.asset",17,9,153,66,0.431373,6,0.039216,6,2,4,0.026144
+"Sasquatch V_015","Assets/Resources/Levels/Sasquatch V/Sasquatch V_015.asset",11,9,99,40,0.40404,14,0.141414,14,4,10,0.10101
+"Sasquatch V_016","Assets/Resources/Levels/Sasquatch V/Sasquatch V_016.asset",12,9,108,50,0.462963,10,0.092593,10,0,10,0.092593
+"Sasquatch V_017","Assets/Resources/Levels/Sasquatch V/Sasquatch V_017.asset",17,17,289,80,0.276817,16,0.055363,16,4,12,0.041522
+"Sasquatch V_018","Assets/Resources/Levels/Sasquatch V/Sasquatch V_018.asset",9,12,108,52,0.481482,10,0.092593,10,0,10,0.092593
+"Sasquatch V_019","Assets/Resources/Levels/Sasquatch V/Sasquatch V_019.asset",23,13,299,97,0.324415,14,0.046823,14,2,12,0.040134
+"Sasquatch V_020","Assets/Resources/Levels/Sasquatch V/Sasquatch V_020.asset",18,11,198,85,0.429293,6,0.030303,6,0,6,0.030303
+"Sasquatch V_021","Assets/Resources/Levels/Sasquatch V/Sasquatch V_021.asset",17,12,204,86,0.421569,7,0.034314,7,0,7,0.034314
+"Sasquatch V_022","Assets/Resources/Levels/Sasquatch V/Sasquatch V_022.asset",14,12,168,72,0.428571,8,0.047619,8,1,7,0.041667
+"Sasquatch V_023","Assets/Resources/Levels/Sasquatch V/Sasquatch V_023.asset",11,13,143,55,0.384615,16,0.111888,16,2,14,0.097902
+"Sasquatch V_024","Assets/Resources/Levels/Sasquatch V/Sasquatch V_024.asset",12,11,132,57,0.431818,9,0.068182,9,1,8,0.060606
+"Sasquatch V_025","Assets/Resources/Levels/Sasquatch V/Sasquatch V_025.asset",21,14,294,113,0.384354,14,0.047619,14,2,12,0.040816
+"Sasquatch V_026","Assets/Resources/Levels/Sasquatch V/Sasquatch V_026.asset",23,15,345,116,0.336232,13,0.037681,13,0,13,0.037681
+"Sasquatch V_027","Assets/Resources/Levels/Sasquatch V/Sasquatch V_027.asset",30,19,570,199,0.349123,18,0.031579,18,0,18,0.031579
+"Sasquatch V_028","Assets/Resources/Levels/Sasquatch V/Sasquatch V_028.asset",21,12,252,100,0.396825,20,0.079365,20,2,18,0.071429
+"Sasquatch V_029","Assets/Resources/Levels/Sasquatch V/Sasquatch V_029.asset",21,18,378,112,0.296296,26,0.068783,26,10,16,0.042328
+"Sasquatch V_030","Assets/Resources/Levels/Sasquatch V/Sasquatch V_030.asset",16,16,256,64,0.25,16,0.0625,16,4,12,0.046875
+"Sasquatch V_031","Assets/Resources/Levels/Sasquatch V/Sasquatch V_031.asset",18,18,324,72,0.222222,28,0.08642,28,12,16,0.049383
+"Sasquatch V_032","Assets/Resources/Levels/Sasquatch V/Sasquatch V_032.asset",11,11,121,54,0.446281,12,0.099174,12,8,4,0.033058
+"Sasquatch V_033","Assets/Resources/Levels/Sasquatch V/Sasquatch V_033.asset",13,13,169,50,0.295858,18,0.106509,18,8,10,0.059172
+"Sasquatch V_034","Assets/Resources/Levels/Sasquatch V/Sasquatch V_034.asset",13,13,169,68,0.402367,20,0.118343,20,4,16,0.094675
+"Sasquatch V_035","Assets/Resources/Levels/Sasquatch V/Sasquatch V_035.asset",13,13,169,52,0.307692,37,0.218935,37,1,36,0.213018
+"Sasquatch V_036","Assets/Resources/Levels/Sasquatch V/Sasquatch V_036.asset",13,13,169,65,0.384615,24,0.142012,24,0,24,0.142012
+"Sasquatch V_037","Assets/Resources/Levels/Sasquatch V/Sasquatch V_037.asset",16,16,256,104,0.40625,18,0.070313,18,10,8,0.03125
+"Sasquatch V_038","Assets/Resources/Levels/Sasquatch V/Sasquatch V_038.asset",18,18,324,140,0.432099,22,0.067901,22,14,8,0.024691
+"Sasquatch V_039","Assets/Resources/Levels/Sasquatch V/Sasquatch V_039.asset",17,17,289,100,0.346021,36,0.124568,36,0,36,0.124568
+"Sasquatch V_040","Assets/Resources/Levels/Sasquatch V/Sasquatch V_040.asset",17,17,289,92,0.318339,48,0.16609,48,0,48,0.16609
+"Sasquatch V_041","Assets/Resources/Levels/Sasquatch V/Sasquatch V_041.asset",19,19,361,133,0.368421,24,0.066482,24,8,16,0.044321
+"Sasquatch V_042","Assets/Resources/Levels/Sasquatch V/Sasquatch V_042.asset",21,21,441,108,0.244898,84,0.190476,84,0,84,0.190476
+"Sasquatch V_043","Assets/Resources/Levels/Sasquatch V/Sasquatch V_043.asset",23,23,529,96,0.181475,80,0.151229,80,0,80,0.151229
+"Sasquatch V_044","Assets/Resources/Levels/Sasquatch V/Sasquatch V_044.asset",23,23,529,56,0.10586,72,0.136106,72,0,72,0.136106
+"Sasquatch V_045","Assets/Resources/Levels/Sasquatch V/Sasquatch V_045.asset",21,21,441,136,0.30839,30,0.068027,30,2,28,0.063492
+"Sasquatch V_046","Assets/Resources/Levels/Sasquatch V/Sasquatch V_046.asset",22,22,484,164,0.338843,16,0.033058,16,0,16,0.033058
+"Sasquatch V_047","Assets/Resources/Levels/Sasquatch V/Sasquatch V_047.asset",31,17,527,194,0.368121,40,0.075901,40,0,40,0.075901
+"Sasquatch V_048","Assets/Resources/Levels/Sasquatch V/Sasquatch V_048.asset",30,18,540,100,0.185185,174,0.322222,174,86,88,0.162963
+"Sasquatch V_049","Assets/Resources/Levels/Sasquatch V/Sasquatch V_049.asset",24,24,576,148,0.256944,128,0.222222,128,0,128,0.222222
+"Sasquatch V_050","Assets/Resources/Levels/Sasquatch V/Sasquatch V_050.asset",27,27,729,120,0.164609,240,0.329218,240,0,240,0.329218
+"Sasquatch VI_001","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_001.asset",15,9,135,54,0.4,9,0.066667,9,4,5,0.037037
+"Sasquatch VI_002","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_002.asset",10,7,70,34,0.485714,5,0.071429,5,0,5,0.071429
+"Sasquatch VI_003","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_003.asset",10,8,80,34,0.425,8,0.1,8,6,2,0.025
+"Sasquatch VI_004","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_004.asset",10,7,70,32,0.457143,6,0.085714,6,2,4,0.057143
+"Sasquatch VI_005","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_005.asset",13,9,117,48,0.410256,6,0.051282,6,4,2,0.017094
+"Sasquatch VI_006","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_006.asset",13,7,91,40,0.43956,6,0.065934,6,4,2,0.021978
+"Sasquatch VI_007","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_007.asset",12,15,180,70,0.388889,4,0.022222,4,0,4,0.022222
+"Sasquatch VI_008","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_008.asset",11,9,99,46,0.464647,8,0.080808,8,0,8,0.080808
+"Sasquatch VI_009","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_009.asset",11,11,121,52,0.429752,7,0.057851,7,1,6,0.049587
+"Sasquatch VI_010","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_010.asset",12,12,144,53,0.368056,9,0.0625,9,0,9,0.0625
+"Sasquatch VI_011","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_011.asset",12,12,144,54,0.375,7,0.048611,7,2,5,0.034722
+"Sasquatch VI_012","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_012.asset",11,9,99,40,0.40404,9,0.090909,9,3,6,0.060606
+"Sasquatch VI_013","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_013.asset",12,12,144,54,0.375,10,0.069444,10,5,5,0.034722
+"Sasquatch VI_014","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_014.asset",15,16,240,87,0.3625,8,0.033333,8,0,8,0.033333
+"Sasquatch VI_015","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_015.asset",16,16,256,64,0.25,32,0.125,32,20,12,0.046875
+"Sasquatch VI_016","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_016.asset",15,15,225,84,0.373333,16,0.071111,16,8,8,0.035556
+"Sasquatch VI_017","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_017.asset",21,17,357,123,0.344538,15,0.042017,15,3,12,0.033613
+"Sasquatch VI_018","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_018.asset",25,9,225,88,0.391111,34,0.151111,34,2,32,0.142222
+"Sasquatch VI_019","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_019.asset",11,23,253,102,0.403162,40,0.158103,40,0,40,0.158103
+"Sasquatch VI_020","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_020.asset",11,11,121,68,0.561984,16,0.132231,16,4,12,0.099174
+"Sasquatch VI_021","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_021.asset",10,10,100,56,0.56,8,0.08,8,4,4,0.04
+"Sasquatch VI_022","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_022.asset",10,10,100,44,0.44,16,0.16,16,8,8,0.08
+"Sasquatch VI_023","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_023.asset",10,10,100,48,0.48,16,0.16,16,8,8,0.08
+"Sasquatch VI_024","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_024.asset",10,10,100,48,0.48,16,0.16,16,0,16,0.16
+"Sasquatch VI_025","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_025.asset",10,10,100,36,0.36,20,0.2,20,16,4,0.04
+"Sasquatch VI_026","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_026.asset",10,10,100,40,0.4,14,0.14,14,0,14,0.14
+"Sasquatch VI_027","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_027.asset",10,10,100,42,0.42,16,0.16,16,0,16,0.16
+"Sasquatch VI_028","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_028.asset",10,10,100,40,0.4,18,0.18,18,0,18,0.18
+"Sasquatch VI_029","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_029.asset",11,11,121,60,0.495868,12,0.099174,12,4,8,0.066116
+"Sasquatch VI_030","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_030.asset",11,11,121,44,0.363636,20,0.165289,20,12,8,0.066116
+"Sasquatch VI_031","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_031.asset",13,13,169,68,0.402367,32,0.189349,32,0,32,0.189349
+"Sasquatch VI_032","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_032.asset",13,13,169,72,0.426036,24,0.142012,24,0,24,0.142012
+"Sasquatch VI_033","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_033.asset",13,13,169,52,0.307692,36,0.213018,36,0,36,0.213018
+"Sasquatch VI_034","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_034.asset",15,15,225,64,0.284445,56,0.248889,56,0,56,0.248889
+"Sasquatch VI_035","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_035.asset",15,15,225,88,0.391111,24,0.106667,24,0,24,0.106667
+"Sasquatch VI_036","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_036.asset",15,15,225,72,0.32,24,0.106667,24,0,24,0.106667
+"Sasquatch VI_037","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_037.asset",15,15,225,72,0.32,32,0.142222,32,0,32,0.142222
+"Sasquatch VI_038","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_038.asset",17,17,289,88,0.304498,52,0.179931,52,0,52,0.179931
+"Sasquatch VI_039","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_039.asset",18,18,324,100,0.308642,24,0.074074,24,4,20,0.061728
+"Sasquatch VI_040","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_040.asset",22,22,484,88,0.181818,56,0.115703,56,16,40,0.082645
+"Sasquatch VI_041","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_041.asset",21,21,441,48,0.108844,48,0.108844,48,0,48,0.108844
+"Sasquatch VI_042","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_042.asset",23,23,529,56,0.10586,72,0.136106,72,68,4,0.007561
+"Sasquatch VI_043","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_043.asset",21,21,441,164,0.371882,48,0.108844,48,36,12,0.027211
+"Sasquatch VI_044","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_044.asset",21,21,441,124,0.281179,88,0.199547,88,0,88,0.199547
+"Sasquatch VI_045","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_045.asset",23,23,529,148,0.279773,112,0.21172,112,4,108,0.204159
+"Sasquatch VI_046","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_046.asset",26,26,676,244,0.360947,100,0.147929,100,0,100,0.147929
+"Sasquatch VI_047","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_047.asset",27,27,729,168,0.230453,208,0.285322,208,36,172,0.23594
+"Sasquatch VI_048","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_048.asset",30,30,900,203,0.225556,198,0.22,198,0,198,0.22
+"Sasquatch VI_049","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_049.asset",33,33,1089,208,0.191001,236,0.216713,236,4,232,0.21304
+"Sasquatch VI_050","Assets/Resources/Levels/Sasquatch VI/Sasquatch VI_050.asset",35,35,1225,240,0.195918,288,0.235102,288,0,288,0.235102
+"Sasquatch VII_001","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_001.asset",11,11,121,45,0.371901,9,0.07438,9,8,1,0.008264
+"Sasquatch VII_002","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_002.asset",10,10,100,39,0.39,8,0.08,8,6,2,0.02
+"Sasquatch VII_003","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_003.asset",15,9,135,52,0.385185,13,0.096296,13,12,1,0.007407
+"Sasquatch VII_004","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_004.asset",9,9,81,39,0.481482,6,0.074074,6,0,6,0.074074
+"Sasquatch VII_005","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_005.asset",12,8,96,44,0.458333,7,0.072917,7,3,4,0.041667
+"Sasquatch VII_006","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_006.asset",9,9,81,41,0.506173,8,0.098765,8,1,7,0.08642
+"Sasquatch VII_007","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_007.asset",9,8,72,31,0.430556,5,0.069444,5,1,4,0.055556
+"Sasquatch VII_008","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_008.asset",9,7,63,30,0.476191,9,0.142857,9,6,3,0.047619
+"Sasquatch VII_009","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_009.asset",9,9,81,35,0.432099,6,0.074074,6,2,4,0.049383
+"Sasquatch VII_010","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_010.asset",10,9,90,39,0.433333,6,0.066667,6,1,5,0.055556
+"Sasquatch VII_011","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_011.asset",7,8,56,27,0.482143,5,0.089286,5,1,4,0.071429
+"Sasquatch VII_012","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_012.asset",9,8,72,34,0.472222,6,0.083333,6,4,2,0.027778
+"Sasquatch VII_013","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_013.asset",11,11,121,48,0.396694,12,0.099174,12,4,8,0.066116
+"Sasquatch VII_014","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_014.asset",12,9,108,45,0.416667,5,0.046296,5,0,5,0.046296
+"Sasquatch VII_015","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_015.asset",10,11,110,43,0.390909,10,0.090909,10,0,10,0.090909
+"Sasquatch VII_016","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_016.asset",15,11,165,62,0.375758,11,0.066667,11,4,7,0.042424
+"Sasquatch VII_017","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_017.asset",11,11,121,45,0.371901,8,0.066116,8,1,7,0.057851
+"Sasquatch VII_018","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_018.asset",9,13,117,40,0.34188,10,0.08547,10,4,6,0.051282
+"Sasquatch VII_019","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_019.asset",11,10,110,41,0.372727,11,0.1,11,6,5,0.045455
+"Sasquatch VII_020","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_020.asset",9,13,117,47,0.401709,10,0.08547,10,4,6,0.051282
+"Sasquatch VII_021","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_021.asset",11,13,143,56,0.391608,7,0.048951,7,4,3,0.020979
+"Sasquatch VII_022","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_022.asset",16,11,176,67,0.380682,10,0.056818,10,3,7,0.039773
+"Sasquatch VII_023","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_023.asset",13,13,169,53,0.31361,15,0.088757,15,14,1,0.005917
+"Sasquatch VII_024","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_024.asset",19,9,171,72,0.421053,21,0.122807,21,0,21,0.122807
+"Sasquatch VII_025","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_025.asset",19,8,152,50,0.328947,36,0.236842,36,12,24,0.157895
+"Sasquatch VII_026","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_026.asset",21,13,273,94,0.344322,14,0.051282,14,6,8,0.029304
+"Sasquatch VII_027","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_027.asset",17,11,187,82,0.438503,12,0.064171,12,3,9,0.048128
+"Sasquatch VII_028","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_028.asset",17,13,221,100,0.452489,4,0.0181,4,0,4,0.0181
+"Sasquatch VII_029","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_029.asset",16,13,208,101,0.485577,6,0.028846,6,0,6,0.028846
+"Sasquatch VII_030","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_030.asset",19,17,323,120,0.371517,26,0.080495,26,7,19,0.058824
+"Sasquatch VII_031","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_031.asset",12,12,144,52,0.361111,24,0.166667,24,8,16,0.111111
+"Sasquatch VII_032","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_032.asset",13,13,169,53,0.31361,24,0.142012,24,0,24,0.142012
+"Sasquatch VII_033","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_033.asset",13,13,169,64,0.378698,20,0.118343,20,12,8,0.047337
+"Sasquatch VII_034","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_034.asset",13,13,169,56,0.331361,40,0.236686,40,28,12,0.071006
+"Sasquatch VII_035","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_035.asset",15,16,240,62,0.258333,39,0.1625,39,38,1,0.004167
+"Sasquatch VII_036","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_036.asset",15,15,225,64,0.284445,40,0.177778,40,4,36,0.16
+"Sasquatch VII_037","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_037.asset",15,15,225,76,0.337778,35,0.155556,35,3,32,0.142222
+"Sasquatch VII_038","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_038.asset",15,15,225,64,0.284445,52,0.231111,52,0,52,0.231111
+"Sasquatch VII_039","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_039.asset",17,17,289,96,0.33218,48,0.16609,48,44,4,0.013841
+"Sasquatch VII_040","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_040.asset",19,19,361,153,0.423823,48,0.132964,48,0,48,0.132964
+"Sasquatch VII_041","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_041.asset",21,21,441,121,0.274376,68,0.154195,68,16,52,0.117914
+"Sasquatch VII_042","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_042.asset",25,25,625,184,0.2944,112,0.1792,112,4,108,0.1728
+"Sasquatch VII_043","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_043.asset",24,26,624,184,0.294872,24,0.038462,24,8,16,0.025641
+"Sasquatch VII_044","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_044.asset",25,25,625,108,0.1728,72,0.1152,72,0,72,0.1152
+"Sasquatch VII_045","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_045.asset",25,25,625,172,0.2752,40,0.064,40,12,28,0.0448
+"Sasquatch VII_046","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_046.asset",33,33,1089,268,0.246097,40,0.036731,40,8,32,0.029385
+"Sasquatch VII_047","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_047.asset",29,29,841,136,0.161712,152,0.180737,152,28,124,0.147444
+"Sasquatch VII_048","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_048.asset",23,23,529,52,0.098299,64,0.120983,64,48,16,0.030246
+"Sasquatch VII_049","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_049.asset",33,33,1089,92,0.084481,148,0.135905,148,112,36,0.033058
+"Sasquatch VII_050","Assets/Resources/Levels/Sasquatch VII/Sasquatch VII_050.asset",43,43,1849,140,0.075717,256,0.138453,256,192,64,0.034613
+"Sasquatch VIII_001","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_001.asset",11,9,99,40,0.40404,9,0.090909,9,3,6,0.060606
+"Sasquatch VIII_002","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_002.asset",11,9,99,42,0.424242,8,0.080808,8,4,4,0.040404
+"Sasquatch VIII_003","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_003.asset",9,8,72,32,0.444444,6,0.083333,6,2,4,0.055556
+"Sasquatch VIII_004","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_004.asset",10,10,100,38,0.38,10,0.1,10,3,7,0.07
+"Sasquatch VIII_005","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_005.asset",11,9,99,39,0.393939,8,0.080808,8,2,6,0.060606
+"Sasquatch VIII_006","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_006.asset",12,10,120,45,0.375,5,0.041667,5,0,5,0.041667
+"Sasquatch VIII_007","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_007.asset",13,14,182,70,0.384615,8,0.043956,8,0,8,0.043956
+"Sasquatch VIII_008","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_008.asset",17,11,187,74,0.395722,7,0.037433,7,0,7,0.037433
+"Sasquatch VIII_009","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_009.asset",14,14,196,61,0.311225,17,0.086735,17,15,2,0.010204
+"Sasquatch VIII_010","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_010.asset",13,13,169,24,0.142012,16,0.094675,16,0,16,0.094675
+"Sasquatch VIII_011","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_011.asset",13,13,169,25,0.147929,16,0.094675,16,8,8,0.047337
+"Sasquatch VIII_012","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_012.asset",8,9,72,35,0.486111,5,0.069444,5,0,5,0.069444
+"Sasquatch VIII_013","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_013.asset",9,9,81,33,0.407407,10,0.123457,10,4,6,0.074074
+"Sasquatch VIII_014","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_014.asset",9,11,99,37,0.373737,14,0.141414,14,6,8,0.080808
+"Sasquatch VIII_015","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_015.asset",12,12,144,48,0.333333,12,0.083333,12,6,6,0.041667
+"Sasquatch VIII_016","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_016.asset",14,12,168,69,0.410714,11,0.065476,11,5,6,0.035714
+"Sasquatch VIII_017","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_017.asset",18,12,216,83,0.384259,9,0.041667,9,0,9,0.041667
+"Sasquatch VIII_018","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_018.asset",21,13,273,65,0.238095,29,0.106227,29,24,5,0.018315
+"Sasquatch VIII_019","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_019.asset",11,13,143,56,0.391608,12,0.083916,12,4,8,0.055944
+"Sasquatch VIII_020","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_020.asset",11,14,154,65,0.422078,9,0.058442,9,1,8,0.051948
+"Sasquatch VIII_021","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_021.asset",14,10,140,54,0.385714,14,0.1,14,1,13,0.092857
+"Sasquatch VIII_022","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_022.asset",16,17,272,70,0.257353,39,0.143382,39,38,1,0.003676
+"Sasquatch VIII_023","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_023.asset",11,11,121,50,0.413223,12,0.099174,12,8,4,0.033058
+"Sasquatch VIII_024","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_024.asset",11,11,121,52,0.429752,16,0.132231,16,8,8,0.066116
+"Sasquatch VIII_025","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_025.asset",11,11,121,46,0.380165,16,0.132231,16,8,8,0.066116
+"Sasquatch VIII_026","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_026.asset",13,13,169,70,0.414201,16,0.094675,16,12,4,0.023669
+"Sasquatch VIII_027","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_027.asset",11,11,121,61,0.504132,12,0.099174,12,0,12,0.099174
+"Sasquatch VIII_028","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_028.asset",19,19,361,137,0.379501,52,0.144044,52,0,52,0.144044
+"Sasquatch VIII_029","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_029.asset",15,15,225,76,0.337778,17,0.075556,17,9,8,0.035556
+"Sasquatch VIII_030","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_030.asset",17,15,255,96,0.376471,10,0.039216,10,2,8,0.031373
+"Sasquatch VIII_031","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_031.asset",17,17,289,112,0.387543,18,0.062284,18,0,18,0.062284
+"Sasquatch VIII_032","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_032.asset",12,12,144,32,0.222222,16,0.111111,16,4,12,0.083333
+"Sasquatch VIII_033","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_033.asset",19,19,361,76,0.210526,48,0.132964,48,8,40,0.110803
+"Sasquatch VIII_034","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_034.asset",19,19,361,117,0.3241,44,0.121884,44,40,4,0.01108
+"Sasquatch VIII_035","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_035.asset",21,13,273,125,0.457876,25,0.091575,25,0,25,0.091575
+"Sasquatch VIII_036","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_036.asset",29,17,493,214,0.434077,50,0.10142,50,0,50,0.10142
+"Sasquatch VIII_037","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_037.asset",21,16,336,123,0.366071,17,0.050595,17,0,17,0.050595
+"Sasquatch VIII_038","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_038.asset",29,17,493,181,0.36714,23,0.046653,23,1,22,0.044625
+"Sasquatch VIII_039","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_039.asset",17,17,289,69,0.238754,27,0.093426,27,26,1,0.00346
+"Sasquatch VIII_040","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_040.asset",19,19,361,80,0.221607,80,0.221607,80,0,80,0.221607
+"Sasquatch VIII_041","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_041.asset",18,18,324,100,0.308642,32,0.098765,32,0,32,0.098765
+"Sasquatch VIII_042","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_042.asset",28,28,784,240,0.306123,68,0.086735,68,0,68,0.086735
+"Sasquatch VIII_043","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_043.asset",28,28,784,200,0.255102,100,0.127551,100,4,96,0.122449
+"Sasquatch VIII_044","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_044.asset",19,19,361,52,0.144044,52,0.144044,52,0,52,0.144044
+"Sasquatch VIII_045","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_045.asset",23,23,529,60,0.113422,84,0.15879,84,0,84,0.15879
+"Sasquatch VIII_046","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_046.asset",17,17,289,92,0.318339,48,0.16609,48,0,48,0.16609
+"Sasquatch VIII_047","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_047.asset",29,29,841,172,0.204518,240,0.285375,240,0,240,0.285375
+"Sasquatch VIII_048","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_048.asset",33,33,1089,236,0.216713,280,0.257117,280,0,280,0.257117
+"Sasquatch VIII_049","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_049.asset",37,37,1369,208,0.151936,480,0.350621,480,0,480,0.350621
+"Sasquatch VIII_050","Assets/Resources/Levels/Sasquatch VIII/Sasquatch VIII_050.asset",43,43,1849,292,0.157923,220,0.118983,220,32,188,0.101677
+"Sasquatch X_001","Assets/Resources/Levels/Sasquatch X/Sasquatch X_001.asset",10,8,80,40,0.5,5,0.0625,5,2,3,0.0375
+"Sasquatch X_002","Assets/Resources/Levels/Sasquatch X/Sasquatch X_002.asset",7,8,56,34,0.607143,4,0.071429,4,1,3,0.053571
+"Sasquatch X_003","Assets/Resources/Levels/Sasquatch X/Sasquatch X_003.asset",8,8,64,35,0.546875,4,0.0625,4,3,1,0.015625
+"Sasquatch X_004","Assets/Resources/Levels/Sasquatch X/Sasquatch X_004.asset",8,8,64,35,0.546875,4,0.0625,4,3,1,0.015625
+"Sasquatch X_005","Assets/Resources/Levels/Sasquatch X/Sasquatch X_005.asset",8,10,80,40,0.5,4,0.05,4,2,2,0.025
+"Sasquatch X_006","Assets/Resources/Levels/Sasquatch X/Sasquatch X_006.asset",10,10,100,50,0.5,4,0.04,4,1,3,0.03
+"Sasquatch X_007","Assets/Resources/Levels/Sasquatch X/Sasquatch X_007.asset",8,14,112,53,0.473214,5,0.044643,5,1,4,0.035714
+"Sasquatch X_008","Assets/Resources/Levels/Sasquatch X/Sasquatch X_008.asset",13,8,104,48,0.461539,7,0.067308,7,2,5,0.048077
+"Sasquatch X_009","Assets/Resources/Levels/Sasquatch X/Sasquatch X_009.asset",10,14,140,59,0.421429,10,0.071429,10,4,6,0.042857
+"Sasquatch X_010","Assets/Resources/Levels/Sasquatch X/Sasquatch X_010.asset",10,10,100,40,0.4,5,0.05,5,3,2,0.02
+"Sasquatch X_011","Assets/Resources/Levels/Sasquatch X/Sasquatch X_011.asset",17,15,255,88,0.345098,7,0.027451,7,0,7,0.027451
+"Sasquatch X_012","Assets/Resources/Levels/Sasquatch X/Sasquatch X_012.asset",12,12,144,61,0.423611,9,0.0625,9,5,4,0.027778
+"Sasquatch X_013","Assets/Resources/Levels/Sasquatch X/Sasquatch X_013.asset",12,11,132,56,0.424242,14,0.106061,14,2,12,0.090909
+"Sasquatch X_014","Assets/Resources/Levels/Sasquatch X/Sasquatch X_014.asset",13,9,117,56,0.478633,13,0.111111,13,3,10,0.08547
+"Sasquatch X_015","Assets/Resources/Levels/Sasquatch X/Sasquatch X_015.asset",13,9,117,56,0.478633,12,0.102564,12,2,10,0.08547
+"Sasquatch X_016","Assets/Resources/Levels/Sasquatch X/Sasquatch X_016.asset",13,9,117,56,0.478633,8,0.068376,8,0,8,0.068376
+"Sasquatch X_017","Assets/Resources/Levels/Sasquatch X/Sasquatch X_017.asset",13,13,169,64,0.378698,12,0.071006,12,4,8,0.047337
+"Sasquatch X_018","Assets/Resources/Levels/Sasquatch X/Sasquatch X_018.asset",11,11,121,54,0.446281,14,0.115703,14,6,8,0.066116
+"Sasquatch X_019","Assets/Resources/Levels/Sasquatch X/Sasquatch X_019.asset",13,13,169,64,0.378698,8,0.047337,8,4,4,0.023669
+"Sasquatch X_020","Assets/Resources/Levels/Sasquatch X/Sasquatch X_020.asset",13,13,169,64,0.378698,8,0.047337,8,0,8,0.047337
+"Sasquatch X_021","Assets/Resources/Levels/Sasquatch X/Sasquatch X_021.asset",13,13,169,64,0.378698,8,0.047337,8,4,4,0.023669
+"Sasquatch X_022","Assets/Resources/Levels/Sasquatch X/Sasquatch X_022.asset",13,13,169,69,0.408284,20,0.118343,20,8,12,0.071006
+"Sasquatch X_023","Assets/Resources/Levels/Sasquatch X/Sasquatch X_023.asset",13,13,169,76,0.449704,16,0.094675,16,4,12,0.071006
+"Sasquatch X_024","Assets/Resources/Levels/Sasquatch X/Sasquatch X_024.asset",15,15,225,80,0.355556,16,0.071111,16,0,16,0.071111
+"Sasquatch X_025","Assets/Resources/Levels/Sasquatch X/Sasquatch X_025.asset",15,15,225,64,0.284445,20,0.088889,20,0,20,0.088889
+"Sasquatch X_026","Assets/Resources/Levels/Sasquatch X/Sasquatch X_026.asset",21,21,441,88,0.199547,20,0.045351,20,4,16,0.036281
+"Sasquatch X_027","Assets/Resources/Levels/Sasquatch X/Sasquatch X_027.asset",21,21,441,68,0.154195,32,0.072562,32,24,8,0.018141
+"Sasquatch X_028","Assets/Resources/Levels/Sasquatch X/Sasquatch X_028.asset",21,21,441,40,0.090703,64,0.145125,64,60,4,0.00907
+"Sasquatch X_029","Assets/Resources/Levels/Sasquatch X/Sasquatch X_029.asset",21,21,441,80,0.181406,80,0.181406,80,40,40,0.090703
+"Sasquatch X_030","Assets/Resources/Levels/Sasquatch X/Sasquatch X_030.asset",14,13,182,106,0.582418,18,0.098901,18,0,18,0.098901
+"Sasquatch X_031","Assets/Resources/Levels/Sasquatch X/Sasquatch X_031.asset",17,18,306,82,0.267974,44,0.143791,44,14,30,0.098039
+"Sasquatch X_032","Assets/Resources/Levels/Sasquatch X/Sasquatch X_032.asset",16,16,256,100,0.390625,16,0.0625,16,8,8,0.03125
+"Sasquatch X_033","Assets/Resources/Levels/Sasquatch X/Sasquatch X_033.asset",16,16,256,100,0.390625,16,0.0625,16,8,8,0.03125
+"Sasquatch X_034","Assets/Resources/Levels/Sasquatch X/Sasquatch X_034.asset",20,10,200,76,0.38,10,0.05,10,5,5,0.025
+"Sasquatch X_035","Assets/Resources/Levels/Sasquatch X/Sasquatch X_035.asset",19,19,361,136,0.376731,24,0.066482,24,12,12,0.033241
+"Sasquatch X_036","Assets/Resources/Levels/Sasquatch X/Sasquatch X_036.asset",21,11,231,84,0.363636,20,0.08658,20,10,10,0.04329
+"Sasquatch X_037","Assets/Resources/Levels/Sasquatch X/Sasquatch X_037.asset",23,23,529,201,0.379962,32,0.060491,32,16,16,0.030246
+"Sasquatch X_038","Assets/Resources/Levels/Sasquatch X/Sasquatch X_038.asset",17,12,204,92,0.45098,10,0.04902,10,0,10,0.04902
+"Sasquatch X_039","Assets/Resources/Levels/Sasquatch X/Sasquatch X_039.asset",26,17,442,138,0.312217,14,0.031674,14,0,14,0.031674
+"Sasquatch X_040","Assets/Resources/Levels/Sasquatch X/Sasquatch X_040.asset",8,22,176,81,0.460227,9,0.051136,9,2,7,0.039773
+"Sasquatch X_041","Assets/Resources/Levels/Sasquatch X/Sasquatch X_041.asset",11,27,297,149,0.501684,12,0.040404,12,0,12,0.040404
+"Sasquatch X_042","Assets/Resources/Levels/Sasquatch X/Sasquatch X_042.asset",15,24,360,130,0.361111,18,0.05,18,2,16,0.044444
+"Sasquatch X_043","Assets/Resources/Levels/Sasquatch X/Sasquatch X_043.asset",22,19,418,134,0.320574,16,0.038278,16,0,16,0.038278
+"Sasquatch X_044","Assets/Resources/Levels/Sasquatch X/Sasquatch X_044.asset",17,17,289,135,0.467128,24,0.083045,24,0,24,0.083045
+"Sasquatch X_045","Assets/Resources/Levels/Sasquatch X/Sasquatch X_045.asset",21,21,441,172,0.390023,58,0.131519,58,0,58,0.131519
+"Sasquatch X_046","Assets/Resources/Levels/Sasquatch X/Sasquatch X_046.asset",25,21,525,252,0.48,48,0.091429,48,0,48,0.091429
+"Sasquatch X_047","Assets/Resources/Levels/Sasquatch X/Sasquatch X_047.asset",27,27,729,116,0.159122,228,0.312757,228,0,228,0.312757
+"Sasquatch X_048","Assets/Resources/Levels/Sasquatch X/Sasquatch X_048.asset",26,26,676,288,0.426036,24,0.035503,24,4,20,0.029586
+"Sasquatch X_049","Assets/Resources/Levels/Sasquatch X/Sasquatch X_049.asset",32,32,1024,360,0.351563,116,0.113281,116,0,116,0.113281
+"Sasquatch X_050","Assets/Resources/Levels/Sasquatch X/Sasquatch X_050.asset",29,41,1189,381,0.320437,236,0.198486,236,67,169,0.142136
+"Sasquatch XI_001","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_001.asset",9,21,189,81,0.428571,8,0.042328,8,4,4,0.021164
+"Sasquatch XI_002","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_002.asset",14,17,238,98,0.411765,8,0.033613,8,0,8,0.033613
+"Sasquatch XI_003","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_003.asset",13,13,169,83,0.491124,12,0.071006,12,6,6,0.035503
+"Sasquatch XI_004","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_004.asset",20,16,320,87,0.271875,9,0.028125,9,0,9,0.028125
+"Sasquatch XI_005","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_005.asset",17,17,289,32,0.110727,36,0.124568,36,16,20,0.069204
+"Sasquatch XI_006","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_006.asset",12,12,144,69,0.479167,12,0.083333,12,0,12,0.083333
+"Sasquatch XI_007","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_007.asset",9,9,81,34,0.419753,10,0.123457,10,6,4,0.049383
+"Sasquatch XI_008","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_008.asset",10,9,90,44,0.488889,7,0.077778,7,1,6,0.066667
+"Sasquatch XI_009","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_009.asset",9,11,99,43,0.434343,9,0.090909,9,1,8,0.080808
+"Sasquatch XI_010","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_010.asset",19,15,285,109,0.382456,20,0.070175,20,0,20,0.070175
+"Sasquatch XI_011","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_011.asset",8,14,112,52,0.464286,7,0.0625,7,4,3,0.026786
+"Sasquatch XI_012","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_012.asset",13,13,169,56,0.331361,16,0.094675,16,4,12,0.071006
+"Sasquatch XI_013","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_013.asset",18,12,216,75,0.347222,10,0.046296,10,1,9,0.041667
+"Sasquatch XI_014","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_014.asset",16,16,256,105,0.410156,20,0.078125,20,0,20,0.078125
+"Sasquatch XI_015","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_015.asset",16,16,256,80,0.3125,54,0.210938,54,0,54,0.210938
+"Sasquatch XI_016","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_016.asset",10,15,150,60,0.4,16,0.106667,16,2,14,0.093333
+"Sasquatch XI_017","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_017.asset",11,14,154,58,0.376623,19,0.123377,19,14,5,0.032468
+"Sasquatch XI_018","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_018.asset",11,17,187,64,0.342246,26,0.139037,26,20,6,0.032086
+"Sasquatch XI_019","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_019.asset",18,18,324,73,0.225309,28,0.08642,28,12,16,0.049383
+"Sasquatch XI_020","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_020.asset",20,20,400,81,0.2025,44,0.11,44,24,20,0.05
+"Sasquatch XI_021","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_021.asset",13,11,143,64,0.447552,17,0.118881,17,7,10,0.06993
+"Sasquatch XI_022","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_022.asset",17,13,221,67,0.303167,16,0.072398,16,4,12,0.054299
+"Sasquatch XI_023","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_023.asset",17,12,204,74,0.362745,15,0.073529,15,6,9,0.044118
+"Sasquatch XI_024","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_024.asset",16,9,144,52,0.361111,15,0.104167,15,5,10,0.069444
+"Sasquatch XI_025","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_025.asset",16,17,272,64,0.235294,23,0.084559,23,3,20,0.073529
+"Sasquatch XI_026","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_026.asset",10,8,80,32,0.4,8,0.1,8,2,6,0.075
+"Sasquatch XI_027","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_027.asset",12,13,156,46,0.294872,16,0.102564,16,4,12,0.076923
+"Sasquatch XI_028","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_028.asset",16,16,256,68,0.265625,32,0.125,32,4,28,0.109375
+"Sasquatch XI_029","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_029.asset",21,21,441,120,0.272109,20,0.045351,20,12,8,0.018141
+"Sasquatch XI_030","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_030.asset",21,19,399,108,0.270677,18,0.045113,18,2,16,0.0401
+"Sasquatch XI_031","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_031.asset",15,15,225,104,0.462222,20,0.088889,20,4,16,0.071111
+"Sasquatch XI_032","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_032.asset",13,17,221,94,0.425339,26,0.117647,26,10,16,0.072398
+"Sasquatch XI_033","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_033.asset",22,21,462,156,0.337662,15,0.032468,15,4,11,0.02381
+"Sasquatch XI_034","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_034.asset",17,19,323,139,0.430341,20,0.06192,20,0,20,0.06192
+"Sasquatch XI_035","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_035.asset",17,17,289,64,0.221453,36,0.124568,36,8,28,0.096886
+"Sasquatch XI_036","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_036.asset",13,17,221,96,0.434389,28,0.126697,28,2,26,0.117647
+"Sasquatch XI_037","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_037.asset",17,17,289,88,0.304498,60,0.207613,60,0,60,0.207613
+"Sasquatch XI_038","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_038.asset",17,17,289,88,0.304498,60,0.207613,60,12,48,0.16609
+"Sasquatch XI_039","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_039.asset",18,18,324,68,0.209877,108,0.333333,108,60,48,0.148148
+"Sasquatch XI_040","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_040.asset",21,21,441,156,0.353742,40,0.090703,40,0,40,0.090703
+"Sasquatch XI_041","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_041.asset",20,16,320,68,0.2125,94,0.29375,94,34,60,0.1875
+"Sasquatch XI_042","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_042.asset",11,8,88,47,0.534091,8,0.090909,8,0,8,0.090909
+"Sasquatch XI_043","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_043.asset",14,10,140,70,0.5,12,0.085714,12,0,12,0.085714
+"Sasquatch XI_044","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_044.asset",23,19,437,198,0.453089,48,0.10984,48,0,48,0.10984
+"Sasquatch XI_045","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_045.asset",29,17,493,170,0.344828,94,0.190669,94,0,94,0.190669
+"Sasquatch XI_046","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_046.asset",24,24,576,174,0.302083,64,0.111111,64,28,36,0.0625
+"Sasquatch XI_047","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_047.asset",29,25,725,220,0.303448,164,0.226207,164,0,164,0.226207
+"Sasquatch XI_048","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_048.asset",33,33,1089,144,0.132231,408,0.374656,408,0,408,0.374656
+"Sasquatch XI_049","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_049.asset",35,21,735,369,0.502041,73,0.09932,73,22,51,0.069388
+"Sasquatch XI_050","Assets/Resources/Levels/Sasquatch XI/Sasquatch XI_050.asset",29,33,957,514,0.537095,87,0.090909,87,17,70,0.073145
+"Sasquatch1_001","Assets/Resources/Levels/Sasquatch1/Sasquatch1_001.asset",11,11,121,52,0.429752,3,0.024793,3,0,3,0.024793
+"Sasquatch1_002","Assets/Resources/Levels/Sasquatch1/Sasquatch1_002.asset",9,9,81,42,0.518519,4,0.049383,4,0,4,0.049383
+"Sasquatch1_003","Assets/Resources/Levels/Sasquatch1/Sasquatch1_003.asset",16,14,224,66,0.294643,10,0.044643,10,0,10,0.044643
+"Sasquatch1_004","Assets/Resources/Levels/Sasquatch1/Sasquatch1_004.asset",13,10,130,63,0.484615,9,0.069231,9,1,8,0.061538
+"Sasquatch1_005","Assets/Resources/Levels/Sasquatch1/Sasquatch1_005.asset",15,15,225,84,0.373333,29,0.128889,29,1,28,0.124444
+"Sasquatch1_006","Assets/Resources/Levels/Sasquatch1/Sasquatch1_006.asset",15,12,180,58,0.322222,13,0.072222,13,0,13,0.072222
+"Sasquatch1_007","Assets/Resources/Levels/Sasquatch1/Sasquatch1_007.asset",19,10,190,69,0.363158,6,0.031579,6,1,5,0.026316
+"Sasquatch1_008","Assets/Resources/Levels/Sasquatch1/Sasquatch1_008.asset",13,11,143,61,0.426573,7,0.048951,7,3,4,0.027972
+"Sasquatch1_009","Assets/Resources/Levels/Sasquatch1/Sasquatch1_009.asset",9,9,81,35,0.432099,5,0.061728,5,0,5,0.061728
+"Sasquatch1_010","Assets/Resources/Levels/Sasquatch1/Sasquatch1_010.asset",18,17,306,92,0.300654,11,0.035948,11,0,11,0.035948
+"Sasquatch1_011","Assets/Resources/Levels/Sasquatch1/Sasquatch1_011.asset",11,9,99,43,0.434343,6,0.060606,6,0,6,0.060606
+"Sasquatch1_012","Assets/Resources/Levels/Sasquatch1/Sasquatch1_012.asset",27,12,324,106,0.327161,15,0.046296,15,1,14,0.04321
+"Sasquatch1_013","Assets/Resources/Levels/Sasquatch1/Sasquatch1_013.asset",12,14,168,65,0.386905,10,0.059524,10,3,7,0.041667
+"Sasquatch1_014","Assets/Resources/Levels/Sasquatch1/Sasquatch1_014.asset",10,8,80,38,0.475,6,0.075,6,2,4,0.05
+"Sasquatch1_015","Assets/Resources/Levels/Sasquatch1/Sasquatch1_015.asset",9,11,99,38,0.383838,6,0.060606,6,0,6,0.060606
+"Sasquatch1_016","Assets/Resources/Levels/Sasquatch1/Sasquatch1_016.asset",15,17,255,92,0.360784,11,0.043137,11,1,10,0.039216
+"Sasquatch1_017","Assets/Resources/Levels/Sasquatch1/Sasquatch1_017.asset",23,12,276,104,0.376812,13,0.047101,13,0,13,0.047101
+"Sasquatch1_018","Assets/Resources/Levels/Sasquatch1/Sasquatch1_018.asset",8,15,120,42,0.35,24,0.2,24,9,15,0.125
+"Sasquatch1_019","Assets/Resources/Levels/Sasquatch1/Sasquatch1_019.asset",25,15,375,135,0.36,9,0.024,9,2,7,0.018667
+"Sasquatch1_020","Assets/Resources/Levels/Sasquatch1/Sasquatch1_020.asset",9,8,72,30,0.416667,9,0.125,9,0,9,0.125
+"Sasquatch1_021","Assets/Resources/Levels/Sasquatch1/Sasquatch1_021.asset",15,6,90,44,0.488889,8,0.088889,8,2,6,0.066667
+"Sasquatch1_022","Assets/Resources/Levels/Sasquatch1/Sasquatch1_022.asset",15,14,210,85,0.404762,8,0.038095,8,0,8,0.038095
+"Sasquatch1_023","Assets/Resources/Levels/Sasquatch1/Sasquatch1_023.asset",17,9,153,62,0.405229,14,0.091503,14,0,14,0.091503
+"Sasquatch1_024","Assets/Resources/Levels/Sasquatch1/Sasquatch1_024.asset",14,14,196,68,0.346939,13,0.066327,13,0,13,0.066327
+"Sasquatch1_025","Assets/Resources/Levels/Sasquatch1/Sasquatch1_025.asset",18,14,252,79,0.313492,19,0.075397,19,1,18,0.071429
+"Sasquatch1_026","Assets/Resources/Levels/Sasquatch1/Sasquatch1_026.asset",18,11,198,73,0.368687,12,0.060606,12,0,12,0.060606
+"Sasquatch1_027","Assets/Resources/Levels/Sasquatch1/Sasquatch1_027.asset",24,16,384,139,0.361979,12,0.03125,12,0,12,0.03125
+"Sasquatch1_028","Assets/Resources/Levels/Sasquatch1/Sasquatch1_028.asset",21,13,273,96,0.351648,17,0.062271,17,0,17,0.062271
+"Sasquatch1_029","Assets/Resources/Levels/Sasquatch1/Sasquatch1_029.asset",22,16,352,114,0.323864,18,0.051136,18,0,18,0.051136
+"Sasquatch1_030","Assets/Resources/Levels/Sasquatch1/Sasquatch1_030.asset",26,14,364,106,0.291209,13,0.035714,13,0,13,0.035714
+"Sasquatch1_031","Assets/Resources/Levels/Sasquatch1/Sasquatch1_031.asset",23,9,207,80,0.386473,16,0.077295,16,12,4,0.019324
+"Sasquatch1_032","Assets/Resources/Levels/Sasquatch1/Sasquatch1_032.asset",24,16,384,119,0.309896,14,0.036458,14,0,14,0.036458
+"Sasquatch1_033","Assets/Resources/Levels/Sasquatch1/Sasquatch1_033.asset",25,17,425,133,0.312941,19,0.044706,19,11,8,0.018824
+"Sasquatch1_034","Assets/Resources/Levels/Sasquatch1/Sasquatch1_034.asset",26,17,442,138,0.312217,19,0.042986,19,0,19,0.042986
+"Sasquatch1_035","Assets/Resources/Levels/Sasquatch1/Sasquatch1_035.asset",26,17,442,108,0.244344,31,0.070136,31,0,31,0.070136
+"Sasquatch1_036","Assets/Resources/Levels/Sasquatch1/Sasquatch1_036.asset",27,15,405,130,0.320988,15,0.037037,15,0,15,0.037037
+"Sasquatch1_037","Assets/Resources/Levels/Sasquatch1/Sasquatch1_037.asset",29,17,493,169,0.342799,30,0.060852,30,0,30,0.060852
+"Sasquatch1_038","Assets/Resources/Levels/Sasquatch1/Sasquatch1_038.asset",26,18,468,149,0.318376,25,0.053419,25,0,25,0.053419
+"Sasquatch1_039","Assets/Resources/Levels/Sasquatch1/Sasquatch1_039.asset",23,17,391,115,0.294118,20,0.051151,20,0,20,0.051151
+"Sasquatch1_040","Assets/Resources/Levels/Sasquatch1/Sasquatch1_040.asset",24,15,360,117,0.325,24,0.066667,24,2,22,0.061111
+"Sasquatch1_041","Assets/Resources/Levels/Sasquatch1/Sasquatch1_041.asset",24,14,336,104,0.309524,16,0.047619,16,8,8,0.02381
+"Sasquatch1_042","Assets/Resources/Levels/Sasquatch1/Sasquatch1_042.asset",19,17,323,121,0.374613,14,0.043344,14,0,14,0.043344
+"Sasquatch1_043","Assets/Resources/Levels/Sasquatch1/Sasquatch1_043.asset",30,18,540,180,0.333333,22,0.040741,22,0,22,0.040741
+"Sasquatch1_044","Assets/Resources/Levels/Sasquatch1/Sasquatch1_044.asset",24,18,432,138,0.319444,23,0.053241,23,0,23,0.053241
+"Sasquatch1_045","Assets/Resources/Levels/Sasquatch1/Sasquatch1_045.asset",23,18,414,155,0.374396,21,0.050725,21,3,18,0.043478
+"Sasquatch1_046","Assets/Resources/Levels/Sasquatch1/Sasquatch1_046.asset",30,18,540,247,0.457407,30,0.055556,30,7,23,0.042593
+"Sasquatch1_047","Assets/Resources/Levels/Sasquatch1/Sasquatch1_047.asset",22,14,308,111,0.36039,33,0.107143,33,3,30,0.097403
+"Sasquatch1_048","Assets/Resources/Levels/Sasquatch1/Sasquatch1_048.asset",23,17,391,145,0.370844,15,0.038363,15,1,14,0.035806
+"Sasquatch1_049","Assets/Resources/Levels/Sasquatch1/Sasquatch1_049.asset",25,13,325,157,0.483077,9,0.027692,9,0,9,0.027692
+"Sasquatch1_050","Assets/Resources/Levels/Sasquatch1/Sasquatch1_050.asset",27,15,405,122,0.301235,36,0.088889,36,0,36,0.088889
+"11","Assets/Resources/Levels/test/Test.asset",20,11,220,90,0.409091,1,0.004545,1,0,1,0.004545
