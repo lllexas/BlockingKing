@@ -130,6 +130,9 @@ public class IntentSystem : MonoBehaviour
             case IntentType.Attack:
                 AttackSystem.Instance?.Execute(actor, intentComponent.Intent as AttackIntent);
                 break;
+            case IntentType.Card:
+                CardEffectSystem.Instance?.Execute(actor, intentComponent.Intent as CardIntent);
+                break;
         }
 
         Return(intentComponent.Intent);

@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 021dd496d4147bf4994149b63ae3c398, type: 3}
+  m_Name: TestRunMsg
+  m_EditorClassIdentifier: 
+  messageId: testmsg
+  title: "\u7B2C\u4E00\u6B21"
+  speaker: ???
+  body: "\u6211\u4EEC\u7B2C\u4E00\u6B21\u89C1\u9762\u5417\uFF1F\u6211\u8BB0\u4E0D\u592A\u6E05\u4E86\u2026\u2026\u7B97\u4E86\uFF0C\u4F60\u968F\u4FBF\u62FF\u5427\u3002"
+  choices:
+  - choiceId: A
+    text: "\u770B\u5411\u56FD\u9645\u8C61\u68CB"
+  - choiceId: B
+    text: "\u770B\u5411\u4E2D\u56FD\u8C61\u68CB"

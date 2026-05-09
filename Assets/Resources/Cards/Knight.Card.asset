@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34a1b3059e77ec64fbdf8b189dd495a9, type: 3}
+  m_Name: Knight.Card
+  m_EditorClassIdentifier: 
+  instanceId: 
+  cardId: knight.stomp
+  displayName: 骑士践踏
+  description: 选择一个日字格。无视路径障碍，落点有敌人则踩踏，落点是墙或箱子则不可执行。
+  cost: 1
+  releaseRule: 5
+  icon: {fileID: 0}

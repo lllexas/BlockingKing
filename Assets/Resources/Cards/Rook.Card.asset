@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34a1b3059e77ec64fbdf8b189dd495a9, type: 3}
+  m_Name: Rook.Card
+  m_EditorClassIdentifier: 
+  instanceId: 
+  cardId: rook.charge
+  displayName: 战车冲撞
+  description: 上下左右直线冲撞。穿透杀敌，推箱前进，撞碎第一面墙后停止。
+  cost: 1
+  releaseRule: 1
+  icon: {fileID: 0}

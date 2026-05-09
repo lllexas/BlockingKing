@@ -8,6 +8,8 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
 {
     public static EnemyAutoAISystem Instance { get; private set; }
 
+    [HideInInspector] public bool AllowAttack = true;
+
     private static readonly Vector2Int[] Directions =
     {
         Vector2Int.up,
@@ -145,7 +147,7 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
                 continue;
 
             var enemyHandle = entitySystem.GetHandleFromId(core.Id);
-            if (IsCrossAdjacent(core.Position, corePosition))
+            if (AllowAttack && IsCrossAdjacent(core.Position, corePosition))
             {
                 var attackIntent = intentSystem.Request<AttackIntent>();
                 attackIntent.Setup(corePosition);

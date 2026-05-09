@@ -32,7 +32,7 @@ public class DrawSystem : MonoBehaviour
     [SerializeField] private float wallY = -0.2f;
 
     [Header("Stats Text")]
-    [SerializeField] private bool showStatsText = true;
+    [SerializeField] public bool showStatsText = true;
     [SerializeField] private float statsTextHeight = 0.01f;
     [SerializeField] private float statsTextScale = 1f;
     [SerializeField] private float statsTextFontSize = 3f;

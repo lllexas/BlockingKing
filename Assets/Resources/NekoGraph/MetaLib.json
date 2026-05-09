@@ -1,0 +1,17 @@
+{
+  "TestEvent": {
+    "ID": "TestEvent",
+    "PackID": "TestEvent",
+    "Kind": 1,
+    "Storage": 0,
+    "ResourcePath": "RunStage/TestEvent/TestEvent",
+    "ObjectType": null,
+    "GraphType": "Base",
+    "DisplayName": "TestEvent",
+    "Author": "NekoTeam",
+    "Version": "1.0.0",
+    "Description": null,
+    "CustomFields": {},
+    "EffectiveID": "TestEvent"
+  }
+}

@@ -1,14 +1,41 @@
 using System.Collections.Generic;
-using UnityEngine;
 using Sirenix.OdinInspector;
+using UnityEngine;
+
+public enum LevelPlayMode
+{
+    Classic,
+    StepLimit
+}
+
+public enum LevelDataSource
+{
+    None,
+    Inspector,
+    QuickPlaySession,
+    RuntimeRequest
+}
+
+public sealed class LevelPlayRequest
+{
+    public LevelData Level;
+    public TileMappingConfig Config;
+    public LevelPlayMode Mode = LevelPlayMode.Classic;
+    public int StepLimit = 30;
+}
 
 /// <summary>
-/// 播放场景入口：Inspector 可拖入 LevelData SO 直接预览，
-/// 面板按钮一键重建 Mesh。
-/// 优先级：QuickPlaySession > 直接引用。
+/// 关卡播放入口。生命周期分为：
+/// LoadLevel -> RebuildWorld -> StartPlayback -> StopPlayback。
+/// Inspector/QuickPlay 只负责提供默认关卡；route/stage 应通过 LevelPlayRequest 显式播放。
 /// </summary>
 public class LevelPlayer : MonoBehaviour
 {
+    private const string LevelMeshObjectName = "LevelMesh";
+    private const int DefaultPlayerTagID = 1;
+    private const int DefaultBoxTagID = 2;
+    private const int DefaultTargetTagID = 3;
+
     [Header("关卡数据")]
     [SerializeField, Tooltip("直接拖入 LevelData SO（QuickPlaySession 激活时会覆盖它）")]
     private LevelData levelData;
@@ -29,69 +56,278 @@ public class LevelPlayer : MonoBehaviour
     [Header("ECS")]
     [SerializeField] private int maxEntityCount = 256;
 
+    [Header("Play Mode")]
+    [SerializeField] private LevelPlayMode defaultPlayMode = LevelPlayMode.Classic;
+    [SerializeField, Min(1)] private int defaultStepLimit = 30;
+
     private LevelData _level;
     private TileMappingConfig _config;
     private GameObject _meshGO;
     private Material _materialInstance;
-    private bool _usingQuickPlaySession;
+    private LevelDataSource _levelSource;
+    private ILevelPlayRule _playRule;
+    private bool _isPlaying;
+    private bool _isSettled;
+    private LevelPlayMode _playMode;
+    private int _remainingSteps = -1;
+    private readonly HashSet<Vector2Int> _targetCells = new();
+
+    public LevelData CurrentLevel => _level;
+    public TileMappingConfig CurrentConfig => _config;
+    public LevelDataSource CurrentLevelSource => _levelSource;
+    public LevelPlayMode PlayMode => _playMode;
+    public int RemainingSteps => _remainingSteps;
+    public bool IsPlaying => _isPlaying;
 
     private void Start()
     {
-        ResolveLevelData();
-        BuildMesh();
-        BuildEntities();
-    }
-
-    private void ResolveLevelData()
-    {
-        if (_usingQuickPlaySession)
+        var flow = GameFlowController.Instance;
+        if (flow != null && !flow.ShouldLevelPlayerAutoBuild)
             return;
 
-        // 快速播放优先于场景里的固定引用。
+        if (LoadConfiguredLevel())
+            RebuildWorld();
+    }
+
+    private void OnDestroy()
+    {
+        StopPlayback();
+    }
+
+    public bool PlayLevel(LevelData level)
+    {
+        return PlayLevel(new LevelPlayRequest
+        {
+            Level = level,
+            Config = tileConfig,
+            Mode = defaultPlayMode,
+            StepLimit = defaultStepLimit
+        });
+    }
+
+    public bool PlayLevel(LevelData level, LevelPlayMode mode)
+    {
+        return PlayLevel(new LevelPlayRequest
+        {
+            Level = level,
+            Config = tileConfig,
+            Mode = mode,
+            StepLimit = defaultStepLimit
+        });
+    }
+
+    public bool PlayLevel(LevelData level, LevelPlayMode mode, int maxSteps)
+    {
+        return PlayLevel(new LevelPlayRequest
+        {
+            Level = level,
+            Config = tileConfig,
+            Mode = mode,
+            StepLimit = maxSteps
+        });
+    }
+
+    public bool PlayLevel(LevelPlayRequest request)
+    {
+        if (request == null)
+        {
+            Debug.LogError("[LevelPlayer] PlayLevel failed: request is null.");
+            return false;
+        }
+
+        StopPlayback();
+
+        if (!LoadLevel(request.Level, request.Config != null ? request.Config : tileConfig, LevelDataSource.RuntimeRequest))
+            return false;
+
+        RebuildWorld();
+        StartPlayback(request);
+        return true;
+    }
+
+    public bool LoadLevel(LevelData level, TileMappingConfig config, LevelDataSource source)
+    {
+        if (level == null)
+        {
+            Debug.LogWarning("[LevelPlayer] LoadLevel failed: level is null.");
+            return false;
+        }
+
+        _level = level;
+        _config = config;
+        _config?.RebuildCache();
+        _levelSource = source;
+
+        if (_config == null)
+            Debug.LogWarning("[LevelPlayer] TileMappingConfig is missing. Tag IDs will use project defaults.");
+
+        Debug.Log($"[LevelPlayer] Level loaded: {level.name}, source={source}");
+        return true;
+    }
+
+    public bool LoadConfiguredLevel()
+    {
         var session = Resources.Load<QuickPlaySession>("QuickPlaySession");
         if (session != null && session.active && session.targetLevel != null)
         {
-            _level = session.targetLevel;
-            _config = session.config != null ? session.config : tileConfig;
-            _config?.RebuildCache();
+            bool loaded = LoadLevel(
+                session.targetLevel,
+                session.config != null ? session.config : tileConfig,
+                LevelDataSource.QuickPlaySession);
+
             session.active = false;
-            _usingQuickPlaySession = true;
+            return loaded;
+        }
+
+        return LoadLevel(levelData, tileConfig, LevelDataSource.Inspector);
+    }
+
+    public void RebuildWorld()
+    {
+        if (_level == null)
+        {
+            Debug.LogWarning("[LevelPlayer] RebuildWorld failed: no loaded level.");
             return;
         }
 
-        // 正常播放使用直接引用
-        if (levelData != null)
+        BuildMeshInternal();
+        BuildEntitiesInternal();
+        CacheTargetCells();
+    }
+
+    public void StartPlayback(LevelPlayRequest request)
+    {
+        if (_level == null)
         {
-            _level = levelData;
-            _config = tileConfig;
-            _config?.RebuildCache();
+            Debug.LogWarning("[LevelPlayer] StartPlayback failed: no loaded level.");
             return;
         }
+
+        _playMode = request != null ? request.Mode : defaultPlayMode;
+        _playRule = CreatePlayRule(_playMode);
+        _isPlaying = true;
+        _isSettled = false;
+
+        _playRule.Begin(this, request);
+
+        GameFlowController.Instance?.EnterLevel();
+        TickSystem.OnTick -= HandleTick;
+        TickSystem.OnTick += HandleTick;
+
+        Debug.Log($"[LevelPlayer] Playback started: {_level.levelName}, mode={_playMode}, steps={_remainingSteps}");
+        _playRule.Evaluate(this);
+    }
+
+    public void StopPlayback()
+    {
+        TickSystem.OnTick -= HandleTick;
+        _playRule = null;
+        _isPlaying = false;
+    }
+
+    [Button("Rebuild World", ButtonSizes.Medium), HorizontalGroup("Buttons")]
+    public void RebuildWorldFromInspector()
+    {
+        if (_level == null && !LoadConfiguredLevel())
+            return;
+
+        RebuildWorld();
     }
 
     [Button("Rebuild Mesh", ButtonSizes.Medium), HorizontalGroup("Buttons")]
     public void BuildMesh()
     {
-        ResolveLevelData();
-        if (_level == null)
+        if (_level == null && !LoadConfiguredLevel())
+            return;
+
+        BuildMeshInternal();
+    }
+
+    [Button("Restart Level", ButtonSizes.Medium), HorizontalGroup("Buttons")]
+    public void RestartLevel()
+    {
+        PlayLevel(new LevelPlayRequest
         {
-            Debug.LogWarning("[LevelPlayer] 无可用关卡数据。请拖入 LevelData SO 或设置 QuickPlaySession。");
+            Level = _level != null ? _level : levelData,
+            Config = _config != null ? _config : tileConfig,
+            Mode = _playMode,
+            StepLimit = _remainingSteps > 0 ? _remainingSteps : defaultStepLimit
+        });
+    }
+
+    public void BuildEntities()
+    {
+        if (_level == null && !LoadConfiguredLevel())
+            return;
+
+        BuildEntitiesInternal();
+        CacheTargetCells();
+    }
+
+    [Button("Clear Mesh", ButtonSizes.Medium), HorizontalGroup("Buttons")]
+    public void ClearMesh()
+    {
+        int removedCount = ClearLevelMeshObjects();
+        if (removedCount == 0)
+        {
+            Debug.LogWarning("[LevelPlayer] 没有可清除的 Mesh。");
             return;
         }
 
-        Debug.Log($"[LevelPlayer] 开始构建: {_level.levelName}, " +
-                  $"size={_level.width}x{_level.height}, wallHeight={wallHeight}");
+        Debug.Log($"[LevelPlayer] Mesh 已清除，数量={removedCount}");
+    }
 
-        // 销毁旧 Mesh（保留材质实例以便复用）
-        if (_meshGO != null)
+    internal bool AreAllBoxesOnTargets()
+    {
+        if (_targetCells.Count == 0)
+            return false;
+
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+            return false;
+
+        var entities = entitySystem.entities;
+        bool hasBox = false;
+        for (int i = 0; i < entities.entityCount; i++)
         {
-            var mr = _meshGO.GetComponent<MeshRenderer>();
-            if (mr != null && mr.sharedMaterial != null && material == null)
-                _materialInstance = mr.sharedMaterial;
+            if (entities.coreComponents[i].EntityType != EntityType.Box)
+                continue;
 
-            DestroyImmediate(_meshGO);
-            _meshGO = null;
+            hasBox = true;
+            if (!_targetCells.Contains(entities.coreComponents[i].Position))
+                return false;
         }
+
+        return hasBox;
+    }
+
+    internal void SetRemainingSteps(int value)
+    {
+        _remainingSteps = value;
+    }
+
+    internal void SettleLevel(bool success, string reason)
+    {
+        if (_isSettled)
+            return;
+
+        _isSettled = true;
+        StopPlayback();
+
+        Debug.Log($"[LevelPlayer] Level settled: success={success}, reason={reason}");
+
+        var stageFacade = NekoGraph.GraphHub.Instance?.GetFacade<RunStageFacade>();
+        if (stageFacade != null && stageFacade.HasWaitingStage())
+            stageFacade.ResumeWaitingStage(success ? 0 : 1);
+
+        GameFlowController.Instance?.OnRouteClassicLevelCompleted();
+    }
+
+    private void BuildMeshInternal()
+    {
+        Debug.Log($"[LevelPlayer] 开始构建: {_level.levelName}, size={_level.width}x{_level.height}, wallHeight={wallHeight}");
+
+        ClearLevelMeshObjects();
 
         var builder = new LevelMeshBuilder
         {
@@ -108,15 +344,13 @@ public class LevelPlayer : MonoBehaviour
             return;
         }
 
-        _meshGO = new GameObject("LevelMesh");
+        _meshGO = new GameObject(LevelMeshObjectName);
         _meshGO.transform.SetParent(transform);
         _meshGO.AddComponent<MeshFilter>().mesh = mesh;
 
         EnsureLevelMaterial();
-
         _meshGO.AddComponent<MeshRenderer>().sharedMaterial = _materialInstance;
 
-        // 通知相机控制器
         var camCtrl = Camera.main?.GetComponent<CameraController>();
         if (camCtrl != null)
         {
@@ -124,27 +358,11 @@ public class LevelPlayer : MonoBehaviour
             camCtrl.ResetView();
         }
 
-        Debug.Log($"[LevelPlayer] {_level.levelName} 已构建, 顶点={mesh.vertexCount}, " +
-                  $"wallHeight={wallHeight}");
+        Debug.Log($"[LevelPlayer] {_level.levelName} 已构建, 顶点={mesh.vertexCount}, wallHeight={wallHeight}");
     }
 
-    [Button("Restart Level", ButtonSizes.Medium), HorizontalGroup("Buttons")]
-    public void RestartLevel()
+    private void BuildEntitiesInternal()
     {
-        ResolveLevelData();
-        BuildMesh();
-        BuildEntities();
-    }
-
-    public void BuildEntities()
-    {
-        ResolveLevelData();
-        if (_level == null)
-        {
-            Debug.LogWarning("[LevelPlayer] 无可用关卡数据，无法初始化 ECS。");
-            return;
-        }
-
         EnsureLevelMaterial();
 
         var entitySystem = EntitySystem.Instance;
@@ -163,10 +381,10 @@ public class LevelPlayer : MonoBehaviour
         entitySystem.SetTerrain(_level.GetMap2D());
         entitySystem.SetWallTerrainIds(GetWallTerrainIds(), GetDefaultFloorTerrainId());
 
-        int playerTagID = ResolveTagID("player", 3);
-        int boxTagID = ResolveTagID("box", 2);
+        int playerTagID = ResolveTagID("player", DefaultPlayerTagID);
+        int boxTagID = ResolveTagID("box", DefaultBoxTagID);
         int boxCoreTagID = ResolveTagID("Box.Core", -1);
-        int targetTagID = ResolveTagID("target", 1);
+        int targetTagID = ResolveTagID("target", DefaultTargetTagID);
         int enemyGoTagID = ResolveTagID("Enemy.Go", 4);
         int unstableWallTagID = ResolveTagID("Wall.Unstable", -1);
 
@@ -190,18 +408,22 @@ public class LevelPlayer : MonoBehaviour
         Debug.Log($"[LevelPlayer] ECS 已初始化，实体数={entitySystem.entities.entityCount}");
     }
 
-    [Button("Clear Mesh", ButtonSizes.Medium), HorizontalGroup("Buttons")]
-    public void ClearMesh()
+    private void HandleTick()
     {
-        if (_meshGO == null)
-        {
-            Debug.LogWarning("[LevelPlayer] 没有可清除的 Mesh。");
+        if (!_isPlaying || _isSettled || _playRule == null)
             return;
-        }
 
-        DestroyImmediate(_meshGO);
-        _meshGO = null;
-        Debug.Log("[LevelPlayer] Mesh 已清除");
+        _playRule.OnTick(this);
+        _playRule.Evaluate(this);
+    }
+
+    private ILevelPlayRule CreatePlayRule(LevelPlayMode mode)
+    {
+        return mode switch
+        {
+            LevelPlayMode.StepLimit => new StepLimitPlayRule(),
+            _ => new ClassicPlayRule()
+        };
     }
 
     private T EnsureRuntimeSystem<T>() where T : Component
@@ -212,9 +434,55 @@ public class LevelPlayer : MonoBehaviour
         return system;
     }
 
+    private int ClearLevelMeshObjects()
+    {
+        int removedCount = 0;
+
+        for (int i = transform.childCount - 1; i >= 0; i--)
+        {
+            var child = transform.GetChild(i);
+            if (child == null)
+                continue;
+
+            if (!string.Equals(child.name, LevelMeshObjectName, System.StringComparison.Ordinal))
+                continue;
+
+            CaptureReusableMaterial(child.gameObject);
+            DestroyUnityObjectImmediate(child.gameObject);
+            removedCount++;
+        }
+
+        if (_meshGO != null)
+        {
+            CaptureReusableMaterial(_meshGO);
+            DestroyUnityObjectImmediate(_meshGO);
+            removedCount++;
+        }
+
+        _meshGO = null;
+        return removedCount;
+    }
+
+    private void CaptureReusableMaterial(GameObject meshObject)
+    {
+        if (meshObject == null || material != null)
+            return;
+
+        var mr = meshObject.GetComponent<MeshRenderer>();
+        if (mr != null && mr.sharedMaterial != null)
+            _materialInstance = mr.sharedMaterial;
+    }
+
+    private static void DestroyUnityObjectImmediate(UnityEngine.Object obj)
+    {
+        if (obj == null)
+            return;
+
+        DestroyImmediate(obj);
+    }
+
     private void EnsureLevelMaterial()
     {
-        // 材质：优先用 Inspector 拖入的 asset，其次复用已有实例，最后新建
         if (material != null)
         {
             _materialInstance = material;
@@ -274,7 +542,7 @@ public class LevelPlayer : MonoBehaviour
         if (_level?.tags == null)
             return result;
 
-        int targetTagID = ResolveTagID("target", 1);
+        int targetTagID = ResolveTagID("target", DefaultTargetTagID);
         foreach (var tag in _level.tags)
         {
             if (tag.tagID == targetTagID)
@@ -282,6 +550,21 @@ public class LevelPlayer : MonoBehaviour
         }
 
         return result;
+    }
+
+    private void CacheTargetCells()
+    {
+        _targetCells.Clear();
+
+        if (_level?.tags == null)
+            return;
+
+        int targetTagID = ResolveTagID("target", DefaultTargetTagID);
+        foreach (var tag in _level.tags)
+        {
+            if (tag.tagID == targetTagID)
+                _targetCells.Add(new Vector2Int(tag.x, tag.y));
+        }
     }
 
     private int ResolveTagID(string tagName, int fallback)
@@ -328,5 +611,56 @@ public class LevelPlayer : MonoBehaviour
         }
 
         return 0;
+    }
+
+    private interface ILevelPlayRule
+    {
+        void Begin(LevelPlayer player, LevelPlayRequest request);
+        void OnTick(LevelPlayer player);
+        void Evaluate(LevelPlayer player);
+    }
+
+    private sealed class ClassicPlayRule : ILevelPlayRule
+    {
+        public void Begin(LevelPlayer player, LevelPlayRequest request)
+        {
+            player.SetRemainingSteps(-1);
+        }
+
+        public void OnTick(LevelPlayer player)
+        {
+        }
+
+        public void Evaluate(LevelPlayer player)
+        {
+            if (player.AreAllBoxesOnTargets())
+                player.SettleLevel(true, "all boxes are on targets");
+        }
+    }
+
+    private sealed class StepLimitPlayRule : ILevelPlayRule
+    {
+        public void Begin(LevelPlayer player, LevelPlayRequest request)
+        {
+            int stepLimit = request != null ? request.StepLimit : 0;
+            player.SetRemainingSteps(Mathf.Max(1, stepLimit));
+        }
+
+        public void OnTick(LevelPlayer player)
+        {
+            player.SetRemainingSteps(Mathf.Max(0, player.RemainingSteps - 1));
+        }
+
+        public void Evaluate(LevelPlayer player)
+        {
+            if (player.AreAllBoxesOnTargets())
+            {
+                player.SettleLevel(true, "all boxes are on targets");
+                return;
+            }
+
+            if (player.RemainingSteps <= 0)
+                player.SettleLevel(false, "step limit reached");
+        }
     }
 }

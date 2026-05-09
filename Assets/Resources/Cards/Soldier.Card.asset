@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34a1b3059e77ec64fbdf8b189dd495a9, type: 3}
+  m_Name: Soldier.Card
+  m_EditorClassIdentifier: 
+  instanceId: 
+  cardId: soldier.charge
+  displayName: 士兵冲撞
+  description: 选择一个斜向相邻格。空地落脚，敌人撞击，墙或箱子不可执行。
+  cost: 1
+  releaseRule: 4
+  icon: {fileID: 0}

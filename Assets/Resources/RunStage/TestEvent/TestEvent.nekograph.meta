@@ -1,0 +1,23 @@
+fileFormatVersion: 2
+guid: 0882665189f29da4a83a8c705ac67096
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 9ef784dafb878e84c9b2e2c8c3666ac7, type: 3}
+  PreviewJson: "{\r\n  \"$type\": \"BasePackData, NekoGraph.Runtime\",\r\n  \"PackID\":
+    \"TestEvent\",\r\n  \"Version\": \"1.0.0\",\r\n  \"ReadableFrom\": 100,\r\n 
+    \"WritableFrom\": 1000,\r\n  \"CreatedAt\": 1778300792,\r\n  \"ModifiedAt\":
+    1778301131,\r\n  \"Nodes\": {\r\n    \"$type\": \"System.Collections.Generic.Dictionary`2[[System.String,
+    mscorlib],[BaseNodeData, NekoGraph.Runtime]], mscorlib\",\r\n    \"5cdef797-31ee-4e81-bc43-acfe949b87fd\":
+    {\r\n      \"$type\": \"RootNodeData, NekoGraph.Runtime\",\r\n      \"_\": [\r\n       
+    \"3452259d-e899-4ed0-9145-215dcc2962de\"\r\n      ],\r\n      \"NodeID\": \"5cdef797-31ee-4e81-bc43-acfe949b87fd\",\r\n     
+    \"EditorPosition\": {\r\n        \"$type\": \"SerializableVector2, NekoGraph.Runtime\",\r\n       
+    \"x\": 124.0,\r\n        \"y\": 295.2\r\n      },\r\n      \"OutputConnections\":
+    [\r\n        {\r\n          \"$type\": \"ConnectionData, NekoGraph.Runtime\",\r\n         
+    \"FromPortIndex\": 0,\r\n          \"TargetNodeID\": \"3452259d-e899-4ed0-9145-215dcc2962de\",\r\n         
+    \"ToPortIndex\": 0\r\n        }\r\n      ],\r\n      \"IsChecked\": false\r\n   
+    },\r\n    \"3452\n... (truncated)"

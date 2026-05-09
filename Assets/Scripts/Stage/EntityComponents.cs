@@ -18,7 +18,8 @@ public enum IntentType : byte
 {
     None,
     Move,
-    Attack
+    Attack,
+    Card
 }
 
 // ─────────── CoreComponent ───────────
