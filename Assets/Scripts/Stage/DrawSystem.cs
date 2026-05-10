@@ -21,16 +21,27 @@ public class DrawSystem : MonoBehaviour
     [SerializeField] private Material playerMaterial;
     [SerializeField] private Material boxMaterial;
     [SerializeField] private Material coreBoxMaterial;
+    [SerializeField] private Material boxGlassMaterial;
+    [SerializeField] private Material coreBoxGlassMaterial;
     [SerializeField] private Material enemyMaterial;
     [SerializeField] private Material wallMaterial;
 
     [Header("Transform")]
     [SerializeField] private float cellSize = 1f;
     [SerializeField] private Vector3 playerScale = new(0.7f, 1f, 0.7f);
-    [SerializeField] private Vector3 boxScale = new(0.85f, 0.85f, 0.85f);
+    [SerializeField] private Vector3 boxScale = new(0.45f, 0.45f, 0.45f);
+    [SerializeField] private Vector3 boxGlassScale = new(0.9f, 0.9f, 0.9f);
     [SerializeField] private Vector3 enemyScale = new(0.75f, 0.35f, 0.75f);
     [SerializeField] private Vector3 wallScale = new(0.95f, 0.95f, 0.95f);
     [SerializeField] private float wallY = -0.2f;
+
+    [Header("Beat Motion")]
+    [SerializeField] private bool enableBeatMotion = true;
+    [SerializeField, Min(0.03f)] private float beatDuration = 0.16f;
+    [SerializeField, Range(0.05f, 1f)] private float movementPortion = 0.86f;
+    [SerializeField, Range(0.05f, 1f)] private float attackPortion = 0.72f;
+    [SerializeField, Range(0f, 0.5f)] private float attackLungeDistance = 0.28f;
+    [SerializeField, Range(0f, 1.5f)] private float spawnRiseDistance = 0.75f;
 
     [Header("Stats Text")]
     [SerializeField] public bool showStatsText = true;
@@ -51,12 +62,16 @@ public class DrawSystem : MonoBehaviour
     private readonly Matrix4x4[] _playerMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _boxMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _coreBoxMatrices = new Matrix4x4[BatchSize];
+    private readonly Matrix4x4[] _boxGlassMatrices = new Matrix4x4[BatchSize];
+    private readonly Matrix4x4[] _coreBoxGlassMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _enemyMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _wallMatrices = new Matrix4x4[BatchSize];
     private readonly List<StatTextPair> _statTexts = new();
     private int _playerCount;
     private int _boxCount;
     private int _coreBoxCount;
+    private int _boxGlassCount;
+    private int _coreBoxGlassCount;
     private int _enemyCount;
     private int _wallCount;
     private int _statTextCount;
@@ -64,6 +79,12 @@ public class DrawSystem : MonoBehaviour
     private Material _runtimeStatsOccludedMaterial;
     private Material _runtimeStatsMaterialSource;
     private TMP_FontAsset _runtimeStatsTextFont;
+    private EventBusSystem _registeredBus;
+    private float _nextBeatStartTime;
+    private float _activeIntentStartTime;
+    private float _activeIntentEndTime;
+    private int _activeIntentSlotId;
+    private bool _hasActiveIntentSlot;
 
     private void Awake()
     {
@@ -73,6 +94,8 @@ public class DrawSystem : MonoBehaviour
 
     private void OnDestroy()
     {
+        UnregisterEventBus();
+
         if (_runtimeStatsVisibleMaterial != null)
         {
             Destroy(_runtimeStatsVisibleMaterial);
@@ -89,8 +112,19 @@ public class DrawSystem : MonoBehaviour
             Instance = null;
     }
 
+    private void OnEnable()
+    {
+        TryRegisterEventBus();
+    }
+
+    private void OnDisable()
+    {
+        UnregisterEventBus();
+    }
+
     private void LateUpdate()
     {
+        TryRegisterEventBus();
         UpdateStatsMaterialProperties();
         DrawEntities();
     }
@@ -113,6 +147,8 @@ public class DrawSystem : MonoBehaviour
         _playerCount = 0;
         _boxCount = 0;
         _coreBoxCount = 0;
+        _boxGlassCount = 0;
+        _coreBoxGlassCount = 0;
         _enemyCount = 0;
         _wallCount = 0;
 
@@ -123,21 +159,21 @@ public class DrawSystem : MonoBehaviour
             switch (core.EntityType)
             {
                 case EntityType.Player:
-                    AddPlayer(core.Position);
-                    AddStatsText(core.Position, entities.propertyComponents[i].Attack, core.Health);
+                    AddPlayer(i, core.Position);
+                    AddStatsText(i, core.EntityType, core.Position, CombatStats.GetAttack(entities.statusComponents[i]), CombatStats.GetCurrentHealth(entities.statusComponents[i]));
                     break;
                 case EntityType.Box:
-                    AddBox(core.Position, entities.propertyComponents[i].IsCore);
+                    AddBox(i, core.Position, entities.propertyComponents[i].IsCore);
                     if (entities.propertyComponents[i].IsCore)
-                        AddStatsText(core.Position, entities.propertyComponents[i].Attack, core.Health);
+                        AddStatsText(i, core.EntityType, core.Position, CombatStats.GetAttack(entities.statusComponents[i]), CombatStats.GetCurrentHealth(entities.statusComponents[i]));
                     break;
                 case EntityType.Enemy:
-                    AddEnemy(core.Position);
-                    AddStatsText(core.Position, entities.propertyComponents[i].Attack, core.Health);
+                    AddEnemy(i, core.Position);
+                    AddStatsText(i, core.EntityType, core.Position, CombatStats.GetAttack(entities.statusComponents[i]), CombatStats.GetCurrentHealth(entities.statusComponents[i]));
                     break;
                 case EntityType.Wall:
-                    AddWall(core.Position);
-                    AddStatsText(core.Position, entities.propertyComponents[i].Attack, core.Health);
+                    AddWall(i, core.Position);
+                    AddStatsText(i, core.EntityType, core.Position, CombatStats.GetAttack(entities.statusComponents[i]), CombatStats.GetCurrentHealth(entities.statusComponents[i]));
                     break;
             }
         }
@@ -145,43 +181,52 @@ public class DrawSystem : MonoBehaviour
         FlushPlayers();
         FlushBoxes();
         FlushCoreBoxes();
+        FlushBoxGlass();
+        FlushCoreBoxGlass();
         FlushEnemies();
         FlushWalls();
         HideUnusedStatTexts();
     }
 
-    private void AddPlayer(Vector2Int gridPos)
+    private void AddPlayer(int entityIndex, Vector2Int gridPos)
     {
-        _playerMatrices[_playerCount++] = Matrix4x4.TRS(ToWorld(gridPos), Quaternion.identity, playerScale);
+        _playerMatrices[_playerCount++] = Matrix4x4.TRS(GetVisualPosition(entityIndex, EntityType.Player, gridPos), Quaternion.identity, playerScale);
         if (_playerCount == BatchSize)
             FlushPlayers();
     }
 
-    private void AddBox(Vector2Int gridPos, bool isCore)
+    private void AddBox(int entityIndex, Vector2Int gridPos, bool isCore)
     {
+        Vector3 position = GetVisualPosition(entityIndex, EntityType.Box, gridPos);
         if (isCore)
         {
-            _coreBoxMatrices[_coreBoxCount++] = Matrix4x4.TRS(ToWorld(gridPos), Quaternion.identity, boxScale);
+            _coreBoxMatrices[_coreBoxCount++] = Matrix4x4.TRS(position, Quaternion.identity, boxScale);
+            _coreBoxGlassMatrices[_coreBoxGlassCount++] = Matrix4x4.TRS(position, Quaternion.identity, boxGlassScale);
             if (_coreBoxCount == BatchSize)
                 FlushCoreBoxes();
+            if (_coreBoxGlassCount == BatchSize)
+                FlushCoreBoxGlass();
             return;
         }
 
-        _boxMatrices[_boxCount++] = Matrix4x4.TRS(ToWorld(gridPos), Quaternion.identity, boxScale);
+        _boxMatrices[_boxCount++] = Matrix4x4.TRS(position, Quaternion.identity, boxScale);
+        _boxGlassMatrices[_boxGlassCount++] = Matrix4x4.TRS(position, Quaternion.identity, boxGlassScale);
         if (_boxCount == BatchSize)
             FlushBoxes();
+        if (_boxGlassCount == BatchSize)
+            FlushBoxGlass();
     }
 
-    private void AddEnemy(Vector2Int gridPos)
+    private void AddEnemy(int entityIndex, Vector2Int gridPos)
     {
-        _enemyMatrices[_enemyCount++] = Matrix4x4.TRS(ToEnemyWorld(gridPos), Quaternion.identity, enemyScale);
+        _enemyMatrices[_enemyCount++] = Matrix4x4.TRS(GetVisualPosition(entityIndex, EntityType.Enemy, gridPos), Quaternion.identity, enemyScale);
         if (_enemyCount == BatchSize)
             FlushEnemies();
     }
 
-    private void AddWall(Vector2Int gridPos)
+    private void AddWall(int entityIndex, Vector2Int gridPos)
     {
-        _wallMatrices[_wallCount++] = Matrix4x4.TRS(ToWallWorld(gridPos), Quaternion.identity, wallScale);
+        _wallMatrices[_wallCount++] = Matrix4x4.TRS(GetVisualPosition(entityIndex, EntityType.Wall, gridPos), Quaternion.identity, wallScale);
         if (_wallCount == BatchSize)
             FlushWalls();
     }
@@ -231,6 +276,36 @@ public class DrawSystem : MonoBehaviour
         _coreBoxCount = 0;
     }
 
+    private void FlushBoxGlass()
+    {
+        if (_boxGlassCount == 0)
+            return;
+
+        if (boxMesh == null || boxGlassMaterial == null)
+        {
+            _boxGlassCount = 0;
+            return;
+        }
+
+        Graphics.DrawMeshInstanced(boxMesh, 0, boxGlassMaterial, _boxGlassMatrices, _boxGlassCount);
+        _boxGlassCount = 0;
+    }
+
+    private void FlushCoreBoxGlass()
+    {
+        if (_coreBoxGlassCount == 0)
+            return;
+
+        if (boxMesh == null || coreBoxGlassMaterial == null)
+        {
+            _coreBoxGlassCount = 0;
+            return;
+        }
+
+        Graphics.DrawMeshInstanced(boxMesh, 0, coreBoxGlassMaterial, _coreBoxGlassMatrices, _coreBoxGlassCount);
+        _coreBoxGlassCount = 0;
+    }
+
     private void FlushEnemies()
     {
         if (_enemyCount == 0)
@@ -261,7 +336,7 @@ public class DrawSystem : MonoBehaviour
         _wallCount = 0;
     }
 
-    private void AddStatsText(Vector2Int gridPos, int attack, int health)
+    private void AddStatsText(int entityIndex, EntityType entityType, Vector2Int gridPos, int attack, int health)
     {
         if (!showStatsText)
             return;
@@ -274,9 +349,10 @@ public class DrawSystem : MonoBehaviour
 
         pair.SetHealthText(health.ToString());
 
+        Vector3 visualPosition = GetVisualPosition(entityIndex, entityType, gridPos);
         float y = statsTextHeight * cellSize;
-        pair.AttackRoot.transform.position = new Vector3(gridPos.x * cellSize, y, gridPos.y * cellSize);
-        pair.HealthRoot.transform.position = new Vector3((gridPos.x + 1f) * cellSize, y, gridPos.y * cellSize);
+        pair.AttackRoot.transform.position = new Vector3(visualPosition.x - 0.5f * cellSize, y, visualPosition.z - 0.5f * cellSize);
+        pair.HealthRoot.transform.position = new Vector3(visualPosition.x + 0.5f * cellSize, y, visualPosition.z - 0.5f * cellSize);
     }
 
     private StatTextPair GetStatTextPair(int index)
@@ -451,6 +527,258 @@ public class DrawSystem : MonoBehaviour
         return new Vector3((gridPos.x + 0.5f) * cellSize, wallY * cellSize, (gridPos.y + 0.5f) * cellSize);
     }
 
+    private Vector3 ToEntityWorld(EntityType entityType, Vector2Int gridPos)
+    {
+        return entityType switch
+        {
+            EntityType.Enemy => ToEnemyWorld(gridPos),
+            EntityType.Wall => ToWallWorld(gridPos),
+            _ => ToWorld(gridPos)
+        };
+    }
+
+    private Vector3 GetVisualPosition(int entityIndex, EntityType entityType, Vector2Int gridPos)
+    {
+        Vector3 logicalPosition = ToEntityWorld(entityType, gridPos);
+        if (!enableBeatMotion)
+            return logicalPosition;
+
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null
+            || entitySystem.entities == null
+            || entitySystem.entities.visualMotionComponents == null
+            || entitySystem.entities.visualImpulseComponents == null
+            || entityIndex < 0
+            || entityIndex >= entitySystem.entities.entityCount)
+            return logicalPosition;
+
+        ref var motion = ref entitySystem.entities.visualMotionComponents[entityIndex];
+        float now = Time.time;
+        Vector3 position = motion.Type == VisualMotionType.None
+            ? logicalPosition
+            : motion.Evaluate(now, logicalPosition);
+        if (motion.Type != VisualMotionType.None && motion.IsComplete(now))
+            motion.Clear();
+
+        ref var impulse = ref entitySystem.entities.visualImpulseComponents[entityIndex];
+        if (impulse.Type == VisualImpulseType.None)
+            return position;
+
+        Vector3 offset = impulse.Evaluate(now);
+        if (impulse.IsComplete(now))
+            impulse.Clear();
+
+        return position + offset;
+    }
+
+    private void TryRegisterEventBus()
+    {
+        if (_registeredBus != null)
+            return;
+
+        var bus = EventBusSystem.Instance;
+        if (bus == null)
+            return;
+
+        _registeredBus = bus;
+        _registeredBus.On(StageEventType.BeforeIntentExecute, OnStageEvent, 100);
+        _registeredBus.On(StageEventType.AfterIntentExecute, OnStageEvent, -100);
+        _registeredBus.On(StageEventType.EntityMoved, OnStageEvent);
+        _registeredBus.On(StageEventType.EntityCreated, OnStageEvent);
+        _registeredBus.On(StageEventType.EntityDestroyed, OnStageEvent);
+    }
+
+    private void UnregisterEventBus()
+    {
+        if (_registeredBus == null)
+            return;
+
+        _registeredBus.Off(StageEventType.BeforeIntentExecute, OnStageEvent);
+        _registeredBus.Off(StageEventType.AfterIntentExecute, OnStageEvent);
+        _registeredBus.Off(StageEventType.EntityMoved, OnStageEvent);
+        _registeredBus.Off(StageEventType.EntityCreated, OnStageEvent);
+        _registeredBus.Off(StageEventType.EntityDestroyed, OnStageEvent);
+        _registeredBus = null;
+    }
+
+    private void OnStageEvent(StageEvent evt)
+    {
+        if (!enableBeatMotion)
+            return;
+
+        switch (evt.Type)
+        {
+            case StageEventType.BeforeIntentExecute:
+                BeginIntentBeat(evt);
+                TryScheduleAttack(evt);
+                break;
+            case StageEventType.AfterIntentExecute:
+                _hasActiveIntentSlot = false;
+                break;
+            case StageEventType.EntityMoved:
+                ScheduleMove(evt);
+                break;
+            case StageEventType.EntityCreated:
+                ScheduleSpawn(evt);
+                break;
+            case StageEventType.EntityDestroyed:
+                ClearMotion(evt.Entity);
+                break;
+        }
+    }
+
+    private void BeginIntentBeat(StageEvent evt)
+    {
+        float now = Time.time;
+        if (_nextBeatStartTime < now)
+            _nextBeatStartTime = now;
+
+        _activeIntentStartTime = _nextBeatStartTime;
+        _activeIntentEndTime = _activeIntentStartTime + beatDuration;
+        _nextBeatStartTime = _activeIntentEndTime;
+        _activeIntentSlotId++;
+        _hasActiveIntentSlot = true;
+    }
+
+    private void ScheduleMove(StageEvent evt)
+    {
+        if (!_hasActiveIntentSlot || !TryGetMotion(evt.Entity, out var state))
+            return;
+
+        float start = _activeIntentStartTime;
+        float end = Mathf.Lerp(_activeIntentStartTime, _activeIntentEndTime, movementPortion);
+        Vector3 from = ToEntityWorld(evt.EntityType, evt.From);
+        Vector3 to = ToEntityWorld(evt.EntityType, evt.To);
+
+        if (state.SlotId == _activeIntentSlotId && state.Type == VisualMotionType.Move)
+            from = state.From;
+
+        state.Schedule(VisualMotionType.Move, _activeIntentSlotId, from, to, start, end);
+    }
+
+    private void TryScheduleAttack(StageEvent evt)
+    {
+        if (evt.IntentType != IntentType.Attack || evt.Intent is not AttackIntent attack || attack.TargetCount <= 0)
+            return;
+
+        if (!TryGetImpulse(evt.Actor, out var impulse))
+            return;
+
+        Vector3 origin = ToEntityWorld(evt.EntityType, evt.From);
+        Vector2Int targetCell = attack.TargetPositions[0];
+        Vector3 target = ToEntityWorld(evt.EntityType, targetCell);
+        Vector3 direction = target - origin;
+        direction.y = 0f;
+        if (direction.sqrMagnitude < 0.0001f)
+            return;
+
+        direction.Normalize();
+        Vector3 offset = direction * (attackLungeDistance * cellSize);
+        float end = Mathf.Lerp(_activeIntentStartTime, _activeIntentEndTime, attackPortion);
+        impulse.Schedule(VisualImpulseType.Lunge, _activeIntentSlotId, offset, _activeIntentStartTime, end);
+    }
+
+    private void ScheduleSpawn(StageEvent evt)
+    {
+        if (!_hasActiveIntentSlot || !TryGetMotion(evt.Entity, out var motion))
+            return;
+
+        Vector3 to = ToEntityWorld(evt.EntityType, evt.To);
+        Vector3 from = to + Vector3.down * (spawnRiseDistance * cellSize);
+        motion.Schedule(VisualMotionType.Rise, _activeIntentSlotId, from, to, _activeIntentStartTime, _activeIntentEndTime);
+    }
+
+    private bool TryGetMotion(EntityHandle entity, out RefVisualMotion motion)
+    {
+        motion = default;
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || !entitySystem.IsValid(entity))
+            return false;
+
+        int index = entitySystem.GetIndex(entity);
+        if (index < 0
+            || entitySystem.entities == null
+            || entitySystem.entities.visualMotionComponents == null
+            || index >= entitySystem.entities.visualMotionComponents.Length)
+            return false;
+
+        motion = new RefVisualMotion(entitySystem.entities.visualMotionComponents, index);
+        return true;
+    }
+
+    private void ClearMotion(EntityHandle entity)
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || !entitySystem.IsValid(entity))
+            return;
+
+        int index = entitySystem.GetIndex(entity);
+        if (index < 0
+            || entitySystem.entities?.visualMotionComponents == null
+            || entitySystem.entities.visualImpulseComponents == null
+            || index >= entitySystem.entities.visualMotionComponents.Length)
+            return;
+
+        entitySystem.entities.visualMotionComponents[index].Clear();
+        entitySystem.entities.visualImpulseComponents[index].Clear();
+    }
+
+    private bool TryGetImpulse(EntityHandle entity, out RefVisualImpulse impulse)
+    {
+        impulse = default;
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || !entitySystem.IsValid(entity))
+            return false;
+
+        int index = entitySystem.GetIndex(entity);
+        if (index < 0
+            || entitySystem.entities == null
+            || entitySystem.entities.visualImpulseComponents == null
+            || index >= entitySystem.entities.visualImpulseComponents.Length)
+            return false;
+
+        impulse = new RefVisualImpulse(entitySystem.entities.visualImpulseComponents, index);
+        return true;
+    }
+
+    private readonly struct RefVisualMotion
+    {
+        private readonly VisualMotionComponent[] _components;
+        private readonly int _index;
+
+        public RefVisualMotion(VisualMotionComponent[] components, int index)
+        {
+            _components = components;
+            _index = index;
+        }
+
+        public VisualMotionType Type => _components != null ? _components[_index].Type : VisualMotionType.None;
+        public int SlotId => _components[_index].SlotId;
+        public Vector3 From => _components[_index].From;
+
+        public void Schedule(VisualMotionType type, int slotId, Vector3 from, Vector3 to, float start, float end)
+        {
+            _components[_index].Schedule(type, slotId, from, to, start, end);
+        }
+    }
+
+    private readonly struct RefVisualImpulse
+    {
+        private readonly VisualImpulseComponent[] _components;
+        private readonly int _index;
+
+        public RefVisualImpulse(VisualImpulseComponent[] components, int index)
+        {
+            _components = components;
+            _index = index;
+        }
+
+        public void Schedule(VisualImpulseType type, int slotId, Vector3 offset, float start, float end)
+        {
+            _components[_index].Schedule(type, slotId, offset, start, end);
+        }
+    }
+
     private void EnsureResources()
     {
         if (playerMesh == null)
@@ -468,6 +796,10 @@ public class DrawSystem : MonoBehaviour
             boxMaterial = CreateMaterial(new Color(0.9f, 0.65f, 0.25f));
         if (coreBoxMaterial == null)
             coreBoxMaterial = CreateMaterial(new Color(0.12f, 0.55f, 1f));
+        if (boxGlassMaterial == null)
+            boxGlassMaterial = CreateGlassMaterial(new Color(1f, 0.75f, 0.22f, 1f));
+        if (coreBoxGlassMaterial == null)
+            coreBoxGlassMaterial = CreateGlassMaterial(new Color(0.12f, 0.7f, 1f, 1f));
         if (enemyMaterial == null)
             enemyMaterial = CreateMaterial(new Color(0.92f, 0.88f, 0.78f));
         if (playerMaterial != null)
@@ -476,6 +808,10 @@ public class DrawSystem : MonoBehaviour
             boxMaterial.enableInstancing = true;
         if (coreBoxMaterial != null)
             coreBoxMaterial.enableInstancing = true;
+        if (boxGlassMaterial != null)
+            boxGlassMaterial.enableInstancing = true;
+        if (coreBoxGlassMaterial != null)
+            coreBoxGlassMaterial.enableInstancing = true;
         if (enemyMaterial != null)
             enemyMaterial.enableInstancing = true;
         if (wallMaterial != null)
@@ -495,6 +831,21 @@ public class DrawSystem : MonoBehaviour
         var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
         var material = new Material(shader);
         material.color = color;
+        material.enableInstancing = true;
+        return material;
+    }
+
+    private static Material CreateGlassMaterial(Color color)
+    {
+        var shader = Shader.Find("BlockingKing/BoxGlass")
+                     ?? Shader.Find("Universal Render Pipeline/Unlit")
+                     ?? Shader.Find("Unlit/Color");
+
+        var material = new Material(shader);
+        material.color = color;
+        material.SetColor("_Color", color);
+        material.SetColor("_BaseColor", color);
+        material.renderQueue = 3050;
         material.enableInstancing = true;
         return material;
     }

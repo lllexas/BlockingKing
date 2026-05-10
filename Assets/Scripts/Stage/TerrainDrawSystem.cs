@@ -15,6 +15,7 @@ public class TerrainDrawSystem : MonoBehaviour
     private readonly List<Matrix4x4> _completedTargetMatrices = new();
     private readonly List<Matrix4x4> _coreTargetMatrices = new();
     private readonly List<Matrix4x4> _completedCoreTargetMatrices = new();
+    private readonly List<Matrix4x4> _enemyTargetMatrices = new();
     private readonly Matrix4x4[] _batch = new Matrix4x4[BatchSize];
 
     private TileMappingConfig _config;
@@ -27,6 +28,12 @@ public class TerrainDrawSystem : MonoBehaviour
     private Mesh _completedTargetMesh;
     private Mesh _coreTargetMesh;
     private Mesh _completedCoreTargetMesh;
+    private Mesh _enemyTargetMesh;
+    private Mesh _runtimeTargetMesh;
+    private Mesh _runtimeCompletedTargetMesh;
+    private Mesh _runtimeCoreTargetMesh;
+    private Mesh _runtimeCompletedCoreTargetMesh;
+    private Mesh _runtimeEnemyTargetMesh;
     private List<LevelTagEntry> _targetTags = new();
     private float _cellSize = 1f;
     private float _wallHeight = 0.4f;
@@ -36,7 +43,6 @@ public class TerrainDrawSystem : MonoBehaviour
     [SerializeField, Range(0.01f, 0.16f)] private float targetBeaconWidthRatio = 0.03f;
     [SerializeField, Range(0.08f, 0.5f)] private float targetCornerBracketRatio = 0.28f;
     [SerializeField] private Color completedTargetColor = new(0.15f, 1f, 0.35f, 1f);
-    [SerializeField] private Color coreTargetColor = new(0.12f, 0.55f, 1f, 1f);
     [SerializeField, Min(1f)] private float coreTargetBeaconHeightMultiplier = 1.85f;
     private int _observedTerrainVersion = -1;
     private bool _dirty = true;
@@ -79,6 +85,7 @@ public class TerrainDrawSystem : MonoBehaviour
         _completedTargetMatrices.Clear();
         _coreTargetMatrices.Clear();
         _completedCoreTargetMatrices.Clear();
+        _enemyTargetMatrices.Clear();
         _observedTerrainVersion = -1;
         _dirty = true;
     }
@@ -91,6 +98,12 @@ public class TerrainDrawSystem : MonoBehaviour
         DestroyGeneratedMesh(_completedTargetMesh);
         DestroyGeneratedMesh(_coreTargetMesh);
         DestroyGeneratedMesh(_completedCoreTargetMesh);
+        DestroyGeneratedMesh(_enemyTargetMesh);
+        DestroyGeneratedMesh(_runtimeTargetMesh);
+        DestroyGeneratedMesh(_runtimeCompletedTargetMesh);
+        DestroyGeneratedMesh(_runtimeCoreTargetMesh);
+        DestroyGeneratedMesh(_runtimeCompletedCoreTargetMesh);
+        DestroyGeneratedMesh(_runtimeEnemyTargetMesh);
         DestroyGeneratedMaterial(_targetMaterial);
         DestroyGeneratedMaterial(_coreTargetMaterial);
         _floorMesh = null;
@@ -99,6 +112,12 @@ public class TerrainDrawSystem : MonoBehaviour
         _completedTargetMesh = null;
         _coreTargetMesh = null;
         _completedCoreTargetMesh = null;
+        _enemyTargetMesh = null;
+        _runtimeTargetMesh = null;
+        _runtimeCompletedTargetMesh = null;
+        _runtimeCoreTargetMesh = null;
+        _runtimeCompletedCoreTargetMesh = null;
+        _runtimeEnemyTargetMesh = null;
         _targetMaterial = null;
         _coreTargetMaterial = null;
     }
@@ -119,10 +138,12 @@ public class TerrainDrawSystem : MonoBehaviour
 
         DrawInstanced(_floorMesh, _floorMatrices, _material);
         DrawInstanced(_wallMesh, _wallMatrices, _material);
-        DrawInstanced(_targetMesh, _targetMatrices, _targetMaterial);
-        DrawInstanced(_completedTargetMesh, _completedTargetMatrices, _targetMaterial);
-        DrawInstanced(_coreTargetMesh, _coreTargetMatrices, _coreTargetMaterial);
-        DrawInstanced(_completedCoreTargetMesh, _completedCoreTargetMatrices, _coreTargetMaterial);
+        RebuildRuntimeTargetMeshes(entitySystem);
+        DrawMesh(_runtimeTargetMesh, _targetMaterial);
+        DrawMesh(_runtimeCompletedTargetMesh, _targetMaterial);
+        DrawMesh(_runtimeCoreTargetMesh, _coreTargetMaterial);
+        DrawMesh(_runtimeCompletedCoreTargetMesh, _coreTargetMaterial);
+        DrawMesh(_runtimeEnemyTargetMesh, _targetMaterial);
     }
 
     private void RebuildMatrices(EntitySystem entitySystem)
@@ -161,6 +182,7 @@ public class TerrainDrawSystem : MonoBehaviour
         _completedTargetMatrices.Clear();
         _coreTargetMatrices.Clear();
         _completedCoreTargetMatrices.Clear();
+        _enemyTargetMatrices.Clear();
 
         if (_targetTags == null || _targetTags.Count == 0)
             return;
@@ -177,8 +199,11 @@ public class TerrainDrawSystem : MonoBehaviour
             var position = new Vector3(tag.x * _cellSize, y, tag.y * _cellSize);
             var matrix = Matrix4x4.TRS(position, Quaternion.identity, Vector3.one);
             bool isCoreTarget = IsCoreTarget(tag.tagID);
+            bool isEnemyTarget = IsEnemyTarget(tag.tagID);
 
-            if (isCoreTarget && HasBoxOnCell(entitySystem, cell))
+            if (isEnemyTarget)
+                _enemyTargetMatrices.Add(matrix);
+            else if (isCoreTarget && HasBoxOnCell(entitySystem, cell))
                 _completedCoreTargetMatrices.Add(matrix);
             else if (isCoreTarget)
                 _coreTargetMatrices.Add(matrix);
@@ -195,6 +220,12 @@ public class TerrainDrawSystem : MonoBehaviour
                string.Equals(_config.GetTagName(tagId), "Target.Core", System.StringComparison.OrdinalIgnoreCase);
     }
 
+    private bool IsEnemyTarget(int tagId)
+    {
+        return _config != null &&
+               string.Equals(_config.GetTagName(tagId), "Target.Enemy", System.StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool HasBoxOnCell(EntitySystem entitySystem, Vector2Int cell)
     {
         EntityHandle occupant = entitySystem.GetOccupant(cell);
@@ -203,6 +234,191 @@ public class TerrainDrawSystem : MonoBehaviour
 
         int occupantIndex = entitySystem.GetIndex(occupant);
         return occupantIndex >= 0 && entitySystem.entities.coreComponents[occupantIndex].EntityType == EntityType.Box;
+    }
+
+    private void RebuildRuntimeTargetMeshes(EntitySystem entitySystem)
+    {
+        var normalTargets = new HashSet<Vector2Int>();
+        var coreTargets = new HashSet<Vector2Int>();
+        var enemyTargets = new HashSet<Vector2Int>();
+
+        if (_targetTags != null)
+        {
+            foreach (var tag in _targetTags)
+            {
+                var cell = new Vector2Int(tag.x, tag.y);
+                if (!entitySystem.IsInsideMap(cell))
+                    continue;
+
+                if (IsCoreTarget(tag.tagID))
+                    coreTargets.Add(cell);
+                else if (IsEnemyTarget(tag.tagID))
+                    enemyTargets.Add(cell);
+                else
+                    normalTargets.Add(cell);
+            }
+        }
+
+        var targetQuads = new List<Quad>();
+        var completedTargetQuads = new List<Quad>();
+        var coreTargetQuads = new List<Quad>();
+        var completedCoreTargetQuads = new List<Quad>();
+        var enemyTargetQuads = new List<Quad>();
+
+        AppendTargetKindQuads(entitySystem, normalTargets, ResolveTargetColor(), targetBeaconHeight, targetQuads, completedTargetQuads);
+        AppendTargetKindQuads(entitySystem, coreTargets, ResolveTagColor("Target.Core"), targetBeaconHeight * coreTargetBeaconHeightMultiplier, coreTargetQuads, completedCoreTargetQuads);
+        AppendTargetKindQuads(entitySystem, enemyTargets, ResolveTagColor("Target.Enemy"), targetBeaconHeight, enemyTargetQuads, null);
+
+        ApplyQuadsToMesh(ref _runtimeTargetMesh, "RuntimeTargetMarkers", targetQuads);
+        ApplyQuadsToMesh(ref _runtimeCompletedTargetMesh, "RuntimeCompletedTargetMarkers", completedTargetQuads);
+        ApplyQuadsToMesh(ref _runtimeCoreTargetMesh, "RuntimeCoreTargetMarkers", coreTargetQuads);
+        ApplyQuadsToMesh(ref _runtimeCompletedCoreTargetMesh, "RuntimeCompletedCoreTargetMarkers", completedCoreTargetQuads);
+        ApplyQuadsToMesh(ref _runtimeEnemyTargetMesh, "RuntimeEnemyTargetMarkers", enemyTargetQuads);
+    }
+
+    private void AppendTargetKindQuads(
+        EntitySystem entitySystem,
+        HashSet<Vector2Int> targets,
+        Color color,
+        float beaconHeight,
+        List<Quad> pendingQuads,
+        List<Quad> completedQuads)
+    {
+        if (targets == null || targets.Count == 0)
+            return;
+
+        foreach (var cell in targets)
+        {
+            int terrainId = entitySystem.GetTerrain(cell);
+            bool onWall = _config != null && _config.IsWall(terrainId);
+            float y = (onWall ? _wallHeight : 0f) + _tagYOffset;
+            var origin = new Vector3(cell.x * _cellSize, y, cell.y * _cellSize);
+            var quads = completedQuads != null && HasBoxOnCell(entitySystem, cell) ? completedQuads : pendingQuads;
+            AddTargetCellQuads(quads, cell, targets, origin, color, beaconHeight);
+        }
+    }
+
+    private void AddTargetCellQuads(
+        List<Quad> quads,
+        Vector2Int cell,
+        HashSet<Vector2Int> sameKindTargets,
+        Vector3 origin,
+        Color color,
+        float beaconHeight)
+    {
+        Color beamColor = color;
+        beamColor.a = 1f;
+        Color centerColor = color;
+        centerColor.a = 0.35f;
+
+        float s = _cellSize;
+        float marker = _tagMarkerSize * s;
+        float inset = (s - marker) * 0.5f;
+        float min = inset;
+        float max = inset + marker;
+        float bracketLength = targetCornerBracketRatio * s;
+        float halfBeaconWidth = Mathf.Max(0.01f, s * targetBeaconWidthRatio * 0.5f);
+        float beaconTop = beaconHeight * s;
+
+        AddQuad(quads, origin,
+            new Vector3(min, 0f, min),
+            new Vector3(min, 0f, max),
+            new Vector3(max, 0f, min),
+            new Vector3(max, 0f, max),
+            Vector3.up,
+            centerColor);
+
+        AddCornerGlyph(quads, origin, new Vector3(0f, 0f, 0f), Vector3.right, Vector3.forward, cell, sameKindTargets, Vector2Int.left, Vector2Int.down, new Vector2Int(-1, -1), halfBeaconWidth, bracketLength, beaconTop, beamColor);
+        AddCornerGlyph(quads, origin, new Vector3(s, 0f, 0f), Vector3.left, Vector3.forward, cell, sameKindTargets, Vector2Int.right, Vector2Int.down, new Vector2Int(1, -1), halfBeaconWidth, bracketLength, beaconTop, beamColor);
+        AddCornerGlyph(quads, origin, new Vector3(0f, 0f, s), Vector3.right, Vector3.back, cell, sameKindTargets, Vector2Int.left, Vector2Int.up, new Vector2Int(-1, 1), halfBeaconWidth, bracketLength, beaconTop, beamColor);
+        AddCornerGlyph(quads, origin, new Vector3(s, 0f, s), Vector3.left, Vector3.back, cell, sameKindTargets, Vector2Int.right, Vector2Int.up, new Vector2Int(1, 1), halfBeaconWidth, bracketLength, beaconTop, beamColor);
+    }
+
+    private void AddCornerGlyph(
+        List<Quad> quads,
+        Vector3 origin,
+        Vector3 corner,
+        Vector3 inwardHorizontal,
+        Vector3 inwardVertical,
+        Vector2Int cell,
+        HashSet<Vector2Int> sameKindTargets,
+        Vector2Int horizontalNeighbor,
+        Vector2Int verticalNeighbor,
+        Vector2Int diagonalNeighbor,
+        float halfWidth,
+        float lineLength,
+        float height,
+        Color color)
+    {
+        bool h = sameKindTargets.Contains(cell + horizontalNeighbor);
+        bool v = sameKindTargets.Contains(cell + verticalNeighbor);
+        bool d = sameKindTargets.Contains(cell + diagonalNeighbor);
+
+        if (h && v && d)
+        {
+            Color weak = color;
+            weak.a = 0.18f;
+            AddCornerBeacon(quads, origin + corner, halfWidth * 0.75f, height * 0.28f, weak);
+            return;
+        }
+
+        if (h && v)
+        {
+            AddVerticalShortLine(quads, origin, corner, (inwardHorizontal + inwardVertical).normalized, lineLength * 0.55f, halfWidth * 0.35f, height * 0.5f, color);
+            return;
+        }
+
+        if (h)
+        {
+            AddVerticalShortLine(quads, origin, corner, inwardHorizontal, lineLength * 0.4f, halfWidth * 0.35f, height * 0.5f, color);
+            return;
+        }
+
+        if (v)
+        {
+            AddVerticalShortLine(quads, origin, corner, inwardVertical, lineLength * 0.4f, halfWidth * 0.35f, height * 0.5f, color);
+            return;
+        }
+
+        if (d)
+        {
+            Color weakDiagonal = color;
+            weakDiagonal.a = 0.55f;
+            AddVerticalShortLine(quads, origin, corner, (inwardHorizontal + inwardVertical).normalized, lineLength * 0.3f, halfWidth * 0.3f, height * 0.35f, weakDiagonal);
+            return;
+        }
+
+        // 孤立角 → 小拐角 L-shape
+        float bracketArmLength = halfWidth * 3f;
+        float bracketThickness = halfWidth * 0.5f;
+        AddVerticalShortLine(quads, origin, corner, inwardHorizontal, bracketArmLength, bracketThickness, height, color);
+        AddVerticalShortLine(quads, origin, corner, inwardVertical, bracketArmLength, bracketThickness, height, color);
+    }
+
+    private static void AddVerticalShortLine(List<Quad> quads, Vector3 origin, Vector3 start, Vector3 direction, float length, float halfWidth, float height, Color color)
+    {
+        Vector3 normalized = direction.normalized;
+        Vector3 perp = new Vector3(normalized.z, 0f, -normalized.x).normalized * halfWidth;
+        Vector3 end = start + normalized * length;
+        Vector3 up = Vector3.up * height;
+
+        // 顶面
+        AddQuad(quads, origin,
+            start - perp + up, start + perp + up,
+            end - perp + up, end + perp + up,
+            Vector3.up, color);
+
+        // 左侧竖面（朝 -perp 方向）
+        AddQuad(quads, origin,
+            start - perp, end - perp,
+            start - perp + up, end - perp + up,
+            -perp.normalized, color);
+
+        // 右侧竖面（朝 +perp 方向）
+        AddQuad(quads, origin,
+            start + perp, end + perp,
+            start + perp + up, end + perp + up,
+            perp.normalized, color);
     }
 
     private void DrawInstanced(Mesh mesh, List<Matrix4x4> matrices, Material material)
@@ -218,6 +434,14 @@ public class TerrainDrawSystem : MonoBehaviour
         }
     }
 
+    private void DrawMesh(Mesh mesh, Material material)
+    {
+        if (mesh == null || mesh.vertexCount == 0 || material == null)
+            return;
+
+        Graphics.DrawMesh(mesh, Matrix4x4.identity, material, gameObject.layer);
+    }
+
     private void RebuildMeshes()
     {
         DestroyGeneratedMesh(_floorMesh);
@@ -226,14 +450,16 @@ public class TerrainDrawSystem : MonoBehaviour
         DestroyGeneratedMesh(_completedTargetMesh);
         DestroyGeneratedMesh(_coreTargetMesh);
         DestroyGeneratedMesh(_completedCoreTargetMesh);
+        DestroyGeneratedMesh(_enemyTargetMesh);
 
         _floorMesh = BuildFloorMesh();
         _wallMesh = BuildWallMesh();
         _targetMesh = BuildTargetMesh(ResolveTargetColor(), targetBeaconHeight);
         _completedTargetMesh = BuildTargetMesh(completedTargetColor, targetBeaconHeight);
         float coreBeaconHeight = targetBeaconHeight * coreTargetBeaconHeightMultiplier;
-        _coreTargetMesh = BuildTargetMesh(coreTargetColor, coreBeaconHeight);
+        _coreTargetMesh = BuildTargetMesh(ResolveTagColor("Target.Core"), coreBeaconHeight);
         _completedCoreTargetMesh = BuildTargetMesh(completedTargetColor, coreBeaconHeight);
+        _enemyTargetMesh = BuildTargetMesh(ResolveTagColor("Target.Enemy"), targetBeaconHeight);
     }
 
     private Mesh BuildFloorMesh()
@@ -367,12 +593,91 @@ public class TerrainDrawSystem : MonoBehaviour
             color));
     }
 
-    private Color ResolveTargetColor()
+    private Color ResolveTagColor(string tagName)
     {
-        if (_targetTags != null && _targetTags.Count > 0 && _config != null)
-            return _config.GetTagColor(_targetTags[0].tagID);
+        if (_config == null)
+            return Color.white;
+
+        foreach (int tagId in _config.AllTagIDs)
+        {
+            if (string.Equals(_config.GetTagName(tagId), tagName, System.StringComparison.OrdinalIgnoreCase))
+                return _config.GetTagColor(tagId);
+        }
 
         return Color.white;
+    }
+
+    private Color ResolveTargetColor()
+    {
+        return ResolveTagColor("Target");
+    }
+
+    private static void AddQuad(
+        List<Quad> quads,
+        Vector3 origin,
+        Vector3 lb,
+        Vector3 rb,
+        Vector3 lt,
+        Vector3 rt,
+        Vector3 normal,
+        Color color)
+    {
+        quads.Add(new Quad(origin + lb, origin + rb, origin + lt, origin + rt, normal, color));
+    }
+
+    private static void ApplyQuadsToMesh(ref Mesh mesh, string name, IReadOnlyList<Quad> quads)
+    {
+        if (mesh == null)
+        {
+            mesh = new Mesh
+            {
+                name = name
+            };
+        }
+        else
+        {
+            mesh.Clear();
+        }
+
+        if (quads == null || quads.Count == 0)
+            return;
+
+        var verts = new List<Vector3>(quads.Count * 4);
+        var normals = new List<Vector3>(quads.Count * 4);
+        var colors = new List<Color>(quads.Count * 4);
+        var tris = new List<int>(quads.Count * 6);
+
+        foreach (var quad in quads)
+        {
+            int index = verts.Count;
+            verts.Add(quad.Lb);
+            verts.Add(quad.Rb);
+            verts.Add(quad.Lt);
+            verts.Add(quad.Rt);
+
+            normals.Add(quad.Normal);
+            normals.Add(quad.Normal);
+            normals.Add(quad.Normal);
+            normals.Add(quad.Normal);
+
+            colors.Add(quad.Color);
+            colors.Add(quad.Color);
+            colors.Add(quad.Color);
+            colors.Add(quad.Color);
+
+            tris.Add(index);
+            tris.Add(index + 1);
+            tris.Add(index + 2);
+            tris.Add(index + 1);
+            tris.Add(index + 3);
+            tris.Add(index + 2);
+        }
+
+        mesh.SetVertices(verts);
+        mesh.SetNormals(normals);
+        mesh.SetColors(colors);
+        mesh.SetTriangles(tris, 0);
+        mesh.RecalculateBounds();
     }
 
     private static Mesh BuildQuads(string name, IReadOnlyList<Quad> quads)

@@ -30,3 +30,6 @@ MonoBehaviour:
   - stageId: Escort
     stageType: Escort
     weight: 1
+    collageGenerationSettings: {fileID: 0}
+  defaultCollageGenerationSettings: {fileID: 11400000, guid: a8a37319184b4b544b565809714fbd7d,
+    type: 2}

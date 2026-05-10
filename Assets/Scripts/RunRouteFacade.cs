@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Newtonsoft.Json;
 using NekoGraph;
 using UnityEngine;
@@ -18,6 +19,7 @@ public class RunRouteFacade : PackFacadeBase
     };
 
     private readonly Dictionary<string, LevelData> _runtimeLevelObjects = new Dictionary<string, LevelData>();
+    private readonly Dictionary<string, LevelCollageGenerationSettings> _runtimeCollageSettings = new Dictionary<string, LevelCollageGenerationSettings>();
 
     protected override string GetDefaultPackID()
     {
@@ -41,7 +43,11 @@ public class RunRouteFacade : PackFacadeBase
         return pack;
     }
 
-    public BasePackData GenerateRoute(IReadOnlyList<RunRouteStageSource> stageSources, int layerCount = 8, int laneCount = 4, int seed = 0)
+    public BasePackData GenerateRoute(
+        IReadOnlyList<RunRouteStageSource> stageSources,
+        int layerCount = 8,
+        int laneCount = 4,
+        int seed = 0)
     {
         if (stageSources == null || stageSources.Count == 0)
         {
@@ -58,6 +64,7 @@ public class RunRouteFacade : PackFacadeBase
 
         ResetPack(pack);
         _runtimeLevelObjects.Clear();
+        _runtimeCollageSettings.Clear();
 
         var random = seed == 0 ? new System.Random() : new System.Random(seed);
         var byLayer = new List<List<VFSNodeData>>();
@@ -78,6 +85,8 @@ public class RunRouteFacade : PackFacadeBase
                 pack.Nodes[node.NodeID] = node;
                 if (source.levelData != null)
                     _runtimeLevelObjects[node.NodeID] = source.levelData;
+                if (source.collageGenerationSettings != null)
+                    _runtimeCollageSettings[node.NodeID] = source.collageGenerationSettings;
                 layerNodes.Add(node);
             }
 
@@ -361,19 +370,45 @@ public class RunRouteFacade : PackFacadeBase
 
     private EscortLevelBuildRequest BuildEscortRequest(VFSNodeData node, RunRouteNodeSideData side)
     {
+        LevelCollageGenerationSettings settings = ResolveEscortGenerationSettings(node?.NodeID);
         Vector2Int from = ResolveParentRoutePoint(node, side);
         Vector2Int to = new Vector2Int(side.layer, side.lane);
-        int dx = Mathf.Max(1, Mathf.Abs(to.x - from.x)) * 8;
-        int dy = Mathf.Abs(to.y - from.y) * 4;
+        int layerUnit = settings != null ? Mathf.Max(1, settings.routeLayerDistanceUnit) : 24;
+        int laneUnit = settings != null ? Mathf.Max(1, settings.routeLaneDistanceUnit) : 12;
+        int dx = Mathf.Max(1, Mathf.Abs(to.x - from.x)) * layerUnit;
+        int dy = Mathf.Abs(to.y - from.y) * laneUnit;
         float slope = dy <= 0 ? 0.001f : dy / (float)dx;
+        int rawManhattanDistance = dx + dy;
 
         return new EscortLevelBuildRequest
         {
             Seed = StableSeed(node?.NodeID),
-            ManhattanDistance = Mathf.Clamp(dx + dy, 8, 28),
+            ManhattanDistance = settings != null
+                ? settings.ClampEscortManhattanDistance(rawManhattanDistance)
+                : rawManhattanDistance,
             LogSlope = Mathf.Log(slope),
-            DifficultyOffset = ResolveEscortDifficultyOffset(side.stageType)
+            DifficultyOffset = ResolveEscortDifficultyOffset(side.stageType),
+            Constraints = ResolveEscortConstraints(node?.NodeID, side.stageType),
+            SourceDatabase = ResolveEscortSourceDatabase(node?.NodeID)
         };
+    }
+
+    private LevelCollageSourceDatabase ResolveEscortSourceDatabase(string nodeId)
+    {
+        return !string.IsNullOrWhiteSpace(nodeId) &&
+               _runtimeCollageSettings.TryGetValue(nodeId, out var settings) &&
+               settings != null
+            ? settings.sourceDatabase
+            : null;
+    }
+
+    private LevelCollageGenerationSettings ResolveEscortGenerationSettings(string nodeId)
+    {
+        return !string.IsNullOrWhiteSpace(nodeId) &&
+               _runtimeCollageSettings.TryGetValue(nodeId, out var settings) &&
+               settings != null
+            ? settings
+            : null;
     }
 
     private Vector2Int ResolveParentRoutePoint(VFSNodeData node, RunRouteNodeSideData side)
@@ -400,7 +435,7 @@ public class RunRouteFacade : PackFacadeBase
         if (separator < 0 || separator >= stageType.Length - 1)
             return 0;
 
-        string token = stageType[(separator + 1)..].Trim();
+        string token = GetFirstStageParameter(stageType[(separator + 1)..]);
         return token.ToLowerInvariant() switch
         {
             "easy" => -1,
@@ -409,6 +444,161 @@ public class RunRouteFacade : PackFacadeBase
             "boss" => 3,
             _ => int.TryParse(token, out int value) ? value : 0
         };
+    }
+
+    private EscortLevelGenerationConstraints ResolveEscortConstraints(string nodeId, string stageType)
+    {
+        var constraints = !string.IsNullOrWhiteSpace(nodeId) &&
+                          _runtimeCollageSettings.TryGetValue(nodeId, out var settings) &&
+                          settings != null
+            ? settings.ToConstraints()
+            : EscortLevelGenerationConstraints.Default;
+        if (string.IsNullOrWhiteSpace(stageType))
+            return constraints;
+
+        int separator = stageType.IndexOf(':');
+        if (separator < 0 || separator >= stageType.Length - 1)
+            return constraints;
+
+        string[] tokens = stageType[(separator + 1)..].Split(',', ';', '|');
+        foreach (string rawToken in tokens)
+        {
+            string token = rawToken.Trim();
+            if (string.IsNullOrWhiteSpace(token))
+                continue;
+
+            string lower = token.ToLowerInvariant();
+            if (lower is "easy" or "normal" or "hard" or "boss")
+                continue;
+
+            if (TryReadIntRange(lower, "eff=", out int minEff, out int maxEff) ||
+                TryReadIntRange(lower, "effective=", out minEff, out maxEff))
+            {
+                constraints.MinTemplateEffectiveBoxes = minEff;
+                constraints.MaxTemplateEffectiveBoxes = maxEff;
+                continue;
+            }
+
+            if (TryReadMaxInt(lower, "eff<=", out int maxOnlyEff))
+            {
+                constraints.MaxTemplateEffectiveBoxes = maxOnlyEff;
+                continue;
+            }
+
+            if (TryReadIntRange(lower, "area=", out int minArea, out int maxArea))
+            {
+                constraints.MinTemplateArea = minArea;
+                constraints.MaxTemplateArea = maxArea;
+                continue;
+            }
+
+            if (TryReadFloatRange(lower, "wall=", out float minWall, out float maxWall))
+            {
+                constraints.MinTemplateWallRate = minWall;
+                constraints.MaxTemplateWallRate = maxWall;
+                continue;
+            }
+
+            if (TryReadIntRange(lower, "w=", out int minWidth, out int maxWidth) ||
+                TryReadIntRange(lower, "width=", out minWidth, out maxWidth))
+            {
+                constraints.MinTemplateWidth = minWidth;
+                constraints.MaxTemplateWidth = maxWidth;
+                continue;
+            }
+
+            if (TryReadIntRange(lower, "h=", out int minHeight, out int maxHeight) ||
+                TryReadIntRange(lower, "height=", out minHeight, out maxHeight))
+            {
+                constraints.MinTemplateHeight = minHeight;
+                constraints.MaxTemplateHeight = maxHeight;
+                continue;
+            }
+
+            if (TryReadMaxInt(lower, "maxreward=", out int maxReward) ||
+                TryReadMaxInt(lower, "maxrewardboxes=", out maxReward))
+            {
+                constraints.MaxFinalRewardBoxes = maxReward;
+            }
+        }
+
+        return constraints;
+    }
+
+    private static string GetFirstStageParameter(string value)
+    {
+        string[] tokens = value.Split(',', ';', '|');
+        return tokens.Length > 0 ? tokens[0].Trim() : value.Trim();
+    }
+
+    private static bool TryReadIntRange(string token, string prefix, out int min, out int max)
+    {
+        min = 0;
+        max = 0;
+        if (!token.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        string value = token[prefix.Length..].Trim();
+        string[] parts = value.Split('-', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1 && int.TryParse(parts[0], out int exact))
+        {
+            min = exact;
+            max = exact;
+            return true;
+        }
+
+        if (parts.Length == 2 &&
+            int.TryParse(parts[0], out min) &&
+            int.TryParse(parts[1], out max))
+        {
+            if (min > max)
+                (min, max) = (max, min);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryReadFloatRange(string token, string prefix, out float min, out float max)
+    {
+        min = 0f;
+        max = 0f;
+        if (!token.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        string value = token[prefix.Length..].Trim();
+        string[] parts = value.Split('-', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1 && TryParseFloat(parts[0], out float exact))
+        {
+            min = exact;
+            max = exact;
+            return true;
+        }
+
+        if (parts.Length == 2 &&
+            TryParseFloat(parts[0], out min) &&
+            TryParseFloat(parts[1], out max))
+        {
+            if (min > max)
+                (min, max) = (max, min);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryReadMaxInt(string token, string prefix, out int max)
+    {
+        max = 0;
+        return token.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+               int.TryParse(token[prefix.Length..].Trim(), out max);
+    }
+
+    private static bool TryParseFloat(string value, out float result)
+    {
+        return float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out result);
     }
 
     private static int StableSeed(string value)
@@ -611,6 +801,8 @@ public sealed class RunRouteStageSource
     public int weight = 1;
     [JsonIgnore]
     public LevelData levelData;
+    [JsonIgnore]
+    public LevelCollageGenerationSettings collageGenerationSettings;
     public VFSContentKind contentKind = VFSContentKind.UnityObject;
     public VFSContentSource contentSource = VFSContentSource.Reference;
     public string referencePath;

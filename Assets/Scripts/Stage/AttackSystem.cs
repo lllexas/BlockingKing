@@ -31,7 +31,7 @@ public class AttackSystem : MonoBehaviour
         if (actorIndex < 0)
             return;
 
-        int attack = entitySystem.entities.propertyComponents[actorIndex].Attack;
+        int attack = CombatStats.GetAttack(entitySystem.entities.statusComponents[actorIndex]);
         if (attack <= 0)
             return;
 
@@ -61,10 +61,8 @@ public class AttackSystem : MonoBehaviour
         if (core.EntityType != EntityType.Enemy && core.EntityType != EntityType.Wall)
             return;
 
-        core.Health -= damage;
-        Debug.Log($"[AttackSystem] Hit {core.EntityType} at {targetPosition}, damage={damage}, health={core.Health}");
-
-        if (core.Health <= 0)
-            entitySystem.DestroyEntity(target);
+        ref var status = ref entitySystem.entities.statusComponents[targetIndex];
+        CombatStats.DealDamage(ref status, damage);
+        Debug.Log($"[AttackSystem] Hit {core.EntityType} at {targetPosition}, damage={damage}, health={CombatStats.GetCurrentHealth(status)}");
     }
 }

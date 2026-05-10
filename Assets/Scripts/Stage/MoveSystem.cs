@@ -127,6 +127,15 @@ public class MoveSystem : MonoBehaviour
 
         entities.gridMap[nextMapIndex] = actor.Id;
         entities.coreComponents[index].Position = next;
+
+        EventBusSystem.Instance?.Publish(new StageEvent(
+            StageEventType.EntityMoved,
+            actor: actor,
+            entity: actor,
+            entityType: entities.coreComponents[index].EntityType,
+            from: current,
+            to: next,
+            sourceTagId: entities.propertyComponents[index].SourceTagId));
     }
 
     private static int ToMapIndex(EntityComponents entities, Vector2Int pos)

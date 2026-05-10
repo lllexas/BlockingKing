@@ -1768,7 +1768,8 @@ MonoBehaviour:
   wallMaterial: {fileID: 2100000, guid: 391fd5930ef59f1489fdef6fc7e9fade, type: 2}
   cellSize: 1
   playerScale: {x: 0.7, y: 1, z: 0.7}
-  boxScale: {x: 0.85, y: 0.85, z: 0.85}
+  boxScale: {x: 0.45, y: 0.45, z: 0.45}
+  boxGlassScale: {x: 0.9, y: 0.9, z: 0.9}
   enemyScale: {x: 0.75, y: 0.35, z: 0.75}
   wallScale: {x: 0.95, y: 0.95, z: 0.95}
   wallY: -0.2

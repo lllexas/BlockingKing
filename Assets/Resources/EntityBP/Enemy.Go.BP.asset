@@ -14,4 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   health: 1
   attack: 1
+  auras:
+  - rid: 7036500344932007936
+  spawnInterval: 0
+  spawnEntityBP: {fileID: 0}
   prefab: {fileID: 0}
+  references:
+    version: 2
+    RefIds:
+    - rid: 7036500344932007936
+      type: {class: GoConnectedGroupAuraDefinition, ns: , asm: Assembly-CSharp}
+      data: 

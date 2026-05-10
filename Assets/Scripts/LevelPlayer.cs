@@ -45,6 +45,7 @@ public class LevelPlayer : MonoBehaviour
     private const int DefaultBoxTagID = 2;
     private const int DefaultTargetTagID = 3;
     private const int DefaultTargetCoreTagID = 7;
+    private const int DefaultTargetEnemyTagID = 8;
 
     [Header("关卡数据")]
     [SerializeField, Tooltip("直接拖入 LevelData SO（QuickPlaySession 激活时会覆盖它）")]
@@ -252,6 +253,8 @@ public class LevelPlayer : MonoBehaviour
         TickSystem.OnTick -= HandleTick;
         TickSystem.OnTick += HandleTick;
 
+        SpawnSystem.Instance?.StartSpawning();
+
         Debug.Log($"[LevelPlayer] Playback started: {_level.levelName}, mode={_playMode}, steps={_remainingSteps}");
         _playRule.Evaluate(this);
     }
@@ -259,6 +262,7 @@ public class LevelPlayer : MonoBehaviour
     public void StopPlayback()
     {
         TickSystem.OnTick -= HandleTick;
+        SpawnSystem.Instance?.StopSpawning();
         _playRule = null;
         _isPlaying = false;
     }
@@ -514,12 +518,16 @@ public class LevelPlayer : MonoBehaviour
         if (entitySystem == null)
             entitySystem = gameObject.AddComponent<EntitySystem>();
 
+        EnsureRuntimeSystem<EventBusSystem>();
         EnsureRuntimeSystem<IntentSystem>();
         EnsureRuntimeSystem<MoveSystem>();
         EnsureRuntimeSystem<AttackSystem>();
         var cardEffectSystem = EnsureRuntimeSystem<CardEffectSystem>();
+        EnsureRuntimeSystem<CombatResolutionSystem>();
         EnsureRuntimeSystem<EnemyAutoAISystem>();
+        var auraResolutionSystem = EnsureRuntimeSystem<AuraResolutionSystem>();
         var drawSystem = EnsureRuntimeSystem<DrawSystem>();
+        EnsureRuntimeSystem<EnemyIntentOverlaySystem>();
         EnsureRuntimeSystem<UserInputReader>();
         drawSystem.SetWallMaterial(_materialInstance);
 
@@ -533,9 +541,11 @@ public class LevelPlayer : MonoBehaviour
         int boxCoreTagID = ResolveTagID("Box.Core", -1);
         int targetTagID = ResolveTagID("target", DefaultTargetTagID);
         int targetCoreTagID = ResolveTagID("Target.Core", DefaultTargetCoreTagID);
+        int targetEnemyTagID = ResolveTagID("Target.Enemy", DefaultTargetEnemyTagID);
         int enemyGoTagID = ResolveTagID("Enemy.Go", 4);
         int unstableWallTagID = ResolveTagID("Wall.Unstable", -1);
         ConfigureCardWallHealth(cardEffectSystem, unstableWallTagID);
+        int enemyTargetCount = 0;
 
         foreach (var tag in _level.tags)
         {
@@ -550,13 +560,22 @@ public class LevelPlayer : MonoBehaviour
                 CreateTaggedEntity(entitySystem, EntityType.Target, pos, tag.tagID, false);
             else if (targetCoreTagID > 0 && tag.tagID == targetCoreTagID)
                 CreateTaggedEntity(entitySystem, EntityType.Target, pos, tag.tagID, false);
+            else if (targetEnemyTagID > 0 && tag.tagID == targetEnemyTagID)
+            {
+                CreateTaggedEntity(entitySystem, EntityType.Target, pos, tag.tagID, false);
+                SetupEnemyTargetCounter(entitySystem, tag.tagID);
+                enemyTargetCount++;
+            }
             else if (tag.tagID == enemyGoTagID)
                 CreateTaggedEntity(entitySystem, EntityType.Enemy, pos, tag.tagID);
             else if (unstableWallTagID > 0 && tag.tagID == unstableWallTagID)
                 CreateUnstableWall(entitySystem, pos, tag.tagID);
         }
 
-        Debug.Log($"[LevelPlayer] ECS 已初始化，实体数={entitySystem.entities.entityCount}");
+        var spawnSystem = EnsureRuntimeSystem<SpawnSystem>();
+        spawnSystem.Initialize(_config?.GetTagEntityBP(enemyGoTagID), enemyGoTagID);
+
+        Debug.Log($"[LevelPlayer] ECS 已初始化，实体数={entitySystem.entities.entityCount}, Target.Enemy={enemyTargetCount}, targetEnemyTagID={targetEnemyTagID}");
     }
 
     private void HandleTick()
@@ -667,19 +686,24 @@ public class LevelPlayer : MonoBehaviour
         EntityType entityType,
         Vector2Int pos,
         int tagId,
-        bool occupiesGrid = true)
+        bool occupiesGrid = true,
+        bool publishCreatedEvent = true)
     {
         var handle = entitySystem.CreateEntity(entityType, pos, occupiesGrid);
         ApplyEntityBP(entitySystem, handle, tagId);
+        if (publishCreatedEvent)
+            entitySystem.PublishEntityCreated(handle);
         return handle;
     }
 
     private void CreateCoreBox(EntitySystem entitySystem, Vector2Int pos, int tagId)
     {
-        var handle = CreateTaggedEntity(entitySystem, EntityType.Box, pos, tagId);
+        var handle = CreateTaggedEntity(entitySystem, EntityType.Box, pos, tagId, publishCreatedEvent: false);
         int index = entitySystem.GetIndex(handle);
         if (index >= 0)
             entitySystem.entities.propertyComponents[index].IsCore = true;
+
+        entitySystem.PublishEntityCreated(handle);
     }
 
     private void CreateUnstableWall(EntitySystem entitySystem, Vector2Int pos, int tagId)
@@ -698,10 +722,33 @@ public class LevelPlayer : MonoBehaviour
         if (bp == null)
             return;
 
-        ref var core = ref entitySystem.entities.coreComponents[index];
         ref var properties = ref entitySystem.entities.propertyComponents[index];
-        core.Health = Mathf.Max(1, bp.health);
-        properties.Attack = Mathf.Max(0, bp.attack);
+        ref var status = ref entitySystem.entities.statusComponents[index];
+        status.BaseMaxHealth = Mathf.Max(1, bp.health);
+        status.BaseAttack = Mathf.Max(0, bp.attack);
+        status.DamageTaken = 0;
+        status.AttackModifier = 0;
+        status.MaxHealthModifier = 0;
+        properties.Attack = CombatStats.GetAttack(status);
+        properties.SourceTagId = tagId;
+        properties.SourceBP = bp;
+    }
+
+    private void SetupEnemyTargetCounter(EntitySystem entitySystem, int tagId)
+    {
+        int index = entitySystem.entities.entityCount - 1;
+        if (index < 0)
+            return;
+
+        ref var counter = ref entitySystem.entities.counterComponents[index];
+        ref var props = ref entitySystem.entities.propertyComponents[index];
+
+        EntityBP bp = _config != null ? _config.GetTagEntityBP(tagId) : null;
+        props.SpawnInterval = bp != null && bp.spawnInterval > 0 ? bp.spawnInterval : 3;
+        props.SpawnEntityBP = bp != null ? bp.spawnEntityBP : null;
+
+        counter.NextTick = entitySystem.GlobalTick + props.SpawnInterval;
+        Debug.Log($"[LevelPlayer] Target.Enemy counter armed: index={index}, interval={props.SpawnInterval}, nextTick={counter.NextTick}, spawnBP={(props.SpawnEntityBP != null ? props.SpawnEntityBP.name : "<default>")}");
     }
 
     private void ConfigureCardWallHealth(CardEffectSystem cardEffectSystem, int unstableWallTagID)
@@ -724,10 +771,15 @@ public class LevelPlayer : MonoBehaviour
 
         int targetTagID = ResolveTagID("target", DefaultTargetTagID);
         int targetCoreTagID = ResolveTagID("Target.Core", DefaultTargetCoreTagID);
+        int targetEnemyTagID = ResolveTagID("Target.Enemy", DefaultTargetEnemyTagID);
         foreach (var tag in _level.tags)
         {
-            if (tag.tagID == targetTagID || tag.tagID == targetCoreTagID)
+            if (tag.tagID == targetTagID ||
+                (targetCoreTagID > 0 && tag.tagID == targetCoreTagID) ||
+                (targetEnemyTagID > 0 && tag.tagID == targetEnemyTagID))
+            {
                 result.Add(tag);
+            }
         }
 
         return result;

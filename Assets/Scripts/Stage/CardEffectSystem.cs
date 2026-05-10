@@ -428,16 +428,14 @@ public class CardEffectSystem : MonoBehaviour
         if (actorIndex < 0 || targetIndex < 0)
             return false;
 
-        int damage = Mathf.Max(1, entitySystem.entities.propertyComponents[actorIndex].Attack);
+        int damage = Mathf.Max(1, CombatStats.GetAttack(entitySystem.entities.statusComponents[actorIndex]));
         ref var targetCore = ref entitySystem.entities.coreComponents[targetIndex];
-        targetCore.Health -= damage;
-        Debug.Log($"[CardEffectSystem] Hit {targetCore.EntityType} at {targetCore.Position}, damage={damage}, health={targetCore.Health}");
+        ref var targetStatus = ref entitySystem.entities.statusComponents[targetIndex];
+        CombatStats.DealDamage(ref targetStatus, damage);
+        int currentHealth = CombatStats.GetCurrentHealth(targetStatus);
+        Debug.Log($"[CardEffectSystem] Hit {targetCore.EntityType} at {targetCore.Position}, damage={damage}, health={currentHealth}");
 
-        if (targetCore.Health > 0)
-            return false;
-
-        entitySystem.DestroyEntity(target);
-        return true;
+        return currentHealth <= 0;
     }
 
     private bool AttackTerrainWall(EntitySystem entitySystem, EntityHandle actor, Vector2Int position)
@@ -472,6 +470,15 @@ public class CardEffectSystem : MonoBehaviour
             entities.gridMap[nextMapIndex] = actor.Id;
 
         entities.coreComponents[index].Position = next;
+
+        EventBusSystem.Instance?.Publish(new StageEvent(
+            StageEventType.EntityMoved,
+            actor: actor,
+            entity: actor,
+            entityType: entities.coreComponents[index].EntityType,
+            from: current,
+            to: next,
+            sourceTagId: entities.propertyComponents[index].SourceTagId));
     }
 
     private static bool IsDirectionAllowed(Vector2Int direction, DirectionMask mask)

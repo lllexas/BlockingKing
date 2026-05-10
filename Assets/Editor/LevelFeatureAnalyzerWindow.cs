@@ -45,6 +45,8 @@ public class LevelFeatureAnalyzerWindow : EditorWindow
             Scan();
         if (GUILayout.Button("导出 CSV", GUILayout.Width(90f)))
             ExportCsv();
+        if (GUILayout.Button("保存为拼贴来源库", GUILayout.Width(130f)))
+            SaveSourceDatabase();
         EditorGUILayout.EndHorizontal();
 
         EditorGUILayout.Space(8f);
@@ -266,6 +268,69 @@ public class LevelFeatureAnalyzerWindow : EditorWindow
         AssetDatabase.Refresh();
     }
 
+    private void SaveSourceDatabase()
+    {
+        if (_rows.Count == 0)
+            Scan();
+
+        if (_rows.Count == 0)
+        {
+            EditorUtility.DisplayDialog("保存失败", "没有可保存的扫描结果。", "确定");
+            return;
+        }
+
+        string path = EditorUtility.SaveFilePanelInProject(
+            "保存拼贴来源库",
+            "LevelCollageSourceDatabase",
+            "asset",
+            "只有保存进这个库并启用的地图，才会作为 Escort 拼贴来源。",
+            "Assets/Settings");
+
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        var database = AssetDatabase.LoadAssetAtPath<LevelCollageSourceDatabase>(path);
+        if (database == null)
+        {
+            database = CreateInstance<LevelCollageSourceDatabase>();
+            AssetDatabase.CreateAsset(database, path);
+        }
+
+        database.entries.Clear();
+        foreach (var row in _rows)
+        {
+            var level = AssetDatabase.LoadAssetAtPath<LevelData>(row.Path);
+            if (level == null)
+                continue;
+
+            database.entries.Add(new LevelCollageSourceEntry
+            {
+                enabled = true,
+                level = level,
+                sourcePath = row.Path,
+                sourceGroup = GetSourceGroup(row.Path),
+                width = row.Width,
+                height = row.Height,
+                area = row.Area,
+                wallCount = row.WallCount,
+                wallRate = row.WallRate,
+                boxCount = row.BoxCount,
+                boxRate = row.BoxRate,
+                targetCount = row.TargetCount,
+                boxOnTargetCount = row.BoxOnTargetCount,
+                effectiveBoxCount = row.EffectiveBoxCount,
+                effectiveBoxRate = row.EffectiveBoxRate,
+                manualWeight = 1
+            });
+        }
+
+        EditorUtility.SetDirty(database);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Selection.activeObject = database;
+        EditorGUIUtility.PingObject(database);
+    }
+
     private static void Header(string text, float width)
     {
         EditorGUILayout.LabelField(text, EditorStyles.boldLabel, GUILayout.Width(width));
@@ -284,6 +349,21 @@ public class LevelFeatureAnalyzerWindow : EditorWindow
     private static string Float(float value)
     {
         return value.ToString("0.######", CultureInfo.InvariantCulture);
+    }
+
+    private static string GetSourceGroup(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return string.Empty;
+
+        string normalized = path.Replace('\\', '/');
+        const string marker = "Assets/Resources/Levels/";
+        if (!normalized.StartsWith(marker))
+            return string.Empty;
+
+        string rest = normalized[marker.Length..];
+        int slash = rest.IndexOf('/');
+        return slash >= 0 ? rest[..slash] : string.Empty;
     }
 
     private static string Escape(string value)

@@ -10,15 +10,20 @@ public class GameFlowSettings : ScriptableObject
     [Serializable]
     public sealed class ClassicLevelStageSource
     {
+        [HorizontalGroup("Row", Width = 120)]
         [TableColumnWidth(140)]
         public string stageId;
 
+        [HorizontalGroup("Row", Width = 92)]
         [TableColumnWidth(76)]
         public string stageType;
 
+        [HorizontalGroup("Row", Width = 58)]
+        [MinValue(1)]
         [TableColumnWidth(48)]
         public int weight = 1;
 
+        [HorizontalGroup("Row")]
         [AssetsOnly]
         public LevelData levelData;
     }
@@ -26,15 +31,20 @@ public class GameFlowSettings : ScriptableObject
     [Serializable]
     public sealed class EncounterStageSource
     {
+        [HorizontalGroup("Row", Width = 120)]
         [TableColumnWidth(140)]
         public string stageId;
 
+        [HorizontalGroup("Row", Width = 92)]
         [TableColumnWidth(76)]
         public string stageType = "Encounter";
 
+        [HorizontalGroup("Row", Width = 58)]
+        [MinValue(1)]
         [TableColumnWidth(48)]
         public int weight = 1;
 
+        [HorizontalGroup("Row")]
         [AssetsOnly]
         public TextAsset stagePack;
     }
@@ -42,32 +52,76 @@ public class GameFlowSettings : ScriptableObject
     [Serializable]
     public sealed class EscortStageSource
     {
+        [HorizontalGroup("Row", Width = 120)]
         [TableColumnWidth(140)]
         public string stageId = "Escort";
 
+        [HorizontalGroup("Row", Width = 120)]
         [TableColumnWidth(76)]
         public string stageType = "Escort";
 
+        [HorizontalGroup("Row", Width = 58)]
+        [MinValue(1)]
         [TableColumnWidth(48)]
         public int weight = 1;
+
+        [HorizontalGroup("Row")]
+        [AssetsOnly]
+        public LevelCollageGenerationSettings collageGenerationSettings;
     }
 
-    [Header("Route Generation")]
+    [Title("Route Layout")]
+    [HorizontalGroup("Route", Width = 120)]
+    [MinValue(1)]
     public int layerCount = 8;
+
+    [HorizontalGroup("Route", Width = 120)]
+    [MinValue(1)]
     public int laneCount = 4;
+
+    [HorizontalGroup("Route", Width = 120)]
     public int seed;
 
-    [Title("经典关卡")]
+    [ShowInInspector, ReadOnly, LabelText("Stage Sources")]
+    [HorizontalGroup("Route")]
+    private int StageSourceCount => BuildRouteStageSources().Count;
+
+    [Title("Stage Pools")]
+    [FoldoutGroup("Classic Levels", Expanded = true)]
     [TableList(AlwaysExpanded = true, DrawScrollView = true, MinScrollViewHeight = 120)]
     public List<ClassicLevelStageSource> classicLevels = new List<ClassicLevelStageSource>();
 
-    [Title("不期而遇")]
+    [FoldoutGroup("Encounters", Expanded = true)]
     [TableList(AlwaysExpanded = true, DrawScrollView = true, MinScrollViewHeight = 120)]
     public List<EncounterStageSource> encounters = new List<EncounterStageSource>();
 
-    [Title("带球/押送")]
+    [FoldoutGroup("Escorts", Expanded = true)]
     [TableList(AlwaysExpanded = true, DrawScrollView = true, MinScrollViewHeight = 80)]
     public List<EscortStageSource> escorts = new List<EscortStageSource>();
+
+    [Title("Collage Defaults")]
+    [AssetsOnly]
+    public LevelCollageGenerationSettings defaultCollageGenerationSettings;
+
+    [Title("Diagnostics")]
+    [ShowInInspector, ReadOnly, LabelText("Weight Summary")]
+    private string WeightSummary => BuildWeightSummary();
+
+    [ShowInInspector, ReadOnly, LabelText("Escort Collage Status")]
+    private string EscortCollageStatus => BuildEscortCollageStatus();
+
+    [Button(ButtonSizes.Medium), HorizontalGroup("Actions")]
+    private void NormalizeWeights()
+    {
+        foreach (var source in classicLevels ?? new List<ClassicLevelStageSource>())
+            if (source != null) source.weight = Mathf.Max(1, source.weight);
+
+        foreach (var source in encounters ?? new List<EncounterStageSource>())
+            if (source != null) source.weight = Mathf.Max(1, source.weight);
+
+        foreach (var source in escorts ?? new List<EscortStageSource>())
+            if (source != null) source.weight = Mathf.Max(1, source.weight);
+    }
 
     public List<RunRouteStageSource> BuildRouteStageSources()
     {
@@ -118,12 +172,101 @@ public class GameFlowSettings : ScriptableObject
                 stageId = string.IsNullOrWhiteSpace(source.stageId) ? "Escort" : source.stageId,
                 stageType = string.IsNullOrWhiteSpace(source.stageType) ? "Escort" : source.stageType,
                 weight = Mathf.Max(1, source.weight),
+                collageGenerationSettings = source.collageGenerationSettings != null
+                    ? source.collageGenerationSettings
+                    : defaultCollageGenerationSettings,
                 contentKind = VFSContentKind.Json,
                 contentSource = VFSContentSource.Inline
             });
         }
 
         return result;
+    }
+
+    private string BuildWeightSummary()
+    {
+        int classicWeight = SumClassicWeight();
+        int encounterWeight = SumEncounterWeight();
+        int escortWeight = SumEscortWeight();
+        int total = classicWeight + encounterWeight + escortWeight;
+        if (total <= 0)
+            return "No active stage sources.";
+
+        return $"Classic {classicWeight} ({classicWeight / (float)total:P0}) | " +
+               $"Encounter {encounterWeight} ({encounterWeight / (float)total:P0}) | " +
+               $"Escort {escortWeight} ({escortWeight / (float)total:P0}) | " +
+               $"Total {total}";
+    }
+
+    private string BuildEscortCollageStatus()
+    {
+        if (escorts == null || escorts.Count == 0)
+            return "No Escort stages configured.";
+
+        int missingSettings = 0;
+        int missingSource = 0;
+        foreach (var source in escorts)
+        {
+            if (source == null)
+                continue;
+
+            var settings = source.collageGenerationSettings != null
+                ? source.collageGenerationSettings
+                : defaultCollageGenerationSettings;
+
+            if (settings == null)
+            {
+                missingSettings++;
+                continue;
+            }
+
+            if (settings.sourceDatabase == null)
+                missingSource++;
+        }
+
+        if (missingSettings > 0)
+            return $"{missingSettings} Escort source(s) missing collage generation settings.";
+
+        if (missingSource > 0)
+            return $"{missingSource} Escort source(s) missing source database on generation settings.";
+
+        return "Escort collage settings ready.";
+    }
+
+    private int SumClassicWeight()
+    {
+        int total = 0;
+        foreach (var source in classicLevels ?? new List<ClassicLevelStageSource>())
+        {
+            if (source?.levelData != null)
+                total += Mathf.Max(1, source.weight);
+        }
+
+        return total;
+    }
+
+    private int SumEncounterWeight()
+    {
+        int total = 0;
+        foreach (var source in encounters ?? new List<EncounterStageSource>())
+        {
+            if (source?.stagePack != null)
+                total += Mathf.Max(1, source.weight);
+        }
+
+        return total;
+    }
+
+    private int SumEscortWeight()
+    {
+        int total = 0;
+        foreach (var source in escorts ?? new List<EscortStageSource>())
+        {
+            if (source != null)
+                total += Mathf.Max(1, source.weight);
+        }
+
+        return total;
     }
 
     private static string GetAssetPath(UnityEngine.Object asset)

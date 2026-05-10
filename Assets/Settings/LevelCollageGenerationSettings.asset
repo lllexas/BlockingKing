@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 706ba85c7b4c70d47b171b4fa4a4f133, type: 3}
+  m_Name: LevelCollageGenerationSettings
+  m_EditorClassIdentifier: 
+  sourceDatabase: {fileID: 11400000, guid: e325a568aeaa77f48b99e73805a9d309, type: 2}
+  templateWidthRange: {x: 1, y: 18}
+  templateHeightRange: {x: 1, y: 18}
+  templateAreaRange: {x: 1, y: 324}
+  templateWallRateRange: {x: 0, y: 1}
+  templateEffectiveBoxRange: {x: 1, y: 5}
+  maxFinalRewardBoxes: -1

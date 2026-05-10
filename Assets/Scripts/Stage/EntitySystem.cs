@@ -44,6 +44,7 @@ public class EntitySystem : MonoBehaviour
     public bool IsInitialized => _initialized;
     public EntityComponents entities;
     public int TerrainVersion { get; private set; }
+    public int GlobalTick { get; private set; }
 
     private bool _initialized;
     private int _versionEpoch;
@@ -67,6 +68,10 @@ public class EntitySystem : MonoBehaviour
                                  _maxEntityCount != maxEntityCount ||
                                  entities.groundMap == null ||
                                  entities.gridMap == null ||
+                                 entities.visualMotionComponents == null ||
+                                 entities.visualMotionComponents.Length != maxEntityCount ||
+                                 entities.visualImpulseComponents == null ||
+                                 entities.visualImpulseComponents.Length != maxEntityCount ||
                                  entities.groundMap.Length != expectedMapSize ||
                                  entities.gridMap.Length != expectedMapSize;
 
@@ -79,8 +84,12 @@ public class EntitySystem : MonoBehaviour
         if (needsReallocation)
         {
             entities.coreComponents = new CoreComponent[maxEntityCount];
+            entities.statusComponents = new StatusComponent[maxEntityCount];
             entities.propertyComponents = new PropertyComponent[maxEntityCount];
+            entities.counterComponents = new CounterComponent[maxEntityCount];
             entities.intentComponents = new IntentComponent[maxEntityCount];
+            entities.visualMotionComponents = new VisualMotionComponent[maxEntityCount];
+            entities.visualImpulseComponents = new VisualImpulseComponent[maxEntityCount];
 
             entities.groundMap = new int[mapWidth * mapHeight];
             entities.gridMap = new int[mapWidth * mapHeight];
@@ -102,8 +111,12 @@ public class EntitySystem : MonoBehaviour
         else
         {
             System.Array.Clear(entities.coreComponents, 0, maxEntityCount);
+            System.Array.Clear(entities.statusComponents, 0, maxEntityCount);
             System.Array.Clear(entities.propertyComponents, 0, maxEntityCount);
+            System.Array.Clear(entities.counterComponents, 0, maxEntityCount);
             System.Array.Clear(entities.intentComponents, 0, maxEntityCount);
+            System.Array.Clear(entities.visualMotionComponents, 0, maxEntityCount);
+            System.Array.Clear(entities.visualImpulseComponents, 0, maxEntityCount);
             System.Array.Clear(entities.groundMap, 0, entities.groundMap.Length);
             System.Array.Clear(entities.gridMap, 0, entities.gridMap.Length);
 
@@ -123,6 +136,7 @@ public class EntitySystem : MonoBehaviour
         TickSystem.OnTick -= UpdateTick;
         TickSystem.OnTick += UpdateTick;
 
+        GlobalTick = 0;
         _initialized = true;
         TerrainVersion++;
         Debug.Log($"[EntitySystem] 初始化完成，容量={maxEntityCount}，地图={mapWidth}x{mapHeight}");
@@ -150,17 +164,43 @@ public class EntitySystem : MonoBehaviour
         core.EntityType = type;
         core.Position = pos;
         core.Id = id;
-        core.Health = 1;
         core.OccupiesGrid = occupiesGrid;
 
+        entities.statusComponents[index] = new StatusComponent
+        {
+            BaseAttack = 0,
+            BaseMaxHealth = 1
+        };
         entities.propertyComponents[index] = default;
+        entities.counterComponents[index] = default;
         entities.intentComponents[index] = default;
+        entities.visualMotionComponents[index] = default;
+        entities.visualImpulseComponents[index] = default;
 
         int mapIdx = pos.y * entities.mapWidth + pos.x;
         if (occupiesGrid && mapIdx >= 0 && mapIdx < entities.gridMap.Length)
             entities.gridMap[mapIdx] = id;
 
         return handle;
+    }
+
+    public void PublishEntityCreated(EntityHandle handle)
+    {
+        if (!IsValid(handle))
+            return;
+
+        int index = GetIndex(handle);
+        if (index < 0)
+            return;
+
+        var core = entities.coreComponents[index];
+        EventBusSystem.Instance?.Publish(new StageEvent(
+            StageEventType.EntityCreated,
+            entity: handle,
+            entityType: core.EntityType,
+            from: core.Position,
+            to: core.Position,
+            sourceTagId: entities.propertyComponents[index].SourceTagId));
     }
 
     public void DestroyEntity(EntityHandle handle)
@@ -172,6 +212,8 @@ public class EntitySystem : MonoBehaviour
         int lastIndex = entities.entityCount - 1;
 
         var pos = entities.coreComponents[indexToRemove].Position;
+        var entityType = entities.coreComponents[indexToRemove].EntityType;
+        int sourceTagId = entities.propertyComponents[indexToRemove].SourceTagId;
         int mapIdx = pos.y * entities.mapWidth + pos.x;
         if (entities.coreComponents[indexToRemove].OccupiesGrid
             && mapIdx >= 0 && mapIdx < entities.gridMap.Length
@@ -181,8 +223,12 @@ public class EntitySystem : MonoBehaviour
         if (indexToRemove != lastIndex)
         {
             entities.coreComponents[indexToRemove] = entities.coreComponents[lastIndex];
+            entities.statusComponents[indexToRemove] = entities.statusComponents[lastIndex];
             entities.propertyComponents[indexToRemove] = entities.propertyComponents[lastIndex];
+            entities.counterComponents[indexToRemove] = entities.counterComponents[lastIndex];
             entities.intentComponents[indexToRemove] = entities.intentComponents[lastIndex];
+            entities.visualMotionComponents[indexToRemove] = entities.visualMotionComponents[lastIndex];
+            entities.visualImpulseComponents[indexToRemove] = entities.visualImpulseComponents[lastIndex];
 
             int idOfMoved = _dataIndexToId[lastIndex];
             _idToDataIndex[idOfMoved] = indexToRemove;
@@ -190,10 +236,20 @@ public class EntitySystem : MonoBehaviour
         }
 
         _idToDataIndex[idToRemove] = -1;
+        entities.visualMotionComponents[lastIndex] = default;
+        entities.visualImpulseComponents[lastIndex] = default;
         entities.entityCount--;
 
         _freeIds.Enqueue(idToRemove);
         _idVersions[idToRemove]++;
+
+        EventBusSystem.Instance?.Publish(new StageEvent(
+            StageEventType.EntityDestroyed,
+            entity: handle,
+            entityType: entityType,
+            from: pos,
+            to: pos,
+            sourceTagId: sourceTagId));
     }
 
     #endregion
@@ -226,6 +282,8 @@ public class EntitySystem : MonoBehaviour
 
     private void UpdateTick()
     {
+        GlobalTick++;
+        SpawnSystem.Instance?.Tick();
         IntentSystem.Instance?.Tick();
         EnemyAutoAISystem.Instance?.Tick();
     }
@@ -248,6 +306,12 @@ public class EntitySystem : MonoBehaviour
 
         TickSystem.OnTick -= UpdateTick;
         entities.entityCount = 0;
+
+        if (entities.visualMotionComponents != null)
+            System.Array.Clear(entities.visualMotionComponents, 0, entities.visualMotionComponents.Length);
+
+        if (entities.visualImpulseComponents != null)
+            System.Array.Clear(entities.visualImpulseComponents, 0, entities.visualImpulseComponents.Length);
 
         if (entities.gridMap != null)
             System.Array.Fill(entities.gridMap, -1);
@@ -333,10 +397,11 @@ public class EntitySystem : MonoBehaviour
         var handle = CreateEntity(EntityType.Wall, pos);
         int entityIndex = GetIndex(handle);
         if (entityIndex >= 0)
-            entities.coreComponents[entityIndex].Health = Mathf.Max(1, health);
+            entities.statusComponents[entityIndex].BaseMaxHealth = Mathf.Max(1, health);
 
         entities.groundMap[idx] = _defaultFloorTerrainId;
         TerrainVersion++;
+        PublishEntityCreated(handle);
         return handle;
     }
 

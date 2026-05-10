@@ -12,6 +12,7 @@ public class IntentSystem : MonoBehaviour
     private readonly Dictionary<Type, Stack<Intent>> _pools = new();
     private readonly List<EntityHandle> _activeIntentEntities = new();
     private EntityHandle _playerIntentActor = EntityHandle.None;
+    private const int MaxResolutionPasses = 8;
 
     private void Awake()
     {
@@ -122,25 +123,123 @@ public class IntentSystem : MonoBehaviour
         if (intentComponent.Type == IntentType.None || intentComponent.Intent == null)
             return;
 
-        switch (intentComponent.Type)
+        IntentType executingType = intentComponent.Type;
+        Intent executingIntent = intentComponent.Intent;
+        var eventBus = EventBusSystem.Instance;
+        eventBus?.Publish(new StageEvent(
+            StageEventType.BeforeIntentExecute,
+            actor: actor,
+            entity: actor,
+            entityType: entitySystem.entities.coreComponents[entityIndex].EntityType,
+            intentType: executingType,
+            intent: executingIntent,
+            from: entitySystem.entities.coreComponents[entityIndex].Position,
+            to: entitySystem.entities.coreComponents[entityIndex].Position,
+            sourceTagId: entitySystem.entities.propertyComponents[entityIndex].SourceTagId));
+
+        switch (executingType)
         {
             case IntentType.Move:
-                MoveSystem.Instance?.Execute(actor, intentComponent.Intent as MoveIntent);
+                MoveSystem.Instance?.Execute(actor, executingIntent as MoveIntent);
                 break;
             case IntentType.Attack:
-                AttackSystem.Instance?.Execute(actor, intentComponent.Intent as AttackIntent);
+                AttackSystem.Instance?.Execute(actor, executingIntent as AttackIntent);
                 break;
             case IntentType.Card:
                 if (CardEffectSystem.Instance != null)
-                    CardEffectSystem.Instance.Execute(actor, intentComponent.Intent as CardIntent);
+                    CardEffectSystem.Instance.Execute(actor, executingIntent as CardIntent);
                 else
                     Debug.LogWarning("[IntentSystem] Card intent was submitted, but CardEffectSystem is missing.");
                 break;
+            case IntentType.Spawn:
+                if (SpawnSystem.Instance != null)
+                    SpawnSystem.Instance.Execute(actor, executingIntent as SpawnIntent);
+                else
+                    Debug.LogWarning("[IntentSystem] Spawn intent was submitted, but SpawnSystem is missing.");
+                break;
         }
 
-        Return(intentComponent.Intent);
+        if (entitySystem.IsValid(actor))
+        {
+            int postIndex = entitySystem.GetIndex(actor);
+            eventBus?.Publish(new StageEvent(
+                StageEventType.AfterIntentExecute,
+                actor: actor,
+                entity: actor,
+                entityType: entitySystem.entities.coreComponents[postIndex].EntityType,
+                intentType: executingType,
+                intent: executingIntent,
+                from: entitySystem.entities.coreComponents[postIndex].Position,
+                to: entitySystem.entities.coreComponents[postIndex].Position,
+                sourceTagId: entitySystem.entities.propertyComponents[postIndex].SourceTagId));
+        }
+        else
+        {
+            eventBus?.Publish(new StageEvent(
+                StageEventType.AfterIntentExecute,
+                actor: actor,
+                entity: actor,
+                intentType: executingType,
+                intent: executingIntent));
+        }
+
         intentComponent.Type = IntentType.None;
         intentComponent.Intent = null;
+
+        ResolveWorldState(actor, executingType);
+
+        Return(executingIntent);
+    }
+
+    public void ResolveWorldState()
+    {
+        ResolveWorldState(EntityHandle.None, IntentType.None);
+    }
+
+    public void ResolveWorldState(EntityHandle actor, IntentType intentType)
+    {
+        var eventBus = EventBusSystem.Instance;
+        if (eventBus == null)
+            return;
+
+        var context = new IntentResolutionContext
+        {
+            Actor = actor,
+            IntentType = intentType
+        };
+
+        eventBus.Publish(new StageEvent(
+            StageEventType.IntentResolutionBegin,
+            actor: actor,
+            intentType: intentType,
+            resolutionContext: context));
+
+        for (int pass = 0; pass < MaxResolutionPasses; pass++)
+        {
+            context.Pass = pass;
+            context.AnyDeathResolved = false;
+
+            eventBus.Publish(new StageEvent(
+                StageEventType.AuraUpdate,
+                actor: actor,
+                intentType: intentType,
+                resolutionContext: context));
+
+            eventBus.Publish(new StageEvent(
+                StageEventType.DeathCheck,
+                actor: actor,
+                intentType: intentType,
+                resolutionContext: context));
+
+            if (!context.AnyDeathResolved)
+                break;
+        }
+
+        eventBus.Publish(new StageEvent(
+            StageEventType.IntentResolutionEnd,
+            actor: actor,
+            intentType: intentType,
+            resolutionContext: context));
     }
 
     public void ForEachActiveIntent(System.Action<EntityHandle, IntentComponent> visitor)
