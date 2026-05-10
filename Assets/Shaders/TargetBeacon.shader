@@ -92,7 +92,7 @@ Shader "BlockingKing/TargetBeacon"
                 float beamAlpha = input.color.a * max(floorBoost, upwardFade * tipFade) * (0.32 + core * 0.7 + scan * 0.45);
                 float markerAlpha = 0.26;
                 float alpha = _BaseAlpha * lerp(beamAlpha, markerAlpha, centerMarker);
-                float3 color = input.color.rgb * _Intensity * lerp(0.34 + core * 0.52 + scan * 0.42 + floorBoost * 0.22, 0.18, centerMarker);
+                float3 color = input.color.rgb * _Intensity * lerp(0.34 + core * 0.52 + scan * 0.42 + floorBoost * 0.22, 0.4, centerMarker);
 
                 return half4(color, saturate(alpha));
             }

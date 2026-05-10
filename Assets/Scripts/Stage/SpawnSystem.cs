@@ -71,13 +71,23 @@ public class SpawnSystem : MonoBehaviour, ITickSystem
                 continue;
 
             ref var counter = ref entities.counterComponents[i];
-            if (counter.NextTick <= 0 || counter.NextTick > globalTick)
+            if (counter.NextTick <= 0)
                 continue;
 
-            // 时间戳到期
             ref var props = ref entities.propertyComponents[i];
             var spawnPos = entities.coreComponents[i].Position;
 
+            if (entitySystem.IsBlocked(spawnPos))
+            {
+                counter.NextTick++;
+                Debug.Log($"[SpawnSystem] Spawn timer frozen at {spawnPos}, nextTick={counter.NextTick}.");
+                continue;
+            }
+
+            if (counter.NextTick > globalTick)
+                continue;
+
+            // 时间戳到期
             var spawnIntent = intentSystem.Request<SpawnIntent>();
             spawnIntent.Setup(spawnPos, props.SpawnEntityBP);
             var actor = entitySystem.GetHandleFromId(entities.coreComponents[i].Id);

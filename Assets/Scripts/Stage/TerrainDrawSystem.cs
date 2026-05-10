@@ -309,7 +309,7 @@ public class TerrainDrawSystem : MonoBehaviour
         Color beamColor = color;
         beamColor.a = 1f;
         Color centerColor = color;
-        centerColor.a = 0.35f;
+        centerColor.a = 0.49f;
 
         float s = _cellSize;
         float marker = _tagMarkerSize * s;
@@ -354,6 +354,9 @@ public class TerrainDrawSystem : MonoBehaviour
         bool v = sameKindTargets.Contains(cell + verticalNeighbor);
         bool d = sameKindTargets.Contains(cell + diagonalNeighbor);
 
+        float edgeInset = halfWidth * 0.5f;
+        corner += inwardHorizontal * edgeInset + inwardVertical * edgeInset;
+
         if (h && v && d)
         {
             Color weak = color;
@@ -364,19 +367,19 @@ public class TerrainDrawSystem : MonoBehaviour
 
         if (h && v)
         {
-            AddVerticalShortLine(quads, origin, corner, (inwardHorizontal + inwardVertical).normalized, lineLength * 0.55f, halfWidth * 0.35f, height * 0.5f, color);
+            AddVerticalShortLine(quads, origin, corner, (inwardHorizontal + inwardVertical).normalized, lineLength * 0.55f, halfWidth * 0.5f, height * 0.5f, color);
             return;
         }
 
         if (h)
         {
-            AddVerticalShortLine(quads, origin, corner, inwardHorizontal, lineLength * 0.4f, halfWidth * 0.35f, height * 0.5f, color);
+            AddVerticalShortLine(quads, origin, corner, inwardHorizontal, lineLength * 0.4f, halfWidth * 0.5f, height * 0.5f, color);
             return;
         }
 
         if (v)
         {
-            AddVerticalShortLine(quads, origin, corner, inwardVertical, lineLength * 0.4f, halfWidth * 0.35f, height * 0.5f, color);
+            AddVerticalShortLine(quads, origin, corner, inwardVertical, lineLength * 0.4f, halfWidth * 0.5f, height * 0.5f, color);
             return;
         }
 
@@ -384,15 +387,17 @@ public class TerrainDrawSystem : MonoBehaviour
         {
             Color weakDiagonal = color;
             weakDiagonal.a = 0.55f;
-            AddVerticalShortLine(quads, origin, corner, (inwardHorizontal + inwardVertical).normalized, lineLength * 0.3f, halfWidth * 0.3f, height * 0.35f, weakDiagonal);
+            AddVerticalShortLine(quads, origin, corner, (inwardHorizontal + inwardVertical).normalized, lineLength * 0.3f, halfWidth * 0.4f, height * 0.35f, weakDiagonal);
             return;
         }
 
-        // 孤立角 → 小拐角 L-shape
-        float bracketArmLength = halfWidth * 3f;
-        float bracketThickness = halfWidth * 0.5f;
-        AddVerticalShortLine(quads, origin, corner, inwardHorizontal, bracketArmLength, bracketThickness, height, color);
-        AddVerticalShortLine(quads, origin, corner, inwardVertical, bracketArmLength, bracketThickness, height, color);
+        // 孤立角 → L 形小拐角（偏移避免侵犯邻格象限）
+        float bracketArmLength = lineLength * 0.8f;
+        float bracketThickness = halfWidth * 1.0f;
+        Vector3 hOffset = inwardVertical * bracketThickness;   // 水平臂往 +Z 推
+        Vector3 vOffset = inwardHorizontal * bracketThickness; // 垂直臂往 +X 推
+        AddVerticalShortLine(quads, origin, corner + hOffset, inwardHorizontal, bracketArmLength, bracketThickness, height, color);
+        AddVerticalShortLine(quads, origin, corner + vOffset, inwardVertical, bracketArmLength, bracketThickness, height, color);
     }
 
     private static void AddVerticalShortLine(List<Quad> quads, Vector3 origin, Vector3 start, Vector3 direction, float length, float halfWidth, float height, Color color)
@@ -498,7 +503,7 @@ public class TerrainDrawSystem : MonoBehaviour
         Color beamColor = color;
         beamColor.a = 1f;
         Color centerColor = color;
-        centerColor.a = 0.35f;
+        centerColor.a = 0.49f;
 
         float s = _cellSize;
         float marker = _tagMarkerSize * s;

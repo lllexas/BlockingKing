@@ -58,11 +58,24 @@ public class AttackSystem : MonoBehaviour
             return;
 
         ref var core = ref entitySystem.entities.coreComponents[targetIndex];
-        if (core.EntityType != EntityType.Enemy && core.EntityType != EntityType.Wall)
+        if (!CanReceiveAttackDamage(entitySystem, targetIndex))
             return;
 
         ref var status = ref entitySystem.entities.statusComponents[targetIndex];
         CombatStats.DealDamage(ref status, damage);
         Debug.Log($"[AttackSystem] Hit {core.EntityType} at {targetPosition}, damage={damage}, health={CombatStats.GetCurrentHealth(status)}");
+    }
+
+    private static bool CanReceiveAttackDamage(EntitySystem entitySystem, int targetIndex)
+    {
+        var entities = entitySystem.entities;
+        EntityType entityType = entities.coreComponents[targetIndex].EntityType;
+        if (entityType == EntityType.Target)
+            return false;
+
+        if (entityType == EntityType.Box && !entities.propertyComponents[targetIndex].IsCore)
+            return false;
+
+        return true;
     }
 }

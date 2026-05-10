@@ -30,6 +30,7 @@ public class HandZone : MonoBehaviour
     [SerializeField] private float maxFanAngle = 8f;
     [SerializeField] private float fanArcDepth = 56f;
     [SerializeField] private float hoverLift = 150f;
+    [SerializeField] private Vector2 hotkeyPendingAnchor = new Vector2(240f, 0f);
     [SerializeField] private float cardTweenDuration = 0.22f;
     [SerializeField] private float hoverTweenDuration = 0.12f;
     [SerializeField] private float pileTweenDuration = 0.18f;
@@ -57,6 +58,8 @@ public class HandZone : MonoBehaviour
 
     public event Action<CardSO> CardPlayed;
     public static bool IsAnyCardAiming { get; private set; }
+    public static bool IsAnyCardInteractionActive { get; private set; }
+    public static HandZone ActiveInstance { get; private set; }
 
     private readonly List<CardSO> _drawPile = new List<CardSO>();
     private readonly List<CardSO> _discardPile = new List<CardSO>();
@@ -113,6 +116,7 @@ public class HandZone : MonoBehaviour
 
     private void Awake()
     {
+        ActiveInstance = this;
         handState ??= new CardHandState();
 
         if (rootCanvas == null)
@@ -143,6 +147,10 @@ public class HandZone : MonoBehaviour
         if (_interactionState == CardInteractionState.Pending)
             IsAnyCardAiming = false;
 
+        if (ActiveInstance == this)
+            ActiveInstance = null;
+
+        IsAnyCardInteractionActive = false;
         ClearCardReleaseOverlay();
     }
 
@@ -174,6 +182,7 @@ public class HandZone : MonoBehaviour
         }
 
         PollHandState();
+        PollCardHotkeys();
 
         if (_pendingCard != null)
         {
@@ -383,6 +392,34 @@ public class HandZone : MonoBehaviour
         // 点击不再直接打出。卡牌必须拖出 HandZone 后进入瞄准态。
     }
 
+    private void PollCardHotkeys()
+    {
+        if (_interactionState == CardInteractionState.Dragging || _interactionState == CardInteractionState.Recycling)
+            return;
+
+        for (int i = 0; i < 9; i++)
+        {
+            if (!Input.GetKeyDown(KeyCode.Alpha1 + i) && !Input.GetKeyDown(KeyCode.Keypad1 + i))
+                continue;
+
+            ActivateCardHotkey(i);
+            return;
+        }
+    }
+
+    private void ActivateCardHotkey(int handIndex)
+    {
+        if (handIndex < 0 || handIndex >= _hand.Count)
+            return;
+
+        var view = _hand[handIndex];
+        if (view == null)
+            return;
+
+        ChangeInteractionState(CardInteractionState.Pending, view);
+        MovePendingCardToHotkeyAnchor(view);
+    }
+
     private void HandleCardHoverEnter(CardView view)
     {
         if (view == null || !_hand.Contains(view) || _interactionState != CardInteractionState.Idle)
@@ -444,6 +481,7 @@ public class HandZone : MonoBehaviour
         ExitInteractionState(_interactionState, _stateCard, nextState);
         _interactionState = nextState;
         _stateCard = nextCard;
+        IsAnyCardInteractionActive = nextState != CardInteractionState.Idle;
         EnterInteractionState(nextState, nextCard);
     }
 
@@ -581,6 +619,19 @@ public class HandZone : MonoBehaviour
         BuildCardReleaseRangeOverlay(view);
     }
 
+    private void MovePendingCardToHotkeyAnchor(CardView view)
+    {
+        if (view == null || cardLayer == null)
+            return;
+
+        Rect rect = cardLayer.rect;
+        Vector2 target = new Vector2(
+            rect.xMax - hotkeyPendingAnchor.x,
+            (rect.yMin + rect.yMax) * 0.5f + hotkeyPendingAnchor.y);
+
+        view.TweenTo(target, 1f, 0f, hoverTweenDuration, hoverEase);
+    }
+
     private void EnterRecyclingState(CardView view)
     {
         if (view == null)
@@ -671,6 +722,15 @@ public class HandZone : MonoBehaviour
         pending.SetInteractable(true);
         pending.SetHoverState(false, hoverTweenDuration, hoverEase);
         RelayoutHand(true);
+    }
+
+    public static bool TryCancelActivePendingCard()
+    {
+        if (ActiveInstance == null || ActiveInstance._interactionState != CardInteractionState.Pending)
+            return false;
+
+        ActiveInstance.CancelPendingCard();
+        return true;
     }
 
     private void PollHandState()

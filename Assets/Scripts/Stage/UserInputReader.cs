@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 /// <summary>
 /// 监听玩家输入，写入玩家单位 Intent，并推进 Tick。
@@ -6,18 +8,16 @@ using UnityEngine;
 public class UserInputReader : MonoBehaviour
 {
     private const int MoveDistance = 1;
-    private const string AttackRangeOverlayId = "player_attack_range";
-    private const string AttackHoverOverlayId = "player_attack_hover";
 
-    [Header("Attack Select")]
-    [SerializeField] private Color attackRangeColor = new(1f, 0.15f, 0.08f, 0.32f);
-    [SerializeField] private Color attackHoverColor = new(1f, 0.9f, 0.15f, 0.58f);
-    [SerializeField] private float attackHighlightHeight = 0.012f;
+    [Header("Move Input")]
+    [SerializeField, Min(0f)] private float movePreInputWindow = 0.15f;
 
     private EntityHandle _playerHandle = EntityHandle.None;
-    private bool _attackPending;
-    private readonly System.Collections.Generic.List<Vector2Int> _attackRangeCells = new();
-    private readonly System.Collections.Generic.List<Vector2Int> _attackHoverCells = new();
+    private Vector2Int _bufferedMoveDirection;
+    private float _bufferedMoveExpireTime;
+    private PathMoveMode _pathMoveMode;
+    private readonly Queue<Vector2Int> _pathMoveDirections = new();
+    private readonly List<int> _pathOpenSet = new();
 
     private static readonly Vector2Int[] CrossDirections =
     {
@@ -27,49 +27,62 @@ public class UserInputReader : MonoBehaviour
         Vector2Int.right
     };
 
-    private void Update()
+    private enum PathMoveMode
     {
-        if (Input.GetKeyDown(KeyCode.Q))
-            _attackPending = true;
-
-        if (_attackPending)
-        {
-            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1))
-            {
-                _attackPending = false;
-                ClearAttackOverlay();
-            }
-
-            if (Input.GetMouseButtonDown(0))
-                TrySubmitAttackAtMouse();
-
-            return;
-        }
-
-        if (!TryReadMoveDirection(out var direction))
-            return;
-
-        if (!TryResolvePlayer(out var playerHandle))
-            return;
-
-        var intent = IntentSystem.Instance.Request<MoveIntent>();
-        intent.Setup(direction, MoveDistance);
-
-        if (IntentSystem.Instance.SetPlayerIntent(playerHandle, IntentType.Move, intent))
-            TickSystem.PushTick();
+        None,
+        TerrainOnly,
+        TerrainAndEntities
     }
 
-    private void LateUpdate()
+    private void Update()
     {
-        if (!_attackPending)
+        TryConsumeBufferedMove();
+        TryConsumePathMove();
+
+        bool hasMoveKey = TryReadMoveDirection(out var direction);
+        if (hasMoveKey && HandZone.IsAnyCardAiming)
+            HandZone.TryCancelActivePendingCard();
+
+        if (IsPointerBlockedForStageInput())
+            return;
+
+        if (Input.GetMouseButtonDown(0))
         {
-            ClearAttackOverlay();
+            TryStartPathMove(PathMoveMode.TerrainOnly);
             return;
         }
 
+        if (Input.GetMouseButtonDown(1))
+        {
+            TryStartPathMove(PathMoveMode.TerrainAndEntities);
+            return;
+        }
+
+        if (!hasMoveKey)
+            return;
+
+        ClearPathMove();
+
+        if (TryBufferMoveDuringBeatMotion(direction))
+            return;
+
+        TrySubmitMove(direction);
+    }
+
+    private void TryConsumePathMove()
+    {
+        if (_pathMoveDirections.Count == 0)
+            return;
+
+        if (HandZone.IsAnyCardInteractionActive)
+            return;
+
+        if (IsBeatMotionBusy())
+            return;
+
         if (!TryResolvePlayer(out var playerHandle))
         {
-            ClearAttackOverlay();
+            ClearPathMove();
             return;
         }
 
@@ -77,65 +90,100 @@ public class UserInputReader : MonoBehaviour
         int playerIndex = entitySystem.GetIndex(playerHandle);
         if (playerIndex < 0)
         {
-            ClearAttackOverlay();
+            ClearPathMove();
             return;
         }
 
+        Vector2Int direction = _pathMoveDirections.Peek();
         Vector2Int playerPosition = entitySystem.entities.coreComponents[playerIndex].Position;
-        TryGetMouseGridPosition(out var hoverPosition);
-        _attackRangeCells.Clear();
-        _attackHoverCells.Clear();
-
-        for (int i = 0; i < CrossDirections.Length; i++)
+        if (!CanExecutePathStep(entitySystem, playerPosition, direction, _pathMoveMode))
         {
-            Vector2Int targetPosition = playerPosition + CrossDirections[i];
-            if (!entitySystem.IsInsideMap(targetPosition))
-                continue;
-
-            bool isHover = targetPosition == hoverPosition;
-            if (isHover)
-                _attackHoverCells.Add(targetPosition);
-            else
-                _attackRangeCells.Add(targetPosition);
+            ClearPathMove();
+            return;
         }
 
-        var overlay = GridOverlayDrawSystem.Instance;
-        if (overlay == null)
-            return;
-
-        overlay.SetOverlay(
-            AttackRangeOverlayId,
-            _attackRangeCells,
-            GridOverlayStyle.Danger,
-            attackRangeColor,
-            attackHighlightHeight,
-            10);
-
-        overlay.SetOverlay(
-            AttackHoverOverlayId,
-            _attackHoverCells,
-            GridOverlayStyle.SoftGlow,
-            attackHoverColor,
-            attackHighlightHeight,
-            11);
+        _pathMoveDirections.Dequeue();
+        if (!TrySubmitMove(direction))
+            ClearPathMove();
     }
 
-    private void OnGUI()
+    private void TryConsumeBufferedMove()
     {
-        var buttonRect = new Rect(12f, Screen.height - 52f, 96f, 36f);
-        if (GUI.Button(buttonRect, "[Q] 攻击"))
-            _attackPending = true;
-
-        if (!_attackPending)
+        if (_bufferedMoveDirection == Vector2Int.zero)
             return;
 
-        var mouse = Event.current.mousePosition;
-        GUI.Label(new Rect(mouse.x + 14f, mouse.y + 12f, 80f, 22f), "+ 攻击");
+        if (Time.time > _bufferedMoveExpireTime)
+        {
+            ClearBufferedMove();
+            return;
+        }
+
+        if (IsBeatMotionBusy())
+            return;
+
+        var direction = _bufferedMoveDirection;
+        ClearBufferedMove();
+        TrySubmitMove(direction);
+    }
+
+    private bool TryBufferMoveDuringBeatMotion(Vector2Int direction)
+    {
+        var drawSystem = DrawSystem.Instance;
+        if (drawSystem == null || !drawSystem.IsBeatMotionBusy)
+            return false;
+
+        float busyUntil = drawSystem.BeatMotionBusyUntil;
+        if (busyUntil - Time.time > movePreInputWindow)
+            return true;
+
+        _bufferedMoveDirection = direction;
+        _bufferedMoveExpireTime = busyUntil + 0.05f;
+        return true;
+    }
+
+    private bool IsBeatMotionBusy()
+    {
+        if (IntentSystem.Instance != null && IntentSystem.Instance.IsRunning)
+            return true;
+
+        var drawSystem = DrawSystem.Instance;
+        return drawSystem != null && drawSystem.IsBeatMotionBusy;
+    }
+
+    private void ClearBufferedMove()
+    {
+        _bufferedMoveDirection = Vector2Int.zero;
+        _bufferedMoveExpireTime = 0f;
+    }
+
+    private void ClearPathMove()
+    {
+        _pathMoveDirections.Clear();
+        _pathMoveMode = PathMoveMode.None;
+    }
+
+    private bool TrySubmitMove(Vector2Int direction)
+    {
+        if (!TryResolvePlayer(out var playerHandle))
+            return false;
+
+        var intent = IntentSystem.Instance.Request<MoveIntent>();
+        intent.Setup(direction, MoveDistance);
+
+        if (IntentSystem.Instance.SetPlayerIntent(playerHandle, IntentType.Move, intent))
+        {
+            TickSystem.PushTick();
+            return true;
+        }
+
+        IntentSystem.Instance.Return(intent);
+        return false;
     }
 
     private void OnDisable()
     {
-        ClearAttackOverlay();
+        ClearBufferedMove();
+        ClearPathMove();
     }
 
     private static bool TryReadMoveDirection(out Vector2Int direction)
@@ -168,8 +216,14 @@ public class UserInputReader : MonoBehaviour
         return false;
     }
 
-    private bool TrySubmitAttackAtMouse()
+    private bool TryStartPathMove(PathMoveMode mode)
     {
+        if (HandZone.IsAnyCardInteractionActive || IsPointerBlockedForStageInput())
+            return false;
+
+        ClearBufferedMove();
+        ClearPathMove();
+
         if (!TryResolvePlayer(out var playerHandle))
             return false;
 
@@ -181,24 +235,197 @@ public class UserInputReader : MonoBehaviour
         if (!TryGetMouseGridPosition(out var targetPosition))
             return false;
 
-        Vector2Int playerPosition = entitySystem.entities.coreComponents[playerIndex].Position;
-        Vector2Int offset = targetPosition - playerPosition;
-        if (Mathf.Abs(offset.x) + Mathf.Abs(offset.y) != 1)
+        Vector2Int startPosition = entitySystem.entities.coreComponents[playerIndex].Position;
+        if (!TryBuildPath(entitySystem, startPosition, targetPosition, mode, _pathMoveDirections))
             return false;
 
-        if (!entitySystem.IsInsideMap(targetPosition))
-            return false;
-
-        var intent = IntentSystem.Instance.Request<AttackIntent>();
-        intent.Setup(targetPosition);
-
-        if (!IntentSystem.Instance.SetPlayerIntent(playerHandle, IntentType.Attack, intent))
-            return false;
-
-        _attackPending = false;
-        ClearAttackOverlay();
-        TickSystem.PushTick();
+        _pathMoveMode = mode;
+        TryConsumePathMove();
         return true;
+    }
+
+    private static bool IsPointerBlockedForStageInput()
+    {
+        if (HandZone.IsAnyCardInteractionActive)
+            return true;
+
+        return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+    }
+
+    private bool TryBuildPath(
+        EntitySystem entitySystem,
+        Vector2Int start,
+        Vector2Int target,
+        PathMoveMode mode,
+        Queue<Vector2Int> result)
+    {
+        result.Clear();
+
+        if (start == target)
+            return false;
+
+        if (!IsPathCellPassable(entitySystem, target, mode))
+            return false;
+
+        var entities = entitySystem.entities;
+        int mapSize = entities.mapWidth * entities.mapHeight;
+        if (mapSize <= 0)
+            return false;
+
+        int startIndex = ToMapIndex(entities, start);
+        int targetIndex = ToMapIndex(entities, target);
+        if (startIndex < 0 || startIndex >= mapSize || targetIndex < 0 || targetIndex >= mapSize)
+            return false;
+
+        int[] cameFrom = new int[mapSize];
+        int[] gScore = new int[mapSize];
+        bool[] closed = new bool[mapSize];
+        bool[] inOpen = new bool[mapSize];
+        for (int i = 0; i < mapSize; i++)
+        {
+            cameFrom[i] = -1;
+            gScore[i] = int.MaxValue;
+        }
+
+        _pathOpenSet.Clear();
+        _pathOpenSet.Add(startIndex);
+        inOpen[startIndex] = true;
+        gScore[startIndex] = 0;
+
+        while (_pathOpenSet.Count > 0)
+        {
+            int currentIndex = PopBestOpenNode(_pathOpenSet, gScore, target, entities);
+            inOpen[currentIndex] = false;
+
+            if (currentIndex == targetIndex)
+                return BuildDirectionQueue(cameFrom, startIndex, targetIndex, entities, result);
+
+            closed[currentIndex] = true;
+            Vector2Int current = FromMapIndex(entities, currentIndex);
+            for (int i = 0; i < CrossDirections.Length; i++)
+            {
+                Vector2Int next = current + CrossDirections[i];
+                if (!IsPathCellPassable(entitySystem, next, mode))
+                    continue;
+
+                int nextIndex = ToMapIndex(entities, next);
+                if (nextIndex < 0 || nextIndex >= mapSize || closed[nextIndex])
+                    continue;
+
+                int tentative = gScore[currentIndex] + 1;
+                if (tentative >= gScore[nextIndex])
+                    continue;
+
+                cameFrom[nextIndex] = currentIndex;
+                gScore[nextIndex] = tentative;
+                if (!inOpen[nextIndex])
+                {
+                    _pathOpenSet.Add(nextIndex);
+                    inOpen[nextIndex] = true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsPathCellPassable(EntitySystem entitySystem, Vector2Int cell, PathMoveMode mode)
+    {
+        if (!entitySystem.IsInsideMap(cell) || entitySystem.IsWall(cell))
+            return false;
+
+        if (mode == PathMoveMode.TerrainAndEntities && entitySystem.GetOccupantId(cell) >= 0)
+            return false;
+
+        return true;
+    }
+
+    private static bool CanExecutePathStep(EntitySystem entitySystem, Vector2Int current, Vector2Int direction, PathMoveMode mode)
+    {
+        Vector2Int next = current + direction;
+        if (!entitySystem.IsInsideMap(next) || entitySystem.IsWall(next))
+            return false;
+
+        int occupantId = entitySystem.GetOccupantId(next);
+        if (occupantId < 0)
+            return true;
+
+        if (mode == PathMoveMode.TerrainAndEntities)
+            return false;
+
+        var occupant = entitySystem.GetHandleFromId(occupantId);
+        int occupantIndex = entitySystem.GetIndex(occupant);
+        if (occupantIndex < 0 || entitySystem.entities.coreComponents[occupantIndex].EntityType != EntityType.Box)
+            return false;
+
+        Vector2Int pushTarget = next + direction;
+        return entitySystem.IsInsideMap(pushTarget)
+               && !entitySystem.IsWall(pushTarget)
+               && entitySystem.GetOccupantId(pushTarget) < 0;
+    }
+
+    private static int PopBestOpenNode(List<int> openSet, int[] gScore, Vector2Int target, EntityComponents entities)
+    {
+        int bestListIndex = 0;
+        int bestNode = openSet[0];
+        int bestScore = GetPathScore(bestNode, gScore, target, entities);
+        for (int i = 1; i < openSet.Count; i++)
+        {
+            int node = openSet[i];
+            int score = GetPathScore(node, gScore, target, entities);
+            if (score >= bestScore)
+                continue;
+
+            bestScore = score;
+            bestNode = node;
+            bestListIndex = i;
+        }
+
+        openSet.RemoveAt(bestListIndex);
+        return bestNode;
+    }
+
+    private static int GetPathScore(int mapIndex, int[] gScore, Vector2Int target, EntityComponents entities)
+    {
+        Vector2Int cell = FromMapIndex(entities, mapIndex);
+        return gScore[mapIndex] + Mathf.Abs(cell.x - target.x) + Mathf.Abs(cell.y - target.y);
+    }
+
+    private static bool BuildDirectionQueue(int[] cameFrom, int startIndex, int targetIndex, EntityComponents entities, Queue<Vector2Int> result)
+    {
+        List<int> reversed = new();
+        int current = targetIndex;
+        while (current != startIndex)
+        {
+            if (current < 0)
+                return false;
+
+            reversed.Add(current);
+            current = cameFrom[current];
+        }
+
+        if (reversed.Count == 0)
+            return false;
+
+        Vector2Int previous = FromMapIndex(entities, startIndex);
+        for (int i = reversed.Count - 1; i >= 0; i--)
+        {
+            Vector2Int cell = FromMapIndex(entities, reversed[i]);
+            result.Enqueue(cell - previous);
+            previous = cell;
+        }
+
+        return result.Count > 0;
+    }
+
+    private static int ToMapIndex(EntityComponents entities, Vector2Int pos)
+    {
+        return pos.y * entities.mapWidth + pos.x;
+    }
+
+    private static Vector2Int FromMapIndex(EntityComponents entities, int index)
+    {
+        return new Vector2Int(index % entities.mapWidth, index / entities.mapWidth);
     }
 
     private bool TryGetMouseGridPosition(out Vector2Int gridPosition)
@@ -221,16 +448,6 @@ public class UserInputReader : MonoBehaviour
         Vector3 world = ray.GetPoint(distance);
         gridPosition = new Vector2Int(Mathf.FloorToInt(world.x), Mathf.FloorToInt(world.z));
         return true;
-    }
-
-    private void ClearAttackOverlay()
-    {
-        var overlay = GridOverlayDrawSystem.Instance;
-        if (overlay == null)
-            return;
-
-        overlay.RemoveOverlay(AttackRangeOverlayId);
-        overlay.RemoveOverlay(AttackHoverOverlayId);
     }
 
     private bool TryResolvePlayer(out EntityHandle playerHandle)

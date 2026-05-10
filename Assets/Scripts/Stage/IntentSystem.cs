@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -11,7 +12,11 @@ public class IntentSystem : MonoBehaviour
 
     private readonly Dictionary<Type, Stack<Intent>> _pools = new();
     private readonly List<EntityHandle> _activeIntentEntities = new();
+    private readonly List<IntentExecutionStep> _executionSteps = new();
+    private readonly List<EntityHandle> _enemyMoveBatch = new();
+    private readonly List<EntityHandle> _spawnBatch = new();
     private EntityHandle _playerIntentActor = EntityHandle.None;
+    private Coroutine _runner;
     private const int MaxResolutionPasses = 8;
 
     private void Awake()
@@ -25,26 +30,26 @@ public class IntentSystem : MonoBehaviour
             Instance = null;
     }
 
+    public bool IsRunning => _runner != null;
+
     public void Tick()
     {
+        if (_runner != null)
+            return;
+
         var entitySystem = EntitySystem.Instance;
         if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
             return;
 
-        if (_playerIntentActor != EntityHandle.None)
-            ExecuteIntent(entitySystem, _playerIntentActor);
-
-        for (int i = 0; i < _activeIntentEntities.Count; i++)
-        {
-            var actor = _activeIntentEntities[i];
-            if (actor == _playerIntentActor)
-                continue;
-
-            ExecuteIntent(entitySystem, actor);
-        }
+        BuildExecutionSteps(entitySystem);
 
         _activeIntentEntities.Clear();
         _playerIntentActor = EntityHandle.None;
+
+        if (_executionSteps.Count == 0)
+            return;
+
+        _runner = StartCoroutine(RunIntentQueue());
     }
 
     // ──────── 对象池 ────────
@@ -110,21 +115,124 @@ public class IntentSystem : MonoBehaviour
         return true;
     }
 
-    private void ExecuteIntent(EntitySystem entitySystem, EntityHandle actor)
+    private IEnumerator RunIntentQueue()
+    {
+        for (int i = 0; i < _executionSteps.Count; i++)
+        {
+            var entitySystem = EntitySystem.Instance;
+            if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+                break;
+
+            var step = _executionSteps[i];
+            if (step.IsBatch)
+                yield return ExecuteBatchRoutine(entitySystem, step.Actors);
+            else
+                yield return ExecuteIntentRoutine(entitySystem, step.Actor, true);
+        }
+
+        _executionSteps.Clear();
+        _runner = null;
+    }
+
+    private void BuildExecutionSteps(EntitySystem entitySystem)
+    {
+        _executionSteps.Clear();
+        _enemyMoveBatch.Clear();
+        _spawnBatch.Clear();
+
+        if (_playerIntentActor != EntityHandle.None)
+            _executionSteps.Add(IntentExecutionStep.Single(_playerIntentActor));
+
+        for (int i = 0; i < _activeIntentEntities.Count; i++)
+        {
+            var actor = _activeIntentEntities[i];
+            if (actor == _playerIntentActor)
+                continue;
+
+            if (CanBatchEnemyMove(entitySystem, actor))
+            {
+                _enemyMoveBatch.Add(actor);
+                continue;
+            }
+
+            if (CanBatchSpawn(entitySystem, actor))
+            {
+                _spawnBatch.Add(actor);
+                continue;
+            }
+
+            _executionSteps.Add(IntentExecutionStep.Single(actor));
+        }
+
+        if (_spawnBatch.Count > 0)
+            _executionSteps.Insert(_playerIntentActor != EntityHandle.None ? 1 : 0, IntentExecutionStep.Batch(_spawnBatch));
+
+        if (_enemyMoveBatch.Count > 0)
+            _executionSteps.Insert(_playerIntentActor != EntityHandle.None ? 1 + (_spawnBatch.Count > 0 ? 1 : 0) : (_spawnBatch.Count > 0 ? 1 : 0), IntentExecutionStep.Batch(_enemyMoveBatch));
+    }
+
+    private static bool CanBatchEnemyMove(EntitySystem entitySystem, EntityHandle actor)
     {
         if (entitySystem == null || !entitySystem.IsValid(actor))
-            return;
+            return false;
+
+        int index = entitySystem.GetIndex(actor);
+        if (index < 0)
+            return false;
+
+        return entitySystem.entities.coreComponents[index].EntityType == EntityType.Enemy
+               && entitySystem.entities.intentComponents[index].Type == IntentType.Move
+               && entitySystem.entities.intentComponents[index].Intent is MoveIntent;
+    }
+
+    private static bool CanBatchSpawn(EntitySystem entitySystem, EntityHandle actor)
+    {
+        if (entitySystem == null || !entitySystem.IsValid(actor))
+            return false;
+
+        int index = entitySystem.GetIndex(actor);
+        if (index < 0)
+            return false;
+
+        return entitySystem.entities.intentComponents[index].Type == IntentType.Spawn
+               && entitySystem.entities.intentComponents[index].Intent is SpawnIntent;
+    }
+
+    private IEnumerator ExecuteBatchRoutine(EntitySystem entitySystem, List<EntityHandle> actors)
+    {
+        var eventBus = EventBusSystem.Instance;
+        eventBus?.Publish(new StageEvent(StageEventType.PresentationBatchBegin));
+
+        for (int i = 0; i < actors.Count; i++)
+        {
+            entitySystem = EntitySystem.Instance;
+            if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+                break;
+
+            yield return ExecuteIntentRoutine(entitySystem, actors[i], false);
+        }
+
+        eventBus?.Publish(new StageEvent(StageEventType.PresentationBatchEnd));
+        yield return WaitForPresentation();
+    }
+
+    private IEnumerator ExecuteIntentRoutine(EntitySystem entitySystem, EntityHandle actor, bool waitForPresentation)
+    {
+        if (entitySystem == null || !entitySystem.IsValid(actor))
+            yield break;
 
         int entityIndex = entitySystem.GetIndex(actor);
         if (entityIndex < 0)
-            return;
+            yield break;
 
-        ref var intentComponent = ref entitySystem.entities.intentComponents[entityIndex];
-        if (intentComponent.Type == IntentType.None || intentComponent.Intent == null)
-            return;
+        IntentType executingType = entitySystem.entities.intentComponents[entityIndex].Type;
+        Intent executingIntent = entitySystem.entities.intentComponents[entityIndex].Intent;
+        if (executingType == IntentType.None || executingIntent == null)
+            yield break;
 
-        IntentType executingType = intentComponent.Type;
-        Intent executingIntent = intentComponent.Intent;
+        entitySystem.entities.intentComponents[entityIndex].Type = IntentType.None;
+        entitySystem.entities.intentComponents[entityIndex].Intent = null;
+
         var eventBus = EventBusSystem.Instance;
         eventBus?.Publish(new StageEvent(
             StageEventType.BeforeIntentExecute,
@@ -136,6 +244,9 @@ public class IntentSystem : MonoBehaviour
             from: entitySystem.entities.coreComponents[entityIndex].Position,
             to: entitySystem.entities.coreComponents[entityIndex].Position,
             sourceTagId: entitySystem.entities.propertyComponents[entityIndex].SourceTagId));
+
+        if (waitForPresentation && ShouldExecuteAfterPrePresentation(executingType))
+            yield return WaitForPresentation();
 
         switch (executingType)
         {
@@ -183,12 +294,58 @@ public class IntentSystem : MonoBehaviour
                 intent: executingIntent));
         }
 
-        intentComponent.Type = IntentType.None;
-        intentComponent.Intent = null;
-
         ResolveWorldState(actor, executingType);
 
         Return(executingIntent);
+
+        if (waitForPresentation && !ShouldExecuteAfterPrePresentation(executingType))
+            yield return WaitForPresentation();
+    }
+
+    private static bool ShouldExecuteAfterPrePresentation(IntentType intentType)
+    {
+        return intentType == IntentType.Attack;
+    }
+
+    private static IEnumerator WaitForPresentation()
+    {
+        var drawSystem = DrawSystem.Instance;
+        while (drawSystem != null && drawSystem.IsBeatMotionBusy)
+        {
+            yield return null;
+            drawSystem = DrawSystem.Instance;
+        }
+    }
+
+    private readonly struct IntentExecutionStep
+    {
+        public readonly bool IsBatch;
+        public readonly EntityHandle Actor;
+        public readonly List<EntityHandle> Actors;
+
+        private IntentExecutionStep(EntityHandle actor)
+        {
+            IsBatch = false;
+            Actor = actor;
+            Actors = null;
+        }
+
+        private IntentExecutionStep(List<EntityHandle> actors)
+        {
+            IsBatch = true;
+            Actor = EntityHandle.None;
+            Actors = new List<EntityHandle>(actors);
+        }
+
+        public static IntentExecutionStep Single(EntityHandle actor)
+        {
+            return new IntentExecutionStep(actor);
+        }
+
+        public static IntentExecutionStep Batch(List<EntityHandle> actors)
+        {
+            return new IntentExecutionStep(actors);
+        }
     }
 
     public void ResolveWorldState()
@@ -272,6 +429,14 @@ public class IntentSystem : MonoBehaviour
             stack.Clear();
         _pools.Clear();
         _activeIntentEntities.Clear();
+        _executionSteps.Clear();
+        _enemyMoveBatch.Clear();
+        _spawnBatch.Clear();
         _playerIntentActor = EntityHandle.None;
+        if (_runner != null)
+        {
+            StopCoroutine(_runner);
+            _runner = null;
+        }
     }
 }

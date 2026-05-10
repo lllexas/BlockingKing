@@ -58,6 +58,7 @@ public class DrawSystem : MonoBehaviour
     [SerializeField] private Color statsOccludedOutlineColor = new(0.08f, 0.08f, 0.08f, 1f);
     [SerializeField] private Color attackTextColor = new(0.95f, 0.35f, 0.25f);
     [SerializeField] private Color healthTextColor = new(0.35f, 0.9f, 0.45f);
+    [SerializeField] private Color countdownTextColor = new(0.25f, 0.65f, 1f);
 
     private readonly Matrix4x4[] _playerMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _boxMatrices = new Matrix4x4[BatchSize];
@@ -84,6 +85,8 @@ public class DrawSystem : MonoBehaviour
     private float _activeIntentStartTime;
     private float _activeIntentEndTime;
     private int _activeIntentSlotId;
+    private bool _hasIntentContext;
+    private bool _hasBatchContext;
     private bool _hasActiveIntentSlot;
 
     private void Awake()
@@ -128,6 +131,10 @@ public class DrawSystem : MonoBehaviour
         UpdateStatsMaterialProperties();
         DrawEntities();
     }
+
+    public bool IsBeatMotionBusy => enableBeatMotion && Time.time < _nextBeatStartTime;
+
+    public float BeatMotionBusyUntil => enableBeatMotion ? _nextBeatStartTime : 0f;
 
     public void SetWallMaterial(Material material)
     {
@@ -174,6 +181,10 @@ public class DrawSystem : MonoBehaviour
                 case EntityType.Wall:
                     AddWall(i, core.Position);
                     AddStatsText(i, core.EntityType, core.Position, CombatStats.GetAttack(entities.statusComponents[i]), CombatStats.GetCurrentHealth(entities.statusComponents[i]));
+                    break;
+                case EntityType.Target:
+                    if (entities.counterComponents[i].NextTick > 0)
+                        AddCountdownText(i, core.EntityType, core.Position, Mathf.Max(0, entities.counterComponents[i].NextTick - entitySystem.GlobalTick));
                     break;
             }
         }
@@ -344,6 +355,8 @@ public class DrawSystem : MonoBehaviour
         var pair = GetStatTextPair(_statTextCount++);
         pair.Root.SetActive(true);
         pair.SetAttackVisible(attack > 0);
+        pair.SetHealthVisible(true);
+        pair.SetCountdownVisible(false);
         if (attack > 0)
             pair.SetAttackText(attack.ToString());
 
@@ -353,6 +366,23 @@ public class DrawSystem : MonoBehaviour
         float y = statsTextHeight * cellSize;
         pair.AttackRoot.transform.position = new Vector3(visualPosition.x - 0.5f * cellSize, y, visualPosition.z - 0.5f * cellSize);
         pair.HealthRoot.transform.position = new Vector3(visualPosition.x + 0.5f * cellSize, y, visualPosition.z - 0.5f * cellSize);
+    }
+
+    private void AddCountdownText(int entityIndex, EntityType entityType, Vector2Int gridPos, int remainingTicks)
+    {
+        if (!showStatsText)
+            return;
+
+        var pair = GetStatTextPair(_statTextCount++);
+        pair.Root.SetActive(true);
+        pair.SetAttackVisible(false);
+        pair.SetHealthVisible(false);
+        pair.SetCountdownVisible(true);
+        pair.SetCountdownText(remainingTicks.ToString());
+
+        Vector3 visualPosition = GetVisualPosition(entityIndex, entityType, gridPos);
+        float y = statsTextHeight * cellSize;
+        pair.CountdownRoot.transform.position = new Vector3(visualPosition.x + 0.5f * cellSize, y, visualPosition.z + 0.5f * cellSize);
     }
 
     private StatTextPair GetStatTextPair(int index)
@@ -370,7 +400,8 @@ public class DrawSystem : MonoBehaviour
 
         var attack = CreateStatTextStack(root.transform, "Attack", attackTextColor);
         var health = CreateStatTextStack(root.transform, "Health", healthTextColor);
-        return new StatTextPair(root, attack, health);
+        var countdown = CreateStatTextStack(root.transform, "Countdown", countdownTextColor);
+        return new StatTextPair(root, attack, health, countdown);
     }
 
     private StatTextStack CreateStatTextStack(Transform parent, string name, Color color)
@@ -396,16 +427,24 @@ public class DrawSystem : MonoBehaviour
         var text = go.AddComponent<TextMeshPro>();
         text.font = ResolveStatsFont();
         text.fontSharedMaterial = material;
-        text.alignment = parent.name == "Attack"
-            ? TextAlignmentOptions.BottomLeft
-            : TextAlignmentOptions.BottomRight;
+        text.alignment = parent.name switch
+        {
+            "Attack" => TextAlignmentOptions.BottomLeft,
+            "Countdown" => TextAlignmentOptions.TopRight,
+            _ => TextAlignmentOptions.BottomRight
+        };
         text.fontSize = statsTextFontSize;
         text.color = color;
         text.enableWordWrapping = false;
         text.text = "0";
 
         RectTransform rectTransform = text.rectTransform;
-        rectTransform.pivot = parent.name == "Attack" ? Vector2.zero : new Vector2(1f, 0f);
+        rectTransform.pivot = parent.name switch
+        {
+            "Attack" => Vector2.zero,
+            "Countdown" => new Vector2(1f, 1f),
+            _ => new Vector2(1f, 0f)
+        };
         rectTransform.sizeDelta = statsTextRectSize;
         return text;
     }
@@ -586,6 +625,8 @@ public class DrawSystem : MonoBehaviour
         _registeredBus.On(StageEventType.EntityMoved, OnStageEvent);
         _registeredBus.On(StageEventType.EntityCreated, OnStageEvent);
         _registeredBus.On(StageEventType.EntityDestroyed, OnStageEvent);
+        _registeredBus.On(StageEventType.PresentationBatchBegin, OnStageEvent, 100);
+        _registeredBus.On(StageEventType.PresentationBatchEnd, OnStageEvent, -100);
     }
 
     private void UnregisterEventBus()
@@ -598,6 +639,8 @@ public class DrawSystem : MonoBehaviour
         _registeredBus.Off(StageEventType.EntityMoved, OnStageEvent);
         _registeredBus.Off(StageEventType.EntityCreated, OnStageEvent);
         _registeredBus.Off(StageEventType.EntityDestroyed, OnStageEvent);
+        _registeredBus.Off(StageEventType.PresentationBatchBegin, OnStageEvent);
+        _registeredBus.Off(StageEventType.PresentationBatchEnd, OnStageEvent);
         _registeredBus = null;
     }
 
@@ -609,11 +652,19 @@ public class DrawSystem : MonoBehaviour
         switch (evt.Type)
         {
             case StageEventType.BeforeIntentExecute:
-                BeginIntentBeat(evt);
+                if (!_hasBatchContext)
+                {
+                    _hasIntentContext = true;
+                    _hasActiveIntentSlot = false;
+                }
                 TryScheduleAttack(evt);
                 break;
             case StageEventType.AfterIntentExecute:
-                _hasActiveIntentSlot = false;
+                if (!_hasBatchContext)
+                {
+                    _hasIntentContext = false;
+                    _hasActiveIntentSlot = false;
+                }
                 break;
             case StageEventType.EntityMoved:
                 ScheduleMove(evt);
@@ -624,11 +675,27 @@ public class DrawSystem : MonoBehaviour
             case StageEventType.EntityDestroyed:
                 ClearMotion(evt.Entity);
                 break;
+            case StageEventType.PresentationBatchBegin:
+                _hasBatchContext = true;
+                _hasIntentContext = true;
+                _hasActiveIntentSlot = false;
+                break;
+            case StageEventType.PresentationBatchEnd:
+                _hasBatchContext = false;
+                _hasIntentContext = false;
+                _hasActiveIntentSlot = false;
+                break;
         }
     }
 
-    private void BeginIntentBeat(StageEvent evt)
+    private bool EnsureIntentBeat()
     {
+        if (_hasActiveIntentSlot)
+            return true;
+
+        if (!_hasIntentContext)
+            return false;
+
         float now = Time.time;
         if (_nextBeatStartTime < now)
             _nextBeatStartTime = now;
@@ -638,11 +705,12 @@ public class DrawSystem : MonoBehaviour
         _nextBeatStartTime = _activeIntentEndTime;
         _activeIntentSlotId++;
         _hasActiveIntentSlot = true;
+        return true;
     }
 
     private void ScheduleMove(StageEvent evt)
     {
-        if (!_hasActiveIntentSlot || !TryGetMotion(evt.Entity, out var state))
+        if (!EnsureIntentBeat() || !TryGetMotion(evt.Entity, out var state))
             return;
 
         float start = _activeIntentStartTime;
@@ -661,7 +729,7 @@ public class DrawSystem : MonoBehaviour
         if (evt.IntentType != IntentType.Attack || evt.Intent is not AttackIntent attack || attack.TargetCount <= 0)
             return;
 
-        if (!TryGetImpulse(evt.Actor, out var impulse))
+        if (!EnsureIntentBeat() || !TryGetImpulse(evt.Actor, out var impulse))
             return;
 
         Vector3 origin = ToEntityWorld(evt.EntityType, evt.From);
@@ -680,7 +748,7 @@ public class DrawSystem : MonoBehaviour
 
     private void ScheduleSpawn(StageEvent evt)
     {
-        if (!_hasActiveIntentSlot || !TryGetMotion(evt.Entity, out var motion))
+        if (!EnsureIntentBeat() || !TryGetMotion(evt.Entity, out var motion))
             return;
 
         Vector3 to = ToEntityWorld(evt.EntityType, evt.To);
@@ -855,20 +923,26 @@ public class DrawSystem : MonoBehaviour
         public readonly GameObject Root;
         public readonly GameObject AttackRoot;
         public readonly GameObject HealthRoot;
+        public readonly GameObject CountdownRoot;
         private readonly TextMeshPro _attackVisible;
         private readonly TextMeshPro _attackOccluded;
         private readonly TextMeshPro _healthVisible;
         private readonly TextMeshPro _healthOccluded;
+        private readonly TextMeshPro _countdownVisible;
+        private readonly TextMeshPro _countdownOccluded;
 
-        public StatTextPair(GameObject root, StatTextStack attack, StatTextStack health)
+        public StatTextPair(GameObject root, StatTextStack attack, StatTextStack health, StatTextStack countdown)
         {
             Root = root;
             AttackRoot = attack.Root;
             HealthRoot = health.Root;
+            CountdownRoot = countdown.Root;
             _attackVisible = attack.Visible;
             _attackOccluded = attack.Occluded;
             _healthVisible = health.Visible;
             _healthOccluded = health.Occluded;
+            _countdownVisible = countdown.Visible;
+            _countdownOccluded = countdown.Occluded;
         }
 
         public void SetAttackText(string text)
@@ -886,6 +960,22 @@ public class DrawSystem : MonoBehaviour
         {
             _healthVisible.text = text;
             _healthOccluded.text = text;
+        }
+
+        public void SetHealthVisible(bool visible)
+        {
+            HealthRoot.SetActive(visible);
+        }
+
+        public void SetCountdownText(string text)
+        {
+            _countdownVisible.text = text;
+            _countdownOccluded.text = text;
+        }
+
+        public void SetCountdownVisible(bool visible)
+        {
+            CountdownRoot.SetActive(visible);
         }
     }
 

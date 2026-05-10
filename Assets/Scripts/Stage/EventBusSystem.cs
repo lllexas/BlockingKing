@@ -13,7 +13,9 @@ public enum StageEventType : byte
     IntentResolutionEnd,
     EntityCreated,
     EntityDestroyed,
-    EntityMoved
+    EntityMoved,
+    PresentationBatchBegin,
+    PresentationBatchEnd
 }
 
 public sealed class IntentResolutionContext
