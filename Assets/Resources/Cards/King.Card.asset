@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 34a1b3059e77ec64fbdf8b189dd495a9, type: 3}
-  m_Name: Bishop.Card
+  m_Name: King.Card
   m_EditorClassIdentifier: 
   instanceId: 
-  cardId: bishop.charge
-  displayName: "\u4E3B\u6559\u51B2\u649E"
-  description: "\u56DB\u4E2A\u659C\u5411\u76F4\u7EBF\u51B2\u649E\u3002\u89C4\u5219\u540C\u6218\u8F66\u51B2\u649E\uFF0C\u4F46\u65B9\u5411\u4E3A\u659C\u7EBF\u3002"
-  cost: 3
-  releaseRule: 2
+  cardId: king.stomp
+  displayName: "\u4E3B\u5E05\u8DF5\u8E0F"
+  description: "\u5BF9\u5468\u56F4 3x3 \u8303\u56F4\u5185\u7684\u654C\u4EBA\u9020\u6210\u4E00\u6B21\u73A9\u5BB6\u653B\u51FB\u529B\u4F24\u5BB3\u3002"
+  cost: 5
+  releaseRule: 0
   icon: {fileID: 0}

@@ -142,6 +142,34 @@ public class SpawnSystem : MonoBehaviour, ITickSystem
         return true;
     }
 
+    public bool SpawnImmediatelyFromTarget(EntityHandle actor)
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || !entitySystem.IsValid(actor))
+            return false;
+
+        int actorIndex = entitySystem.GetIndex(actor);
+        if (actorIndex < 0 || entitySystem.entities.coreComponents[actorIndex].EntityType != EntityType.Target)
+            return false;
+
+        var origin = entitySystem.entities.coreComponents[actorIndex].Position;
+        if (IsCoveredByBox(entitySystem, origin) || entitySystem.IsBlocked(origin))
+            return false;
+
+        var handle = entitySystem.CreateEntity(EntityType.Enemy, origin);
+        if (!entitySystem.IsValid(handle))
+            return false;
+
+        ref var props = ref entitySystem.entities.propertyComponents[actorIndex];
+        ApplyBP(entitySystem, handle, props.SpawnEntityBP);
+
+        ref var counter = ref entitySystem.entities.counterComponents[actorIndex];
+        int interval = props.SpawnInterval > 0 ? props.SpawnInterval : 3;
+        counter.NextTick = entitySystem.GlobalTick + interval;
+        Debug.Log($"[SpawnSystem] Immediately spawned enemy at {origin}.");
+        return true;
+    }
+
     private static bool IsCoveredByBox(EntitySystem entitySystem, Vector2Int cell)
     {
         var occupant = entitySystem.GetOccupant(cell);

@@ -58,7 +58,7 @@ public class DrawSystem : MonoBehaviour
     [SerializeField] private Color statsOccludedOutlineColor = new(0.08f, 0.08f, 0.08f, 1f);
     [SerializeField] private Color attackTextColor = new(0.95f, 0.35f, 0.25f);
     [SerializeField] private Color healthTextColor = new(0.35f, 0.9f, 0.45f);
-    [SerializeField] private Color countdownTextColor = new(0.25f, 0.65f, 1f);
+    [SerializeField] private Color countdownTextColor = new(1f, 0.16f, 0.08f);
 
     private readonly Matrix4x4[] _playerMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _boxMatrices = new Matrix4x4[BatchSize];

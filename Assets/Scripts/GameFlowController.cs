@@ -81,6 +81,9 @@ public class GameFlowController : MonoBehaviour
 
         if (hub.GetFacade<CardDeckFacade>() == null)
             hub.RegisterFacade(new CardDeckFacade());
+
+        if (hub.GetFacade<RunInventoryFacade>() == null)
+            hub.RegisterFacade(new RunInventoryFacade());
     }
 
     public void InitializeRouteMap()
@@ -106,6 +109,11 @@ public class GameFlowController : MonoBehaviour
         if (FindObjectOfType<RunStageOnGUIFrontend>() == null)
         {
             gameObject.AddComponent<RunStageOnGUIFrontend>();
+        }
+
+        if (FindObjectOfType<RunShopOnGUIFrontend>() == null)
+        {
+            gameObject.AddComponent<RunShopOnGUIFrontend>();
         }
 
         if (ensureRouteOnGUI && FindObjectOfType<RunRouteOnGUIFrontend>() == null)
@@ -180,8 +188,21 @@ public class GameFlowController : MonoBehaviour
         if (deck == null)
             return;
 
-        if (deck.ReplaceWithStartingDeck(runStartSettings.startingDeck))
+        var inventory = GraphHub.Instance?.GetFacade<RunInventoryFacade>();
+        if (inventory == null)
+        {
+            inventory = new RunInventoryFacade();
+            GraphHub.Instance?.RegisterFacade(inventory);
+        }
+
+        if (inventory == null)
+            return;
+
+        if (deck.ReplaceWithStartingDeck(runStartSettings.startingDeck) &&
+            inventory.Reset(runStartSettings.startingGold))
+        {
             _runStartApplied = true;
+        }
     }
 
     private void TryCompleteEncounterRouteNode()

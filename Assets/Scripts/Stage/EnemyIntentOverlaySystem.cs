@@ -4,13 +4,16 @@ using UnityEngine;
 public class EnemyIntentOverlaySystem : MonoBehaviour
 {
     private const string EnemyMoveOverlayId = "enemy_intent_move";
+    private const string EnemyMoveDirectionOverlayId = "enemy_intent_move_direction";
     private const string EnemyAttackOverlayId = "enemy_intent_attack";
 
     [SerializeField] private Color moveColor = new(1f, 0.72f, 0.08f, 0.36f);
+    [SerializeField] private Color moveDirectionColor = new(1f, 0.9f, 0.2f, 0.68f);
     [SerializeField] private Color attackColor = new(1f, 0.05f, 0.02f, 0.48f);
     [SerializeField] private float overlayHeight = 0.014f;
 
     private readonly List<Vector2Int> _moveCells = new();
+    private readonly List<GridDirectionalOverlayCell> _moveDirections = new();
     private readonly List<Vector2Int> _attackCells = new();
 
     private void LateUpdate()
@@ -26,26 +29,27 @@ public class EnemyIntentOverlaySystem : MonoBehaviour
     private void Refresh()
     {
         var entitySystem = EntitySystem.Instance;
-        var intentSystem = IntentSystem.Instance;
         var overlay = GridOverlayDrawSystem.Instance;
-        if (entitySystem == null || intentSystem == null || overlay == null || !entitySystem.IsInitialized)
+        if (entitySystem == null || overlay == null || !entitySystem.IsInitialized)
         {
             Clear();
             return;
         }
 
         _moveCells.Clear();
+        _moveDirections.Clear();
         _attackCells.Clear();
 
-        intentSystem.ForEachActiveIntent((actor, intentComponent) =>
+        var entities = entitySystem.entities;
+        for (int i = 0; i < entities.entityCount; i++)
         {
-            int actorIndex = entitySystem.GetIndex(actor);
-            if (actorIndex < 0)
-                return;
-
-            ref var core = ref entitySystem.entities.coreComponents[actorIndex];
+            ref var core = ref entities.coreComponents[i];
             if (core.EntityType != EntityType.Enemy)
-                return;
+                continue;
+
+            var intentComponent = entities.intentComponents[i];
+            if (intentComponent.Type == IntentType.None || intentComponent.Intent == null)
+                continue;
 
             switch (intentComponent.Type)
             {
@@ -56,15 +60,22 @@ public class EnemyIntentOverlaySystem : MonoBehaviour
                     AddAttackIntentCells(intentComponent.Intent as AttackIntent);
                     break;
             }
-        });
+        }
 
         overlay.SetOverlay(
             EnemyMoveOverlayId,
             _moveCells,
-            GridOverlayStyle.Path,
+            GridOverlayStyle.SolidTint,
             moveColor,
             overlayHeight,
             20);
+
+        overlay.SetDirectionalOverlay(
+            EnemyMoveDirectionOverlayId,
+            _moveDirections,
+            moveDirectionColor,
+            overlayHeight + 0.002f,
+            21);
 
         overlay.SetOverlay(
             EnemyAttackOverlayId,
@@ -72,7 +83,7 @@ public class EnemyIntentOverlaySystem : MonoBehaviour
             GridOverlayStyle.Danger,
             attackColor,
             overlayHeight,
-            21);
+            22);
     }
 
     private void AddMoveIntentCell(Vector2Int origin, MoveIntent intent)
@@ -81,7 +92,9 @@ public class EnemyIntentOverlaySystem : MonoBehaviour
             return;
 
         int distance = Mathf.Max(1, intent.Distance);
-        AddUnique(_moveCells, origin + intent.Direction * distance);
+        Vector2Int target = origin + intent.Direction * distance;
+        AddUnique(_moveCells, target);
+        AddUniqueDirection(_moveDirections, target, intent.Direction);
     }
 
     private void AddAttackIntentCells(AttackIntent intent)
@@ -99,6 +112,20 @@ public class EnemyIntentOverlaySystem : MonoBehaviour
             cells.Add(cell);
     }
 
+    private static void AddUniqueDirection(
+        List<GridDirectionalOverlayCell> cells,
+        Vector2Int cell,
+        Vector2Int direction)
+    {
+        for (int i = 0; i < cells.Count; i++)
+        {
+            if (cells[i].Cell == cell && cells[i].Direction == direction)
+                return;
+        }
+
+        cells.Add(new GridDirectionalOverlayCell(cell, direction));
+    }
+
     private static void Clear()
     {
         var overlay = GridOverlayDrawSystem.Instance;
@@ -106,6 +133,7 @@ public class EnemyIntentOverlaySystem : MonoBehaviour
             return;
 
         overlay.RemoveOverlay(EnemyMoveOverlayId);
+        overlay.RemoveOverlay(EnemyMoveDirectionOverlayId);
         overlay.RemoveOverlay(EnemyAttackOverlayId);
     }
 }

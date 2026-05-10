@@ -9,7 +9,8 @@ public enum CardReleaseRule
     DiagonalLine,
     EightWayLine,
     DiagonalStep,
-    KnightJump
+    KnightJump,
+    OrthogonalStep
 }
 
 public readonly struct CardReleaseTarget
@@ -67,7 +68,8 @@ public static class CardReleaseRuleRegistry
         { CardReleaseRule.DiagonalLine, ResolveDiagonalLine },
         { CardReleaseRule.EightWayLine, ResolveEightWayLine },
         { CardReleaseRule.DiagonalStep, ResolveDiagonalStep },
-        { CardReleaseRule.KnightJump, ResolveKnightJump }
+        { CardReleaseRule.KnightJump, ResolveKnightJump },
+        { CardReleaseRule.OrthogonalStep, ResolveOrthogonalStep }
     };
 
     public static bool TryResolve(CardSO card, EntityHandle player, Vector2Int selectedCell, out CardReleaseTarget target)
@@ -134,6 +136,10 @@ public static class CardReleaseRuleRegistry
 
             case CardReleaseRule.DiagonalStep:
                 CollectOffsets(playerCell, DiagonalDirections, results);
+                break;
+
+            case CardReleaseRule.OrthogonalStep:
+                CollectOffsets(playerCell, OrthogonalDirections, results);
                 break;
 
             case CardReleaseRule.KnightJump:
@@ -207,6 +213,19 @@ public static class CardReleaseRuleRegistry
     {
         Vector2Int delta = selectedCell - playerCell;
         if (Mathf.Abs(delta.x) != 1 || Mathf.Abs(delta.y) != 1)
+        {
+            target = default;
+            return false;
+        }
+
+        target = new CardReleaseTarget(playerCell, selectedCell, delta);
+        return true;
+    }
+
+    private static bool ResolveOrthogonalStep(Vector2Int playerCell, Vector2Int selectedCell, out CardReleaseTarget target)
+    {
+        Vector2Int delta = selectedCell - playerCell;
+        if (Mathf.Abs(delta.x) + Mathf.Abs(delta.y) != 1)
         {
             target = default;
             return false;

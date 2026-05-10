@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   instanceId: 
   cardId: queen.charge
-  displayName: 皇后冲撞
-  description: 八方向任选，规则同战车冲撞。终极瞄线牌。
-  cost: 1
+  displayName: "\u7687\u540E\u51B2\u649E"
+  description: "\u516B\u65B9\u5411\u4EFB\u9009\uFF0C\u89C4\u5219\u540C\u6218\u8F66\u51B2\u649E\u3002\u7EC8\u6781\u7784\u7EBF\u724C\u3002"
+  cost: 4
   releaseRule: 3
   icon: {fileID: 0}

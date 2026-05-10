@@ -127,7 +127,7 @@ public class CameraController : MonoBehaviour
         }
 
         // ── 4. 滚轮缩放 ──
-        float scroll = Input.GetAxis("Mouse ScrollWheel");
+        float scroll = HandZone.HasAssistSelection ? 0f : Input.GetAxis("Mouse ScrollWheel");
         if (Mathf.Abs(scroll) > 0.001f)
         {
             _targetHeight -= scroll * zoomSensitivity;

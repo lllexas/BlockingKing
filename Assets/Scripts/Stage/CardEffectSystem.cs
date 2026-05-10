@@ -73,11 +73,240 @@ public class CardEffectSystem : MonoBehaviour
         return true;
     }
 
+    public bool TryPreviewDamageCell(EntityHandle actor, CardSO card, CardReleaseTarget target, Vector2Int watchedCell)
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || !entitySystem.IsValid(actor) || card == null)
+            return false;
+
+        string cardId = ResolveCardId(card);
+        return cardId switch
+        {
+            "rook.charge" => PreviewLineCharge(actor, target.Direction, DirectionMask.Orthogonal, watchedCell),
+            "bishop.charge" => PreviewLineCharge(actor, target.Direction, DirectionMask.Diagonal, watchedCell),
+            "queen.charge" => PreviewLineCharge(actor, target.Direction, DirectionMask.EightWay, watchedCell),
+            "soldier.charge" => PreviewStepAttack(actor, target.Direction, DirectionMask.Orthogonal, watchedCell),
+            "knight.stomp" => PreviewTargetCellAttack(target.TargetCell, watchedCell),
+            "cannon.charge" => PreviewCannonCharge(actor, target.Direction, watchedCell),
+            "king.stomp" => PreviewKingStomp(actor, watchedCell),
+            _ => false
+        };
+    }
+
     private enum DirectionMask
     {
         Orthogonal,
         Diagonal,
         EightWay
+    }
+
+    private bool PreviewLineCharge(EntityHandle actor, Vector2Int direction, DirectionMask mask, Vector2Int watchedCell)
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (!IsDirectionAllowed(direction, mask))
+            return false;
+
+        if (!TryGetActorPosition(entitySystem, actor, out var current))
+            return false;
+
+        int attack = GetActorAttack(entitySystem, actor);
+        while (true)
+        {
+            Vector2Int next = current + direction;
+            if (!entitySystem.IsInsideMap(next))
+                return false;
+
+            if (entitySystem.IsWall(next))
+                return next == watchedCell;
+
+            EntityHandle occupant = entitySystem.GetOccupant(next);
+            if (!entitySystem.IsValid(occupant))
+            {
+                current = next;
+                continue;
+            }
+
+            int occupantIndex = entitySystem.GetIndex(occupant);
+            if (occupantIndex < 0)
+                return false;
+
+            EntityType occupantType = entitySystem.entities.coreComponents[occupantIndex].EntityType;
+            if (occupantType == EntityType.Enemy || occupantType == EntityType.Wall)
+                return next == watchedCell || (WouldKill(entitySystem, occupantIndex, attack) && PreviewLineChargeFrom(next, direction, watchedCell, attack, mask));
+
+            if (occupantType == EntityType.Box && CanPreviewPushBox(entitySystem, next, direction))
+            {
+                current = next;
+                continue;
+            }
+
+            return false;
+        }
+    }
+
+    private bool PreviewLineChargeFrom(Vector2Int current, Vector2Int direction, Vector2Int watchedCell, int attack, DirectionMask mask)
+    {
+        var entitySystem = EntitySystem.Instance;
+        while (true)
+        {
+            Vector2Int next = current + direction;
+            if (!entitySystem.IsInsideMap(next))
+                return false;
+
+            if (entitySystem.IsWall(next))
+                return next == watchedCell;
+
+            EntityHandle occupant = entitySystem.GetOccupant(next);
+            if (!entitySystem.IsValid(occupant))
+            {
+                current = next;
+                continue;
+            }
+
+            int occupantIndex = entitySystem.GetIndex(occupant);
+            if (occupantIndex < 0)
+                return false;
+
+            EntityType occupantType = entitySystem.entities.coreComponents[occupantIndex].EntityType;
+            if (occupantType == EntityType.Enemy || occupantType == EntityType.Wall)
+                return next == watchedCell || (WouldKill(entitySystem, occupantIndex, attack) && PreviewLineChargeFrom(next, direction, watchedCell, attack, mask));
+
+            if (occupantType == EntityType.Box && CanPreviewPushBox(entitySystem, next, direction))
+            {
+                current = next;
+                continue;
+            }
+
+            return false;
+        }
+    }
+
+    private bool PreviewStepAttack(EntityHandle actor, Vector2Int direction, DirectionMask mask, Vector2Int watchedCell)
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (!IsDirectionAllowed(direction, mask) || !TryGetActorPosition(entitySystem, actor, out var current))
+            return false;
+
+        Vector2Int next = current + direction;
+        if (!entitySystem.IsInsideMap(next))
+            return false;
+
+        if (entitySystem.IsWall(next))
+            return next == watchedCell;
+
+        return IsDamageableOccupantAt(entitySystem, next) && next == watchedCell;
+    }
+
+    private bool PreviewTargetCellAttack(Vector2Int targetCell, Vector2Int watchedCell)
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (!entitySystem.IsInsideMap(targetCell))
+            return false;
+
+        return targetCell == watchedCell && (entitySystem.IsWall(targetCell) || IsDamageableOccupantAt(entitySystem, targetCell));
+    }
+
+    private bool PreviewKingStomp(EntityHandle actor, Vector2Int watchedCell)
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (!TryGetActorPosition(entitySystem, actor, out var center))
+            return false;
+
+        Vector2Int delta = watchedCell - center;
+        if (delta == Vector2Int.zero || Mathf.Abs(delta.x) > 1 || Mathf.Abs(delta.y) > 1)
+            return false;
+
+        return entitySystem.IsInsideMap(watchedCell) && (entitySystem.IsWall(watchedCell) || IsDamageableOccupantAt(entitySystem, watchedCell));
+    }
+
+    private bool PreviewCannonCharge(EntityHandle actor, Vector2Int direction, Vector2Int watchedCell)
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (!IsDirectionAllowed(direction, DirectionMask.Orthogonal) || !TryGetActorPosition(entitySystem, actor, out var current))
+            return false;
+
+        bool hasJumped = false;
+        while (true)
+        {
+            Vector2Int next = current + direction;
+            if (!entitySystem.IsInsideMap(next))
+                return false;
+
+            if (entitySystem.IsWall(next))
+                return next == watchedCell;
+
+            EntityHandle occupant = entitySystem.GetOccupant(next);
+            if (!entitySystem.IsValid(occupant))
+            {
+                current = next;
+                continue;
+            }
+
+            int occupantIndex = entitySystem.GetIndex(occupant);
+            if (occupantIndex < 0)
+                return false;
+
+            EntityType occupantType = entitySystem.entities.coreComponents[occupantIndex].EntityType;
+            if (!hasJumped && (occupantType == EntityType.Enemy || occupantType == EntityType.Box))
+            {
+                Vector2Int landing = next + direction;
+                if (!entitySystem.IsInsideMap(landing) || entitySystem.IsWall(landing) || entitySystem.IsValid(entitySystem.GetOccupant(landing)))
+                    return false;
+
+                current = landing;
+                hasJumped = true;
+                continue;
+            }
+
+            if (occupantType == EntityType.Enemy || occupantType == EntityType.Wall)
+                return next == watchedCell;
+
+            return false;
+        }
+    }
+
+    private static bool TryGetActorPosition(EntitySystem entitySystem, EntityHandle actor, out Vector2Int position)
+    {
+        position = default;
+        int actorIndex = entitySystem.GetIndex(actor);
+        if (actorIndex < 0)
+            return false;
+
+        position = entitySystem.entities.coreComponents[actorIndex].Position;
+        return true;
+    }
+
+    private static int GetActorAttack(EntitySystem entitySystem, EntityHandle actor)
+    {
+        int actorIndex = entitySystem.GetIndex(actor);
+        return actorIndex >= 0 ? Mathf.Max(1, CombatStats.GetAttack(entitySystem.entities.statusComponents[actorIndex])) : 1;
+    }
+
+    private static bool WouldKill(EntitySystem entitySystem, int targetIndex, int damage)
+    {
+        return CombatStats.GetCurrentHealth(entitySystem.entities.statusComponents[targetIndex]) - damage <= 0;
+    }
+
+    private static bool IsDamageableOccupantAt(EntitySystem entitySystem, Vector2Int cell)
+    {
+        EntityHandle occupant = entitySystem.GetOccupant(cell);
+        if (!entitySystem.IsValid(occupant))
+            return false;
+
+        int index = entitySystem.GetIndex(occupant);
+        if (index < 0)
+            return false;
+
+        EntityType type = entitySystem.entities.coreComponents[index].EntityType;
+        return type == EntityType.Enemy || type == EntityType.Wall;
+    }
+
+    private static bool CanPreviewPushBox(EntitySystem entitySystem, Vector2Int boxCell, Vector2Int direction)
+    {
+        Vector2Int next = boxCell + direction;
+        return entitySystem.IsInsideMap(next)
+               && !entitySystem.IsWall(next)
+               && !entitySystem.IsValid(entitySystem.GetOccupant(next));
     }
 
     private bool ExecuteLineCharge(EntityHandle actor, Vector2Int direction, DirectionMask mask)
@@ -164,7 +393,7 @@ public class CardEffectSystem : MonoBehaviour
         if (entitySystem == null || !entitySystem.IsInitialized || !entitySystem.IsValid(actor))
             return false;
 
-        if (!IsDirectionAllowed(direction, DirectionMask.Diagonal))
+        if (!IsDirectionAllowed(direction, DirectionMask.Orthogonal))
             return false;
 
         int actorIndex = entitySystem.GetIndex(actor);

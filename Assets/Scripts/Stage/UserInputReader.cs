@@ -8,16 +8,31 @@ using UnityEngine.EventSystems;
 public class UserInputReader : MonoBehaviour
 {
     private const int MoveDistance = 1;
+    private const string ActivePathPreviewOverlayId = "player_path_preview_active";
+    private const string LeftPathHoverOverlayId = "player_path_hover_left";
+    private const string RightPathHoverOverlayId = "player_path_hover_right";
 
     [Header("Move Input")]
     [SerializeField, Min(0f)] private float movePreInputWindow = 0.15f;
+    [SerializeField] private Color leftPathHoverColor = new(0.2f, 0.85f, 1f, 0.18f);
+    [SerializeField] private Color rightPathHoverColor = new(1f, 0.72f, 0.25f, 0.16f);
+    [SerializeField] private Color leftActivePathColor = new(0.25f, 0.85f, 1f, 0.42f);
+    [SerializeField] private Color rightActivePathColor = new(1f, 0.72f, 0.25f, 0.38f);
+    [SerializeField, Min(0f)] private float pathPreviewHeight = 0.014f;
+    [SerializeField] private int pathPreviewPriority = 5;
 
     private EntityHandle _playerHandle = EntityHandle.None;
     private Vector2Int _bufferedMoveDirection;
     private float _bufferedMoveExpireTime;
     private PathMoveMode _pathMoveMode;
     private readonly Queue<Vector2Int> _pathMoveDirections = new();
+    private readonly Queue<Vector2Int> _leftPathHoverDirections = new();
+    private readonly Queue<Vector2Int> _rightPathHoverDirections = new();
+    private readonly List<GridPathFlowOverlayCell> _pathPreviewCells = new();
     private readonly List<int> _pathOpenSet = new();
+    private bool _hasPathHoverCache;
+    private Vector2Int _cachedPathHoverStart;
+    private Vector2Int _cachedPathHoverTarget;
 
     private static readonly Vector2Int[] CrossDirections =
     {
@@ -42,18 +57,29 @@ public class UserInputReader : MonoBehaviour
         bool hasMoveKey = TryReadMoveDirection(out var direction);
         if (hasMoveKey && HandZone.IsAnyCardAiming)
             HandZone.TryCancelActivePendingCard();
+        if (hasMoveKey && HandZone.HasAssistSelection)
+            HandZone.ClearAssistSelectionActive();
 
-        if (IsPointerBlockedForStageInput())
+        if (IsPointerBlockedForStageInputExceptAssist())
             return;
 
         if (Input.GetMouseButtonDown(0))
         {
+            if (TryHandleCardAssistClick())
+                return;
+
+            if (HandZone.HasAssistSelection)
+                HandZone.ClearAssistSelectionActive();
+
             TryStartPathMove(PathMoveMode.TerrainOnly);
             return;
         }
 
         if (Input.GetMouseButtonDown(1))
         {
+            if (HandZone.HasAssistSelection)
+                HandZone.ClearAssistSelectionActive();
+
             TryStartPathMove(PathMoveMode.TerrainAndEntities);
             return;
         }
@@ -69,13 +95,21 @@ public class UserInputReader : MonoBehaviour
         TrySubmitMove(direction);
     }
 
+    private void LateUpdate()
+    {
+        UpdatePathPreview();
+    }
+
     private void TryConsumePathMove()
     {
         if (_pathMoveDirections.Count == 0)
             return;
 
         if (HandZone.IsAnyCardInteractionActive)
+        {
+            ClearPathPreview();
             return;
+        }
 
         if (IsBeatMotionBusy())
             return;
@@ -160,6 +194,8 @@ public class UserInputReader : MonoBehaviour
     {
         _pathMoveDirections.Clear();
         _pathMoveMode = PathMoveMode.None;
+        _hasPathHoverCache = false;
+        ClearPathPreview();
     }
 
     private bool TrySubmitMove(Vector2Int direction)
@@ -240,8 +276,44 @@ public class UserInputReader : MonoBehaviour
             return false;
 
         _pathMoveMode = mode;
+        SetActivePathPreview(startPosition);
         TryConsumePathMove();
         return true;
+    }
+
+    private bool TryHandleCardAssistClick()
+    {
+        if (!TryGetMouseGridPosition(out var targetCell) || !IsCardAssistTarget(targetCell))
+            return false;
+
+        if (HandZone.HasAssistSelection && !HandZone.IsAssistTargetCell(targetCell))
+        {
+            HandZone.ClearAssistSelectionActive();
+            return true;
+        }
+
+        return HandZone.TryHandleAssistTargetClick(targetCell);
+    }
+
+    private static bool IsCardAssistTarget(Vector2Int cell)
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || !entitySystem.IsInsideMap(cell))
+            return false;
+
+        if (entitySystem.IsWall(cell))
+            return true;
+
+        EntityHandle occupant = entitySystem.GetOccupant(cell);
+        if (!entitySystem.IsValid(occupant))
+            return false;
+
+        int index = entitySystem.GetIndex(occupant);
+        if (index < 0)
+            return false;
+
+        EntityType type = entitySystem.entities.coreComponents[index].EntityType;
+        return type == EntityType.Enemy || type == EntityType.Wall;
     }
 
     private static bool IsPointerBlockedForStageInput()
@@ -250,6 +322,204 @@ public class UserInputReader : MonoBehaviour
             return true;
 
         return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+    }
+
+    private static bool IsPointerBlockedForStageInputExceptAssist()
+    {
+        if (HandZone.IsAnyCardAiming)
+            return true;
+
+        return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+    }
+
+    private void UpdatePathPreview()
+    {
+        if (GridOverlayDrawSystem.Instance == null)
+            return;
+
+        if (HandZone.IsAnyCardInteractionActive || IsPointerBlockedForStageInputExceptAssist())
+        {
+            ClearPathPreview();
+            return;
+        }
+
+        if (!TryResolvePlayer(out var playerHandle))
+        {
+            ClearPathPreview();
+            return;
+        }
+
+        var entitySystem = EntitySystem.Instance;
+        int playerIndex = entitySystem.GetIndex(playerHandle);
+        if (playerIndex < 0)
+        {
+            ClearPathPreview();
+            return;
+        }
+
+        Vector2Int startPosition = entitySystem.entities.coreComponents[playerIndex].Position;
+        if (_pathMoveDirections.Count > 0)
+        {
+            SetActivePathPreview(startPosition);
+            return;
+        }
+
+        if (!TryGetMouseGridPosition(out var targetPosition)
+            || IsCardAssistTarget(targetPosition)
+            || !entitySystem.IsInsideMap(targetPosition))
+        {
+            _hasPathHoverCache = false;
+            ClearPathPreview();
+            return;
+        }
+
+        if (_hasPathHoverCache
+            && _cachedPathHoverStart == startPosition
+            && _cachedPathHoverTarget == targetPosition)
+        {
+            return;
+        }
+
+        _hasPathHoverCache = true;
+        _cachedPathHoverStart = startPosition;
+        _cachedPathHoverTarget = targetPosition;
+
+        bool hasLeftPath = TryBuildPath(entitySystem, startPosition, targetPosition, PathMoveMode.TerrainOnly, _leftPathHoverDirections);
+        bool hasRightPath = TryBuildPath(entitySystem, startPosition, targetPosition, PathMoveMode.TerrainAndEntities, _rightPathHoverDirections);
+        if (!hasLeftPath && !hasRightPath)
+        {
+            ClearPathPreview();
+            return;
+        }
+
+        ClearPathPreviewOverlay(ActivePathPreviewOverlayId);
+        if (hasLeftPath)
+        {
+            SetPathPreviewFromDirections(
+                LeftPathHoverOverlayId,
+                startPosition,
+                _leftPathHoverDirections,
+                leftPathHoverColor,
+                pathPreviewPriority);
+        }
+        else
+        {
+            ClearPathPreviewOverlay(LeftPathHoverOverlayId);
+        }
+
+        if (hasRightPath && (!hasLeftPath || !AreDirectionQueuesEqual(_leftPathHoverDirections, _rightPathHoverDirections)))
+        {
+            SetPathPreviewFromDirections(
+                RightPathHoverOverlayId,
+                startPosition,
+                _rightPathHoverDirections,
+                rightPathHoverColor,
+                pathPreviewPriority + 1);
+        }
+        else
+        {
+            ClearPathPreviewOverlay(RightPathHoverOverlayId);
+        }
+    }
+
+    private void SetActivePathPreview(Vector2Int startPosition)
+    {
+        ClearPathPreviewOverlay(LeftPathHoverOverlayId);
+        ClearPathPreviewOverlay(RightPathHoverOverlayId);
+        SetPathPreviewFromDirections(
+            ActivePathPreviewOverlayId,
+            startPosition,
+            _pathMoveDirections,
+            GetActivePathColor(),
+            pathPreviewPriority);
+    }
+
+    private Color GetActivePathColor()
+    {
+        return _pathMoveMode == PathMoveMode.TerrainAndEntities
+            ? rightActivePathColor
+            : leftActivePathColor;
+    }
+
+    private void SetPathPreviewFromDirections(
+        string overlayId,
+        Vector2Int startPosition,
+        Queue<Vector2Int> directions,
+        Color color,
+        int priority)
+    {
+        _pathPreviewCells.Clear();
+
+        Vector2Int current = startPosition;
+        Vector2Int[] directionArray = new Vector2Int[directions.Count];
+        directions.CopyTo(directionArray, 0);
+        for (int i = 0; i < directionArray.Length; i++)
+        {
+            Vector2Int direction = directionArray[i];
+            current += direction;
+            Vector2Int nextDirection = i + 1 < directionArray.Length ? directionArray[i + 1] : Vector2Int.zero;
+            _pathPreviewCells.Add(new GridPathFlowOverlayCell(
+                current,
+                direction,
+                nextDirection,
+                i,
+                directionArray.Length));
+        }
+
+        var overlay = GridOverlayDrawSystem.Instance;
+        if (overlay == null || _pathPreviewCells.Count == 0)
+        {
+            ClearPathPreviewOverlay(overlayId);
+            return;
+        }
+
+        overlay.SetPathFlowOverlay(
+            overlayId,
+            _pathPreviewCells,
+            color,
+            pathPreviewHeight,
+            priority);
+    }
+
+    private void ClearPathPreview()
+    {
+        _hasPathHoverCache = false;
+        _pathPreviewCells.Clear();
+        _leftPathHoverDirections.Clear();
+        _rightPathHoverDirections.Clear();
+
+        var overlay = GridOverlayDrawSystem.Instance;
+        if (overlay == null)
+            return;
+
+        overlay.RemoveOverlay(ActivePathPreviewOverlayId);
+        overlay.RemoveOverlay(LeftPathHoverOverlayId);
+        overlay.RemoveOverlay(RightPathHoverOverlayId);
+    }
+
+    private static void ClearPathPreviewOverlay(string overlayId)
+    {
+        var overlay = GridOverlayDrawSystem.Instance;
+        if (overlay == null)
+            return;
+
+        overlay.RemoveOverlay(overlayId);
+    }
+
+    private static bool AreDirectionQueuesEqual(Queue<Vector2Int> first, Queue<Vector2Int> second)
+    {
+        if (first.Count != second.Count)
+            return false;
+
+        using var firstEnumerator = first.GetEnumerator();
+        using var secondEnumerator = second.GetEnumerator();
+        while (firstEnumerator.MoveNext() && secondEnumerator.MoveNext())
+        {
+            if (firstEnumerator.Current != secondEnumerator.Current)
+                return false;
+        }
+
+        return true;
     }
 
     private bool TryBuildPath(

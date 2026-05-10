@@ -87,6 +87,8 @@ public class LevelPlayer : MonoBehaviour
     private int _remainingSteps = -1;
     private GUIStyle _stepLimitStyle;
     private GUIStyle _stepLimitShadowStyle;
+    private GUIStyle _classicPhaseStyle;
+    private GUIStyle _classicPhaseShadowStyle;
     private readonly HashSet<Vector2Int> _targetCells = new();
     private readonly HashSet<Vector2Int> _coreTargetCells = new();
 
@@ -118,18 +120,25 @@ public class LevelPlayer : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!_isPlaying || _playMode != LevelPlayMode.StepLimit)
+        if (!_isPlaying)
             return;
 
-        EnsureStepLimitStyles();
+        if (_playMode == LevelPlayMode.StepLimit)
+        {
+            EnsureStepLimitStyles();
 
-        string text = $"Steps: {Mathf.Max(0, _remainingSteps)}";
-        float width = Mathf.Min(460f, Screen.width - 32f);
-        var rect = new Rect((Screen.width - width) * 0.5f, 18f, width, 58f);
-        var shadowRect = new Rect(rect.x + 2f, rect.y + 2f, rect.width, rect.height);
+            string text = $"Steps: {Mathf.Max(0, _remainingSteps)}";
+            float width = Mathf.Min(460f, Screen.width - 32f);
+            var rect = new Rect((Screen.width - width) * 0.5f, 18f, width, 58f);
+            var shadowRect = new Rect(rect.x + 2f, rect.y + 2f, rect.width, rect.height);
 
-        GUI.Label(shadowRect, text, _stepLimitShadowStyle);
-        GUI.Label(rect, text, _stepLimitStyle);
+            GUI.Label(shadowRect, text, _stepLimitShadowStyle);
+            GUI.Label(rect, text, _stepLimitStyle);
+            return;
+        }
+
+        if (_playRule is ClassicPlayRule classicRule)
+            classicRule.DrawGUI(this);
     }
 
     public bool PlayLevel(LevelData level)
@@ -253,7 +262,10 @@ public class LevelPlayer : MonoBehaviour
         TickSystem.OnTick -= HandleTick;
         TickSystem.OnTick += HandleTick;
 
-        SpawnSystem.Instance?.StartSpawning();
+        if (_playRule.ShouldStartSpawningOnBegin)
+            SpawnSystem.Instance?.StartSpawning();
+        else
+            SpawnSystem.Instance?.StopSpawning();
 
         Debug.Log($"[LevelPlayer] Playback started: {_level.levelName}, mode={_playMode}, steps={_remainingSteps}");
         _playRule.Evaluate(this);
@@ -263,6 +275,7 @@ public class LevelPlayer : MonoBehaviour
     {
         TickSystem.OnTick -= HandleTick;
         SpawnSystem.Instance?.StopSpawning();
+        HandZone.SetCardsLocked(false);
         _playRule = null;
         _isPlaying = false;
     }
@@ -355,6 +368,42 @@ public class LevelPlayer : MonoBehaviour
         return hasBox;
     }
 
+    internal int CountBoxesOnTargets()
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+            return 0;
+
+        int count = 0;
+        var entities = entitySystem.entities;
+        for (int i = 0; i < entities.entityCount; i++)
+        {
+            if (entities.coreComponents[i].EntityType == EntityType.Box &&
+                _targetCells.Contains(entities.coreComponents[i].Position))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    internal bool HasAnyEnemyAlive()
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+            return false;
+
+        var entities = entitySystem.entities;
+        for (int i = 0; i < entities.entityCount; i++)
+        {
+            if (entities.coreComponents[i].EntityType == EntityType.Enemy)
+                return true;
+        }
+
+        return false;
+    }
+
     internal bool IsAnyCoreBoxAlive()
     {
         var entitySystem = EntitySystem.Instance;
@@ -420,6 +469,66 @@ public class LevelPlayer : MonoBehaviour
             stageFacade.ResumeWaitingStage(result == LevelPlayResult.Success ? 0 : 1);
 
         GameFlowController.Instance?.OnRouteClassicLevelSettled(result);
+    }
+
+    internal int AwardGoldByArithmeticSequence(int count, int firstAmount, int stepAmount, string reason)
+    {
+        if (count <= 0)
+            return 0;
+
+        int amount = 0;
+        for (int i = 0; i < count; i++)
+            amount += firstAmount + i * stepAmount;
+
+        var inventory = NekoGraph.GraphHub.Instance?.GetFacade<RunInventoryFacade>();
+        if (inventory != null)
+        {
+            inventory.AddGold(amount);
+        }
+        else
+        {
+            Debug.LogWarning($"[LevelPlayer] Gold reward skipped because RunInventoryFacade is missing: amount={amount}, reason={reason}");
+        }
+
+        Debug.Log($"[LevelPlayer] Gold awarded: amount={amount}, count={count}, reason={reason}");
+        return amount;
+    }
+
+    internal int ConvertUnoccupiedClassicTargetsToEnemyTargets()
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+            return 0;
+
+        int targetTagID = ResolveTagID("target", DefaultTargetTagID);
+        int targetEnemyTagID = ResolveTagID("Target.Enemy", DefaultTargetEnemyTagID);
+        if (targetEnemyTagID <= 0)
+            return 0;
+
+        var entities = entitySystem.entities;
+        int converted = 0;
+        for (int i = 0; i < entities.entityCount; i++)
+        {
+            if (entities.coreComponents[i].EntityType != EntityType.Target)
+                continue;
+
+            if (entities.propertyComponents[i].SourceTagId != targetTagID)
+                continue;
+
+            var pos = entities.coreComponents[i].Position;
+            if (!_targetCells.Contains(pos) || IsBoxOnCell(entitySystem, pos))
+                continue;
+
+            var handle = entitySystem.GetHandleFromId(entities.coreComponents[i].Id);
+            ApplyEntityBP(entitySystem, handle, targetEnemyTagID);
+            SetupEnemyTargetCounter(entitySystem, i, targetEnemyTagID, 0);
+            converted++;
+
+            SpawnSystem.Instance?.SpawnImmediatelyFromTarget(handle);
+        }
+
+        Debug.Log($"[LevelPlayer] Converted classic targets to Target.Enemy: {converted}");
+        return converted;
     }
 
     private void BuildMeshInternal()
@@ -613,6 +722,22 @@ public class LevelPlayer : MonoBehaviour
         };
     }
 
+    private void EnsureClassicPhaseStyles()
+    {
+        _classicPhaseStyle ??= new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = 26,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = new Color(1f, 0.95f, 0.72f, 1f) }
+        };
+
+        _classicPhaseShadowStyle ??= new GUIStyle(_classicPhaseStyle)
+        {
+            normal = { textColor = new Color(0f, 0f, 0f, 0.72f) }
+        };
+    }
+
     private T EnsureRuntimeSystem<T>() where T : Component
     {
         var system = GetComponent<T>();
@@ -740,6 +865,14 @@ public class LevelPlayer : MonoBehaviour
         if (index < 0)
             return;
 
+        SetupEnemyTargetCounter(entitySystem, index, tagId);
+    }
+
+    private void SetupEnemyTargetCounter(EntitySystem entitySystem, int index, int tagId, int initialDelay = -1)
+    {
+        if (entitySystem == null || entitySystem.entities == null || index < 0 || index >= entitySystem.entities.entityCount)
+            return;
+
         ref var counter = ref entitySystem.entities.counterComponents[index];
         ref var props = ref entitySystem.entities.propertyComponents[index];
 
@@ -747,8 +880,22 @@ public class LevelPlayer : MonoBehaviour
         props.SpawnInterval = bp != null && bp.spawnInterval > 0 ? bp.spawnInterval : 3;
         props.SpawnEntityBP = bp != null ? bp.spawnEntityBP : null;
 
-        counter.NextTick = entitySystem.GlobalTick + props.SpawnInterval;
+        counter.NextTick = entitySystem.GlobalTick + (initialDelay >= 0 ? initialDelay : props.SpawnInterval);
         Debug.Log($"[LevelPlayer] Target.Enemy counter armed: index={index}, interval={props.SpawnInterval}, nextTick={counter.NextTick}, spawnBP={(props.SpawnEntityBP != null ? props.SpawnEntityBP.name : "<default>")}");
+    }
+
+    private static bool IsBoxOnCell(EntitySystem entitySystem, Vector2Int cell)
+    {
+        if (entitySystem == null || !entitySystem.IsInitialized)
+            return false;
+
+        var handle = entitySystem.GetOccupant(cell);
+        if (!entitySystem.IsValid(handle))
+            return false;
+
+        int index = entitySystem.GetIndex(handle);
+        return index >= 0 &&
+               entitySystem.entities.coreComponents[index].EntityType == EntityType.Box;
     }
 
     private void ConfigureCardWallHealth(CardEffectSystem cardEffectSystem, int unstableWallTagID)
@@ -852,6 +999,7 @@ public class LevelPlayer : MonoBehaviour
 
     private interface ILevelPlayRule
     {
+        bool ShouldStartSpawningOnBegin { get; }
         void Begin(LevelPlayer player, LevelPlayRequest request);
         void OnTick(LevelPlayer player);
         void Evaluate(LevelPlayer player);
@@ -859,9 +1007,29 @@ public class LevelPlayer : MonoBehaviour
 
     private sealed class ClassicPlayRule : ILevelPlayRule
     {
+        private enum Phase
+        {
+            PuzzleOnly,
+            CombatUnlocked
+        }
+
+        private Phase _phase;
+        private int _phaseOneBoxCount;
+        private int _phaseOneGold;
+        private int _phaseTwoGold;
+        private int _convertedTargetCount;
+
+        public bool ShouldStartSpawningOnBegin => false;
+
         public void Begin(LevelPlayer player, LevelPlayRequest request)
         {
             player.SetRemainingSteps(-1);
+            _phase = Phase.PuzzleOnly;
+            _phaseOneBoxCount = 0;
+            _phaseOneGold = 0;
+            _phaseTwoGold = 0;
+            _convertedTargetCount = 0;
+            HandZone.SetCardsLocked(true);
         }
 
         public void OnTick(LevelPlayer player)
@@ -870,17 +1038,87 @@ public class LevelPlayer : MonoBehaviour
 
         public void Evaluate(LevelPlayer player)
         {
-            if (player.AreAllBoxesOnTargets())
-                player.SettleLevel(LevelPlayResult.Success, "all boxes are on targets");
+            if (_phase != Phase.CombatUnlocked)
+                return;
+
+            if (!player.AreAllBoxesOnTargets() || player.HasAnyEnemyAlive())
+                return;
+
+            int phaseTwoBoxCount = Mathf.Max(0, player.CountBoxesOnTargets() - _phaseOneBoxCount);
+            _phaseTwoGold = player.AwardGoldByArithmeticSequence(phaseTwoBoxCount, 3, 1, "classic phase two boxes");
+            player.SettleLevel(LevelPlayResult.Success, "classic phase two completed");
+        }
+
+        public void DrawGUI(LevelPlayer player)
+        {
+            if (_phase == Phase.PuzzleOnly)
+            {
+                player.EnsureClassicPhaseStyles();
+                int boxCount = player.CountBoxesOnTargets();
+                int previewGold = CalculateArithmeticSequence(boxCount, 3, 3);
+                string text = $"经典阶段一  箱子: {boxCount}  预期金币: {previewGold}";
+                float width = Mathf.Min(560f, Screen.width - 32f);
+                var rect = new Rect((Screen.width - width) * 0.5f, 18f, width, 42f);
+                var shadowRect = new Rect(rect.x + 2f, rect.y + 2f, rect.width, rect.height);
+                GUI.Label(shadowRect, text, player._classicPhaseShadowStyle);
+                GUI.Label(rect, text, player._classicPhaseStyle);
+
+                var buttonRect = new Rect((Screen.width - 180f) * 0.5f, rect.yMax + 8f, 180f, 44f);
+                if (GUI.Button(buttonRect, "结算"))
+                    SettlePhaseOne(player);
+
+                return;
+            }
+
+            player.EnsureClassicPhaseStyles();
+            int newBoxes = Mathf.Max(0, player.CountBoxesOnTargets() - _phaseOneBoxCount);
+            int preview = CalculateArithmeticSequence(newBoxes, 3, 1);
+            string combatText = $"经典阶段二  新箱子: {newBoxes}  预期金币: {preview}  敌人: {(player.HasAnyEnemyAlive() ? "未清空" : "已清空")}";
+            float combatWidth = Mathf.Min(640f, Screen.width - 32f);
+            var combatRect = new Rect((Screen.width - combatWidth) * 0.5f, 18f, combatWidth, 42f);
+            var combatShadowRect = new Rect(combatRect.x + 2f, combatRect.y + 2f, combatRect.width, combatRect.height);
+            GUI.Label(combatShadowRect, combatText, player._classicPhaseShadowStyle);
+            GUI.Label(combatRect, combatText, player._classicPhaseStyle);
+        }
+
+        private void SettlePhaseOne(LevelPlayer player)
+        {
+            if (_phase != Phase.PuzzleOnly)
+                return;
+
+            _phaseOneBoxCount = player.CountBoxesOnTargets();
+            _phaseOneGold = player.AwardGoldByArithmeticSequence(_phaseOneBoxCount, 3, 3, "classic phase one boxes");
+            _convertedTargetCount = player.ConvertUnoccupiedClassicTargetsToEnemyTargets();
+            _phase = Phase.CombatUnlocked;
+            HandZone.SetCardsLocked(false);
+            SpawnSystem.Instance?.StartSpawning();
+
+            Debug.Log($"[LevelPlayer] Classic phase one settled: boxes={_phaseOneBoxCount}, gold={_phaseOneGold}, convertedTargets={_convertedTargetCount}");
+            player._playRule.Evaluate(player);
+        }
+
+        private static int CalculateArithmeticSequence(int count, int firstAmount, int stepAmount)
+        {
+            if (count <= 0)
+                return 0;
+
+            int amount = 0;
+            for (int i = 0; i < count; i++)
+                amount += firstAmount + i * stepAmount;
+
+            return amount;
         }
     }
 
     private sealed class StepLimitPlayRule : ILevelPlayRule
     {
+        public bool ShouldStartSpawningOnBegin => true;
+
         public void Begin(LevelPlayer player, LevelPlayRequest request)
         {
             int stepLimit = request != null ? request.StepLimit : 0;
             player.SetRemainingSteps(Mathf.Max(1, stepLimit));
+            HandZone.SetCardsLocked(false);
         }
 
         public void OnTick(LevelPlayer player)
@@ -903,9 +1141,12 @@ public class LevelPlayer : MonoBehaviour
 
     private sealed class EscortPlayRule : ILevelPlayRule
     {
+        public bool ShouldStartSpawningOnBegin => true;
+
         public void Begin(LevelPlayer player, LevelPlayRequest request)
         {
             player.SetRemainingSteps(-1);
+            HandZone.SetCardsLocked(false);
         }
 
         public void OnTick(LevelPlayer player)

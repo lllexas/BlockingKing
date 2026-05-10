@@ -20,6 +20,7 @@ public class RunRouteFacade : PackFacadeBase
 
     private readonly Dictionary<string, LevelData> _runtimeLevelObjects = new Dictionary<string, LevelData>();
     private readonly Dictionary<string, LevelCollageGenerationSettings> _runtimeCollageSettings = new Dictionary<string, LevelCollageGenerationSettings>();
+    private readonly Dictionary<string, ShopSO> _runtimeShopObjects = new Dictionary<string, ShopSO>();
 
     protected override string GetDefaultPackID()
     {
@@ -65,6 +66,7 @@ public class RunRouteFacade : PackFacadeBase
         ResetPack(pack);
         _runtimeLevelObjects.Clear();
         _runtimeCollageSettings.Clear();
+        _runtimeShopObjects.Clear();
 
         var random = seed == 0 ? new System.Random() : new System.Random(seed);
         var byLayer = new List<List<VFSNodeData>>();
@@ -87,6 +89,8 @@ public class RunRouteFacade : PackFacadeBase
                     _runtimeLevelObjects[node.NodeID] = source.levelData;
                 if (source.collageGenerationSettings != null)
                     _runtimeCollageSettings[node.NodeID] = source.collageGenerationSettings;
+                if (source.shop != null)
+                    _runtimeShopObjects[node.NodeID] = source.shop;
                 layerNodes.Add(node);
             }
 
@@ -235,6 +239,9 @@ public class RunRouteFacade : PackFacadeBase
             return false;
 
         var stagePack = content.GetNekographPack();
+        if (stagePack == null)
+            stagePack = ResolveShopStagePack(nodeId, content, side);
+
         if (stagePack != null)
         {
             var stageFacade = GraphHub.Instance?.GetFacade<RunStageFacade>();
@@ -306,6 +313,78 @@ public class RunRouteFacade : PackFacadeBase
         }
 
         return content?.GetUnityObject<LevelData>();
+    }
+
+    private BasePackData ResolveShopStagePack(string nodeId, VFSResolvedContent content, RunRouteNodeSideData side)
+    {
+        ShopSO shop = null;
+        if (!string.IsNullOrWhiteSpace(nodeId))
+            _runtimeShopObjects.TryGetValue(nodeId, out shop);
+
+        shop ??= content?.GetUnityObject<ShopSO>();
+        return shop != null ? CreateShopStagePack(nodeId, shop, side) : null;
+    }
+
+    private static BasePackData CreateShopStagePack(string routeNodeId, ShopSO shop, RunRouteNodeSideData side)
+    {
+        string suffix = StableSeed($"{routeNodeId}:{shop?.name}").ToString("x8");
+        string rootId = $"root_shop_{suffix}";
+        string shopNodeId = $"shop_{suffix}";
+        string endNodeId = $"shop_end_{suffix}";
+
+        var pack = new BasePackData
+        {
+            PackID = $"shop_stage_{suffix}",
+            DisplayName = string.IsNullOrWhiteSpace(side?.stageId) ? shop?.name : side.stageId,
+            Description = shop != null ? shop.description : string.Empty,
+            RootNodeId = rootId,
+            Nodes = new Dictionary<string, BaseNodeData>()
+        };
+
+        var root = new RootNodeData
+        {
+            NodeID = rootId,
+            Name = "Root",
+            EditorPosition = new SerializableVector2(0f, 0f),
+            OutputConnections = new List<ConnectionData>(),
+            _ = new List<string> { shopNodeId }
+        };
+
+        var shopNode = new VFSNodeData
+        {
+            NodeID = shopNodeId,
+            Name = shop != null && !string.IsNullOrWhiteSpace(shop.title) ? shop.title : "Shop",
+            Extension = ".shop",
+            ContentKind = VFSContentKind.UnityObject,
+            ContentSource = VFSContentSource.Reference,
+            AssetPath = GetAssetPath(shop),
+            ReferencePath = GetResourcesPath(shop),
+            UnityObjectTypeName = typeof(ShopSO).AssemblyQualifiedName,
+            IsEnabled = true,
+            EditorPosition = new SerializableVector2(260f, 0f),
+            ParentNodeID = rootId,
+            ChildNodeIDs = new List<string> { endNodeId },
+            OutputConnections = new List<ConnectionData>()
+        };
+
+        var end = new LeafNode_B_Data
+        {
+            NodeID = endNodeId,
+            Name = "End",
+            ProcessID = $"shop_{suffix}",
+            EditorPosition = new SerializableVector2(520f, 0f),
+            InputNodeIDs = new List<string> { shopNodeId },
+            OutputConnections = new List<ConnectionData>()
+        };
+
+        root.OutputConnections.Add(new ConnectionData(rootId, 0, shopNodeId, 0));
+        shopNode.OutputConnections.Add(new ConnectionData(shopNodeId, 0, endNodeId, 0));
+
+        pack.Nodes[rootId] = root;
+        pack.Nodes[shopNodeId] = shopNode;
+        pack.Nodes[endNodeId] = end;
+        ShopResource.RegisterRuntimeShop(shopNodeId, shop);
+        return pack;
     }
 
     private void GenerateEscortLevelsForRoute(BasePackData pack)
@@ -616,6 +695,36 @@ public class RunRouteFacade : PackFacadeBase
         }
     }
 
+    private static string GetAssetPath(UnityEngine.Object asset)
+    {
+#if UNITY_EDITOR
+        return asset != null ? UnityEditor.AssetDatabase.GetAssetPath(asset) : string.Empty;
+#else
+        return string.Empty;
+#endif
+    }
+
+    private static string GetResourcesPath(UnityEngine.Object asset)
+    {
+#if UNITY_EDITOR
+        string assetPath = GetAssetPath(asset);
+        if (string.IsNullOrWhiteSpace(assetPath))
+            return string.Empty;
+
+        string normalized = assetPath.Replace('\\', '/');
+        const string marker = "/Resources/";
+        int index = normalized.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (index < 0)
+            return string.Empty;
+
+        string relative = normalized[(index + marker.Length)..];
+        string extension = System.IO.Path.GetExtension(relative);
+        return string.IsNullOrEmpty(extension) ? relative : relative[..^extension.Length];
+#else
+        return string.Empty;
+#endif
+    }
+
     private static int ResolveStepLimit(string stageType, int fallback)
     {
         if (string.IsNullOrWhiteSpace(stageType))
@@ -803,6 +912,8 @@ public sealed class RunRouteStageSource
     public LevelData levelData;
     [JsonIgnore]
     public LevelCollageGenerationSettings collageGenerationSettings;
+    [JsonIgnore]
+    public ShopSO shop;
     public VFSContentKind contentKind = VFSContentKind.UnityObject;
     public VFSContentSource contentSource = VFSContentSource.Reference;
     public string referencePath;

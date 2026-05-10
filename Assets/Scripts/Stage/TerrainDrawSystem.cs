@@ -265,9 +265,9 @@ public class TerrainDrawSystem : MonoBehaviour
         var completedCoreTargetQuads = new List<Quad>();
         var enemyTargetQuads = new List<Quad>();
 
-        AppendTargetKindQuads(entitySystem, normalTargets, ResolveTargetColor(), targetBeaconHeight, targetQuads, completedTargetQuads);
-        AppendTargetKindQuads(entitySystem, coreTargets, ResolveTagColor("Target.Core"), targetBeaconHeight * coreTargetBeaconHeightMultiplier, coreTargetQuads, completedCoreTargetQuads);
-        AppendTargetKindQuads(entitySystem, enemyTargets, ResolveTagColor("Target.Enemy"), targetBeaconHeight, enemyTargetQuads, null);
+        AppendTargetKindQuads(entitySystem, normalTargets, ResolveTargetColor(), completedTargetColor, targetBeaconHeight, targetQuads, completedTargetQuads);
+        AppendTargetKindQuads(entitySystem, coreTargets, ResolveTagColor("Target.Core"), completedTargetColor, targetBeaconHeight * coreTargetBeaconHeightMultiplier, coreTargetQuads, completedCoreTargetQuads);
+        AppendTargetKindQuads(entitySystem, enemyTargets, ResolveTagColor("Target.Enemy"), completedTargetColor, targetBeaconHeight, enemyTargetQuads, null);
 
         ApplyQuadsToMesh(ref _runtimeTargetMesh, "RuntimeTargetMarkers", targetQuads);
         ApplyQuadsToMesh(ref _runtimeCompletedTargetMesh, "RuntimeCompletedTargetMarkers", completedTargetQuads);
@@ -280,6 +280,7 @@ public class TerrainDrawSystem : MonoBehaviour
         EntitySystem entitySystem,
         HashSet<Vector2Int> targets,
         Color color,
+        Color completedColor,
         float beaconHeight,
         List<Quad> pendingQuads,
         List<Quad> completedQuads)
@@ -293,8 +294,10 @@ public class TerrainDrawSystem : MonoBehaviour
             bool onWall = _config != null && _config.IsWall(terrainId);
             float y = (onWall ? _wallHeight : 0f) + _tagYOffset;
             var origin = new Vector3(cell.x * _cellSize, y, cell.y * _cellSize);
-            var quads = completedQuads != null && HasBoxOnCell(entitySystem, cell) ? completedQuads : pendingQuads;
-            AddTargetCellQuads(quads, cell, targets, origin, color, beaconHeight);
+            bool hasBox = HasBoxOnCell(entitySystem, cell);
+            var quads = completedQuads != null && hasBox ? completedQuads : pendingQuads;
+            var usedColor = (completedQuads != null && hasBox) ? completedColor : color;
+            AddTargetCellQuads(quads, cell, targets, origin, usedColor, beaconHeight);
         }
     }
 

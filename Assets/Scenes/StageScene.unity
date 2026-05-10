@@ -894,6 +894,7 @@ MonoBehaviour:
   maxFanAngle: 12
   fanArcDepth: 30
   hoverLift: 100
+  hotkeyPendingAnchor: {x: 240, y: 0}
   cardTweenDuration: 0.22
   hoverTweenDuration: 0.12
   pileTweenDuration: 0.18
@@ -1700,6 +1701,7 @@ GameObject:
   - component: {fileID: 2039827880}
   - component: {fileID: 2039827882}
   - component: {fileID: 2039827890}
+  - component: {fileID: 2039827891}
   m_Layer: 0
   m_Name: LevelPlayer
   m_TagString: Untagged
@@ -1764,6 +1766,9 @@ MonoBehaviour:
   wallMesh: {fileID: 0}
   playerMaterial: {fileID: 0}
   boxMaterial: {fileID: 0}
+  coreBoxMaterial: {fileID: 0}
+  boxGlassMaterial: {fileID: 0}
+  coreBoxGlassMaterial: {fileID: 0}
   enemyMaterial: {fileID: 0}
   wallMaterial: {fileID: 2100000, guid: 391fd5930ef59f1489fdef6fc7e9fade, type: 2}
   cellSize: 1
@@ -1773,6 +1778,12 @@ MonoBehaviour:
   enemyScale: {x: 0.75, y: 0.35, z: 0.75}
   wallScale: {x: 0.95, y: 0.95, z: 0.95}
   wallY: -0.2
+  enableBeatMotion: 1
+  beatDuration: 0.16
+  movementPortion: 0.86
+  attackPortion: 0.72
+  attackLungeDistance: 0.28
+  spawnRiseDistance: 0.75
   showStatsText: 1
   statsTextHeight: 0.01
   statsTextScale: 1
@@ -1787,6 +1798,7 @@ MonoBehaviour:
   statsOccludedOutlineColor: {r: 0.08, g: 0.08, b: 0.08, a: 1}
   attackTextColor: {r: 0.95, g: 0.35, b: 0.25, a: 1}
   healthTextColor: {r: 0.35, g: 0.9, b: 0.45, a: 1}
+  countdownTextColor: {r: 0.25, g: 0.65, b: 1, a: 1}
 --- !u!114 &2039827890
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1801,9 +1813,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cellMesh: {fileID: 0}
   defaultMaterial: {fileID: 0}
+  pathFlowMaterial: {fileID: 2100000, guid: 1e4a707aaa33bef4cb4ae3a854594c87, type: 2}
   cellSize: {x: 1, y: 1}
   priorityHeightStep: 0.0005
   wallSurfaceHeight: 0.3
+  chevronCount: 3
+  chevronArmWidth: 0.12
+  chevronFlowSpeed: 0.75
   materialSlots:
   - Style: 0
     Material: {fileID: 2100000, guid: 43067182b83a8c443a9f6d9cc94155fd, type: 2}
@@ -1825,6 +1841,26 @@ MonoBehaviour:
     Material: {fileID: 2100000, guid: e5e85370e640c2346b58f29a756b9c40, type: 2}
   - Style: 9
     Material: {fileID: 2100000, guid: 88b9c733d8537f14695e2ffc4918f7fd, type: 2}
+  - Style: 0
+    Material: {fileID: 0}
+--- !u!114 &2039827891
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2039827879}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa35fce5c4a0414085cf690272aa217d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  movePreInputWindow: 0.1
+  activePathPreviewColor: {r: 0.25, g: 0.85, b: 1, a: 0.42}
+  leftPathHoverColor: {r: 0.2, g: 0.85, b: 1, a: 0.18}
+  rightPathHoverColor: {r: 1, g: 0.72, b: 0.25, a: 0.16}
+  pathPreviewHeight: 0.014
+  pathPreviewPriority: 5
 --- !u!1 &2084633140
 GameObject:
   m_ObjectHideFlags: 0

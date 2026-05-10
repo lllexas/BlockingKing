@@ -16,6 +16,10 @@ public class RunStartSettings : ScriptableObject
     [AssetsOnly]
     public StartingDeckSO startingDeck;
 
+    [Title("Economy")]
+    [Min(0)]
+    public int startingGold = 0;
+
     [Title("Hand")]
     [Min(0)]
     public int targetHandCount = 5;

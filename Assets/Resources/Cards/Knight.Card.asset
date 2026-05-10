@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   instanceId: 
   cardId: knight.stomp
-  displayName: 骑士践踏
-  description: 选择一个日字格。无视路径障碍，落点有敌人则踩踏，落点是墙或箱子则不可执行。
-  cost: 1
+  displayName: "\u9A91\u58EB\u8DF5\u8E0F"
+  description: "\u9009\u62E9\u4E00\u4E2A\u65E5\u5B57\u683C\u3002\u65E0\u89C6\u8DEF\u5F84\u969C\u788D\uFF0C\u843D\u70B9\u6709\u654C\u4EBA\u5219\u8E29\u8E0F\uFF0C\u843D\u70B9\u662F\u5899\u6216\u7BB1\u5B50\u5219\u4E0D\u53EF\u6267\u884C\u3002"
+  cost: 3
   releaseRule: 5
   icon: {fileID: 0}

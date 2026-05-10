@@ -26,6 +26,9 @@ public static class RewardResource
             case RewardSO.RewardKind.AddCardsToDeck:
                 return AddCardsToDeck(reward);
 
+            case RewardSO.RewardKind.AddGold:
+                return AddGold(reward);
+
             default:
                 Debug.LogError($"[RewardResource] Unsupported reward kind: {reward.rewardKind}");
                 return HandleResult.Error;
@@ -61,6 +64,33 @@ public static class RewardResource
                 Debug.LogError($"[RewardResource] Failed to add card reward: {entry.card.name}");
                 return HandleResult.Error;
             }
+        }
+
+        return HandleResult.Push;
+    }
+
+    private static HandleResult AddGold(RewardSO reward)
+    {
+        if (reward.goldAmount <= 0)
+            return HandleResult.Push;
+
+        var inventory = GraphHub.Instance?.GetFacade<RunInventoryFacade>();
+        if (inventory == null)
+        {
+            inventory = new RunInventoryFacade();
+            GraphHub.Instance?.RegisterFacade(inventory);
+        }
+
+        if (inventory == null)
+        {
+            Debug.LogError("[RewardResource] RunInventoryFacade is not available.");
+            return HandleResult.Error;
+        }
+
+        if (!inventory.AddGold(reward.goldAmount))
+        {
+            Debug.LogError($"[RewardResource] Failed to add gold reward: {reward.goldAmount}");
+            return HandleResult.Error;
         }
 
         return HandleResult.Push;

@@ -9,7 +9,8 @@ public class RewardSO : ScriptableObject
 {
     public enum RewardKind
     {
-        AddCardsToDeck
+        AddCardsToDeck,
+        AddGold
     }
 
     [Serializable]
@@ -22,4 +23,7 @@ public class RewardSO : ScriptableObject
     public string rewardId;
     public RewardKind rewardKind = RewardKind.AddCardsToDeck;
     public List<CardReward> cards = new List<CardReward>();
+
+    [Min(0)]
+    public int goldAmount;
 }

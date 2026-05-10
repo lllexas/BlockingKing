@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   instanceId: 
   cardId: cannon.charge
-  displayName: 火炮冲撞
-  description: 上下左右直线释放。翻越第一个单位，不伤它，继续冲撞后排。
-  cost: 1
+  displayName: "\u706B\u70AE\u51B2\u649E"
+  description: "\u4E0A\u4E0B\u5DE6\u53F3\u76F4\u7EBF\u91CA\u653E\u3002\u7FFB\u8D8A\u7B2C\u4E00\u4E2A\u5355\u4F4D\uFF0C\u4E0D\u4F24\u5B83\uFF0C\u7EE7\u7EED\u51B2\u649E\u540E\u6392\u3002"
+  cost: 3
   releaseRule: 1
   icon: {fileID: 0}

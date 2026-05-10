@@ -16,6 +16,41 @@ public enum GridOverlayStyle
     PreviewAfterimage
 }
 
+public readonly struct GridDirectionalOverlayCell
+{
+    public readonly Vector2Int Cell;
+    public readonly Vector2Int Direction;
+
+    public GridDirectionalOverlayCell(Vector2Int cell, Vector2Int direction)
+    {
+        Cell = cell;
+        Direction = direction;
+    }
+}
+
+public readonly struct GridPathFlowOverlayCell
+{
+    public readonly Vector2Int Cell;
+    public readonly Vector2Int IncomingDirection;
+    public readonly Vector2Int OutgoingDirection;
+    public readonly int Index;
+    public readonly int Length;
+
+    public GridPathFlowOverlayCell(
+        Vector2Int cell,
+        Vector2Int incomingDirection,
+        Vector2Int outgoingDirection,
+        int index,
+        int length)
+    {
+        Cell = cell;
+        IncomingDirection = incomingDirection;
+        OutgoingDirection = outgoingDirection;
+        Index = index;
+        Length = length;
+    }
+}
+
 /// <summary>
 /// 格子叠加层绘制服务。接受任意系统注册的半透明格子叠加层。
 /// 当前后端使用 GPU instancing，和实体 DrawSystem 保持同一类绘制模型。
@@ -25,22 +60,41 @@ public class GridOverlayDrawSystem : MonoBehaviour
     public static GridOverlayDrawSystem Instance { get; private set; }
 
     private const int BatchSize = 1023;
+    private static readonly int PathColorPropertyId = Shader.PropertyToID("_PathColor");
+    private static readonly int PathInPropertyId = Shader.PropertyToID("_PathIn");
+    private static readonly int PathOutPropertyId = Shader.PropertyToID("_PathOut");
+    private static readonly int PathMetaPropertyId = Shader.PropertyToID("_PathMeta");
 
     [Header("Instancing Backend")]
     [SerializeField] private Mesh cellMesh;
     [SerializeField] private Material defaultMaterial;
+    [SerializeField] private Material pathFlowMaterial;
     [SerializeField] private Vector2 cellSize = Vector2.one;
     [SerializeField] private float priorityHeightStep = 0.0005f;
     [SerializeField] private float wallSurfaceHeight = 0.3f;
+    [SerializeField, Range(1, 6)] private int chevronCount = 3;
+    [SerializeField, Range(0.05f, 0.45f)] private float chevronArmWidth = 0.12f;
+    [SerializeField, Range(0.2f, 2f)] private float chevronFlowSpeed = 0.75f;
 
     [Header("Styles")]
     [TableList(AlwaysExpanded = true)]
     [SerializeField] private GridOverlayMaterialSlot[] materialSlots;
 
     private readonly Dictionary<string, OverlayEntry> _overlays = new();
+    private readonly Dictionary<string, DirectionalOverlayEntry> _directionalOverlays = new();
+    private readonly Dictionary<string, PathFlowOverlayEntry> _pathFlowOverlays = new();
     private readonly List<Vector2Int> _scratchCells = new();
+    private readonly List<Vector3> _chevronVertices = new();
+    private readonly List<int> _chevronTriangles = new();
+    private readonly List<Color> _chevronColors = new();
     private readonly Matrix4x4[] _matrices = new Matrix4x4[BatchSize];
+    private readonly Vector4[] _pathColors = new Vector4[BatchSize];
+    private readonly Vector4[] _pathIns = new Vector4[BatchSize];
+    private readonly Vector4[] _pathOuts = new Vector4[BatchSize];
+    private readonly Vector4[] _pathMetas = new Vector4[BatchSize];
+    private MaterialPropertyBlock _pathFlowProperties;
     private Mesh _quadMesh;
+    private Material _runtimePathFlowMaterial;
     private readonly Dictionary<MaterialCacheKey, Material> _materialCache = new();
 
     private void Awake()
@@ -59,8 +113,16 @@ public class GridOverlayDrawSystem : MonoBehaviour
         if (_quadMesh != null)
             Destroy(_quadMesh);
 
+        if (_runtimePathFlowMaterial != null)
+            Destroy(_runtimePathFlowMaterial);
+
+        foreach (var kvp in _directionalOverlays)
+            DestroyDirectionalOverlayMesh(kvp.Value);
+
         _materialCache.Clear();
         _overlays.Clear();
+        _directionalOverlays.Clear();
+        _pathFlowOverlays.Clear();
 
         if (Instance == this)
             Instance = null;
@@ -105,6 +167,67 @@ public class GridOverlayDrawSystem : MonoBehaviour
 
         entry.Color = color;
         entry.Style = style;
+        entry.Height = height;
+        entry.Priority = priority;
+    }
+
+    /// <summary>设置一组带方向的格子叠加层。同 ID 重复调用会覆盖。</summary>
+    public void SetDirectionalOverlay(
+        string id,
+        IReadOnlyList<GridDirectionalOverlayCell> cells,
+        Color color,
+        float height = 0.018f,
+        int priority = 0)
+    {
+        if (!_directionalOverlays.TryGetValue(id, out var entry))
+        {
+            entry = new DirectionalOverlayEntry { Id = id };
+            _directionalOverlays[id] = entry;
+        }
+
+        entry.Cells.Clear();
+        if (cells != null)
+        {
+            for (int i = 0; i < cells.Count; i++)
+            {
+                if (cells[i].Direction != Vector2Int.zero)
+                    entry.Cells.Add(cells[i]);
+            }
+        }
+
+        entry.Color = color;
+        entry.Height = height;
+        entry.Priority = priority;
+    }
+
+    /// <summary>设置连续路径流叠加层。同 ID 重复调用会覆盖。</summary>
+    public void SetPathFlowOverlay(
+        string id,
+        IReadOnlyList<GridPathFlowOverlayCell> cells,
+        Color color,
+        float height = 0.018f,
+        int priority = 0)
+    {
+        if (!_pathFlowOverlays.TryGetValue(id, out var entry))
+        {
+            entry = new PathFlowOverlayEntry { Id = id };
+            _pathFlowOverlays[id] = entry;
+        }
+
+        entry.Cells.Clear();
+        if (cells != null)
+        {
+            for (int i = 0; i < cells.Count; i++)
+            {
+                var cell = cells[i];
+                if (cell.IncomingDirection == Vector2Int.zero && cell.OutgoingDirection == Vector2Int.zero)
+                    continue;
+
+                entry.Cells.Add(cell);
+            }
+        }
+
+        entry.Color = color;
         entry.Height = height;
         entry.Priority = priority;
     }
@@ -437,25 +560,44 @@ public class GridOverlayDrawSystem : MonoBehaviour
     public void RemoveOverlay(string id)
     {
         _overlays.Remove(id);
+        if (_directionalOverlays.TryGetValue(id, out var directionalOverlay))
+            DestroyDirectionalOverlayMesh(directionalOverlay);
+
+        _directionalOverlays.Remove(id);
+        _pathFlowOverlays.Remove(id);
     }
 
     /// <summary>清除全部叠加层。</summary>
     public void ClearAll()
     {
+        foreach (var kvp in _directionalOverlays)
+            DestroyDirectionalOverlayMesh(kvp.Value);
+
         _overlays.Clear();
+        _directionalOverlays.Clear();
+        _pathFlowOverlays.Clear();
     }
 
     private void LateUpdate()
     {
-        if (_overlays.Count == 0)
+        if (_overlays.Count == 0 && _directionalOverlays.Count == 0 && _pathFlowOverlays.Count == 0)
             return;
 
         Mesh mesh = ResolveCellMesh();
-        if (mesh == null)
-            return;
+        if (mesh != null)
+        {
+            foreach (var kvp in _overlays)
+                DrawOverlay(kvp.Value, mesh);
+        }
 
-        foreach (var kvp in _overlays)
-            DrawOverlay(kvp.Value, mesh);
+        foreach (var kvp in _directionalOverlays)
+            DrawDirectionalOverlay(kvp.Value);
+
+        if (mesh != null)
+        {
+            foreach (var kvp in _pathFlowOverlays)
+                DrawPathFlowOverlay(kvp.Value, mesh);
+        }
     }
 
     // ──────── 资源 ────────
@@ -545,6 +687,27 @@ public class GridOverlayDrawSystem : MonoBehaviour
         return defaultMaterial;
     }
 
+    private Material ResolvePathFlowMaterial()
+    {
+        if (pathFlowMaterial != null)
+            return pathFlowMaterial;
+
+        if (_runtimePathFlowMaterial != null)
+            return _runtimePathFlowMaterial;
+
+        Shader shader = Shader.Find("BlockingKing/GridOverlay/PathFlow");
+        if (shader == null)
+            return GetOrCreateMaterial(GridOverlayStyle.Path, Color.white);
+
+        _runtimePathFlowMaterial = new Material(shader)
+        {
+            name = "GridOverlay_PathFlow_Runtime",
+            renderQueue = 3000,
+            enableInstancing = true
+        };
+        return _runtimePathFlowMaterial;
+    }
+
     private void DrawOverlay(OverlayEntry overlay, Mesh mesh)
     {
         if (overlay == null || overlay.Cells.Count == 0)
@@ -573,6 +736,179 @@ public class GridOverlayDrawSystem : MonoBehaviour
 
         if (count > 0)
             Graphics.DrawMeshInstanced(mesh, 0, material, _matrices, count);
+    }
+
+    private void DrawDirectionalOverlay(DirectionalOverlayEntry overlay)
+    {
+        if (overlay == null || overlay.Cells.Count == 0)
+            return;
+
+        Material material = GetOrCreateMaterial(GridOverlayStyle.SolidTint, overlay.Color);
+        if (material == null)
+            return;
+
+        EnsureChevronMesh(overlay);
+        BuildChevronMesh(overlay);
+        if (overlay.Mesh == null || overlay.Mesh.vertexCount == 0)
+            return;
+
+        Graphics.DrawMesh(overlay.Mesh, Matrix4x4.identity, material, gameObject.layer);
+    }
+
+    private void DrawPathFlowOverlay(PathFlowOverlayEntry overlay, Mesh mesh)
+    {
+        if (overlay == null || overlay.Cells.Count == 0)
+            return;
+
+        Material material = ResolvePathFlowMaterial();
+        if (material == null)
+            return;
+
+        int count = 0;
+        for (int i = 0; i < overlay.Cells.Count; i++)
+        {
+            var cell = overlay.Cells[i];
+            float y = ResolveSurfaceHeight(cell.Cell) + overlay.Height + overlay.Priority * priorityHeightStep;
+            var position = new Vector3(cell.Cell.x + 0.5f, y, cell.Cell.y + 0.5f);
+            var scale = new Vector3(cellSize.x, 1f, cellSize.y);
+            _matrices[count] = Matrix4x4.TRS(position, Quaternion.identity, scale);
+            _pathColors[count] = overlay.Color;
+            _pathIns[count] = DirectionToShaderVector(cell.IncomingDirection);
+            _pathOuts[count] = DirectionToShaderVector(cell.OutgoingDirection);
+            _pathMetas[count] = new Vector4(cell.Index, Mathf.Max(1, cell.Length), 0f, 0f);
+            count++;
+
+            if (count == BatchSize)
+            {
+                DrawPathFlowBatch(mesh, material, count);
+                count = 0;
+            }
+        }
+
+        if (count > 0)
+            DrawPathFlowBatch(mesh, material, count);
+    }
+
+    private void DrawPathFlowBatch(Mesh mesh, Material material, int count)
+    {
+        _pathFlowProperties ??= new MaterialPropertyBlock();
+        _pathFlowProperties.Clear();
+        _pathFlowProperties.SetVectorArray(PathColorPropertyId, _pathColors);
+        _pathFlowProperties.SetVectorArray(PathInPropertyId, _pathIns);
+        _pathFlowProperties.SetVectorArray(PathOutPropertyId, _pathOuts);
+        _pathFlowProperties.SetVectorArray(PathMetaPropertyId, _pathMetas);
+        Graphics.DrawMeshInstanced(mesh, 0, material, _matrices, count, _pathFlowProperties);
+    }
+
+    private static Vector4 DirectionToShaderVector(Vector2Int direction)
+    {
+        if (direction == Vector2Int.zero)
+            return Vector4.zero;
+
+        return new Vector4(direction.x, direction.y, 0f, 0f);
+    }
+
+    private static void EnsureChevronMesh(DirectionalOverlayEntry overlay)
+    {
+        if (overlay.Mesh != null)
+            return;
+
+        overlay.Mesh = new Mesh { name = $"GridOverlayDirectionalChevrons_{overlay.Id}" };
+        overlay.Mesh.MarkDynamic();
+    }
+
+    private void BuildChevronMesh(DirectionalOverlayEntry overlay)
+    {
+        _chevronVertices.Clear();
+        _chevronTriangles.Clear();
+        _chevronColors.Clear();
+
+        int count = Mathf.Max(1, chevronCount);
+        float spacing = 1f / count;
+        float phase = Mathf.Repeat(Time.time * chevronFlowSpeed, spacing);
+        Color color = overlay.Color;
+
+        for (int i = 0; i < overlay.Cells.Count; i++)
+        {
+            GridDirectionalOverlayCell cell = overlay.Cells[i];
+            Vector2 direction2 = new(cell.Direction.x, cell.Direction.y);
+            if (direction2.sqrMagnitude <= 0.0001f)
+                continue;
+
+            direction2.Normalize();
+            Vector3 forward = new(direction2.x, 0f, direction2.y);
+            Vector3 right = new(forward.z, 0f, -forward.x);
+            float y = ResolveSurfaceHeight(cell.Cell) + overlay.Height + overlay.Priority * priorityHeightStep;
+            Vector3 center = new(cell.Cell.x + 0.5f, y, cell.Cell.y + 0.5f);
+
+            for (int c = 0; c < count; c++)
+            {
+                float lane = -0.34f + c * spacing + phase;
+                if (lane > 0.44f)
+                    lane -= 1f;
+
+                AddChevron(center, forward, right, lane, color);
+            }
+        }
+
+        overlay.Mesh.Clear();
+        if (_chevronVertices.Count == 0)
+            return;
+
+        overlay.Mesh.SetVertices(_chevronVertices);
+        overlay.Mesh.SetTriangles(_chevronTriangles, 0);
+        overlay.Mesh.SetColors(_chevronColors);
+        overlay.Mesh.RecalculateBounds();
+    }
+
+    private static void DestroyDirectionalOverlayMesh(DirectionalOverlayEntry overlay)
+    {
+        if (overlay?.Mesh == null)
+            return;
+
+        Destroy(overlay.Mesh);
+        overlay.Mesh = null;
+    }
+
+    private void AddChevron(Vector3 center, Vector3 forward, Vector3 right, float lane, Color color)
+    {
+        const float halfSpan = 0.28f;
+        const float backOffset = 0.24f;
+        const float frontOffset = 0.1f;
+
+        Vector3 tip = center + forward * (lane + frontOffset);
+        Vector3 left = center + forward * (lane - backOffset) - right * halfSpan;
+        Vector3 rightPoint = center + forward * (lane - backOffset) + right * halfSpan;
+
+        AddGroundSegment(left, tip, chevronArmWidth, color);
+        AddGroundSegment(rightPoint, tip, chevronArmWidth, color);
+    }
+
+    private void AddGroundSegment(Vector3 start, Vector3 end, float width, Color color)
+    {
+        Vector3 delta = end - start;
+        if (delta.sqrMagnitude <= 0.0001f)
+            return;
+
+        Vector3 side = Vector3.Cross(Vector3.up, delta.normalized) * (width * 0.5f);
+        int vertexStart = _chevronVertices.Count;
+
+        _chevronVertices.Add(start - side);
+        _chevronVertices.Add(start + side);
+        _chevronVertices.Add(end + side);
+        _chevronVertices.Add(end - side);
+
+        _chevronColors.Add(color);
+        _chevronColors.Add(color);
+        _chevronColors.Add(color);
+        _chevronColors.Add(color);
+
+        _chevronTriangles.Add(vertexStart);
+        _chevronTriangles.Add(vertexStart + 2);
+        _chevronTriangles.Add(vertexStart + 1);
+        _chevronTriangles.Add(vertexStart);
+        _chevronTriangles.Add(vertexStart + 3);
+        _chevronTriangles.Add(vertexStart + 2);
     }
 
     private float ResolveSurfaceHeight(Vector2Int cell)
@@ -675,6 +1011,25 @@ public class GridOverlayDrawSystem : MonoBehaviour
         public string Id;
         public readonly List<Vector2Int> Cells = new();
         public GridOverlayStyle Style;
+        public Color Color;
+        public float Height;
+        public int Priority;
+    }
+
+    private class DirectionalOverlayEntry
+    {
+        public string Id;
+        public readonly List<GridDirectionalOverlayCell> Cells = new();
+        public Mesh Mesh;
+        public Color Color;
+        public float Height;
+        public int Priority;
+    }
+
+    private class PathFlowOverlayEntry
+    {
+        public string Id;
+        public readonly List<GridPathFlowOverlayCell> Cells = new();
         public Color Color;
         public float Height;
         public int Priority;

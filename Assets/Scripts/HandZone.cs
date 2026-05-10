@@ -60,12 +60,15 @@ public class HandZone : MonoBehaviour
     public static bool IsAnyCardAiming { get; private set; }
     public static bool IsAnyCardInteractionActive { get; private set; }
     public static HandZone ActiveInstance { get; private set; }
+    public static bool CardsLocked { get; private set; }
 
     private readonly List<CardSO> _drawPile = new List<CardSO>();
     private readonly List<CardSO> _discardPile = new List<CardSO>();
     private readonly List<CardView> _hand = new List<CardView>();
     private readonly List<Vector2Int> _cardReleaseCells = new List<Vector2Int>();
     private readonly List<Vector2Int> _cardReleaseHoverCells = new List<Vector2Int>();
+    private readonly List<Vector2Int> _assistCandidateCells = new List<Vector2Int>();
+    private readonly List<AssistCandidate> _assistCandidates = new List<AssistCandidate>();
 
     private int _cachedScreenWidth;
     private int _cachedScreenHeight;
@@ -76,8 +79,13 @@ public class HandZone : MonoBehaviour
     private CardView _draggingCard;
     private CardView _pendingCard;
     private CardView _stateCard;
+    private CardView _assistCard;
+    private Vector2Int _assistTargetCell;
+    private CardReleaseTarget _assistReleaseTarget;
+    private int _assistCandidateIndex;
     private CardInteractionState _interactionState = CardInteractionState.Idle;
     private int _pendingCardIndex = -1;
+    private bool _hasAssistSelection;
     private EntityHandle _playerHandle = EntityHandle.None;
     private Vector2 _cachedCardSize;
     private Vector2 _cachedHoverCardSize;
@@ -111,6 +119,22 @@ public class HandZone : MonoBehaviour
             Position = position;
             Rotation = rotation;
             Scale = scale;
+        }
+    }
+
+    private readonly struct AssistCandidate
+    {
+        public readonly CardView View;
+        public readonly CardReleaseTarget Target;
+        public readonly int Value;
+        public readonly int HandIndex;
+
+        public AssistCandidate(CardView view, CardReleaseTarget target, int value, int handIndex)
+        {
+            View = view;
+            Target = target;
+            Value = value;
+            HandIndex = handIndex;
         }
     }
 
@@ -182,9 +206,13 @@ public class HandZone : MonoBehaviour
         }
 
         PollHandState();
-        PollCardHotkeys();
+        if (!CardsLocked)
+        {
+            PollCardHotkeys();
+            PollAssistSelection();
+        }
 
-        if (_pendingCard != null)
+        if (!CardsLocked && _pendingCard != null)
         {
             UpdateCardReleaseHoverOverlay();
             PollPendingCardAim();
@@ -279,6 +307,9 @@ public class HandZone : MonoBehaviour
 
     public bool TryPlayCard(CardView view, CardReleaseTarget target)
     {
+        if (CardsLocked)
+            return false;
+
         if (view == null)
             return false;
 
@@ -381,7 +412,7 @@ public class HandZone : MonoBehaviour
         if (!animate)
         {
             view.Snap(view.RectTransform.anchoredPosition, 1f, 0f);
-            view.SetInteractable(true);
+            view.SetInteractable(!CardsLocked);
         }
 
         return true;
@@ -418,6 +449,143 @@ public class HandZone : MonoBehaviour
 
         ChangeInteractionState(CardInteractionState.Pending, view);
         MovePendingCardToHotkeyAnchor(view);
+    }
+
+    public static bool TryHandleAssistTargetClick(Vector2Int targetCell)
+    {
+        return !CardsLocked && ActiveInstance != null && ActiveInstance.TryHandleAssistTargetClickInternal(targetCell);
+    }
+
+    public static bool HasAssistSelection => ActiveInstance != null && ActiveInstance._hasAssistSelection;
+
+    public static bool IsAssistTargetCell(Vector2Int targetCell)
+    {
+        return ActiveInstance != null &&
+               ActiveInstance._hasAssistSelection &&
+               ActiveInstance._assistTargetCell == targetCell;
+    }
+
+    public static void ClearAssistSelectionActive(bool restoreCard = true)
+    {
+        ActiveInstance?.ClearAssistSelection(restoreCard);
+    }
+
+    public static bool TryCycleAssistSelection()
+    {
+        return ActiveInstance != null && ActiveInstance.TryCycleAssistSelectionInternal();
+    }
+
+    private bool TryHandleAssistTargetClickInternal(Vector2Int targetCell)
+    {
+        if (_interactionState == CardInteractionState.Pending ||
+            _interactionState == CardInteractionState.Dragging ||
+            _interactionState == CardInteractionState.Recycling)
+            return false;
+
+        if (_hasAssistSelection && _assistCard != null && _assistTargetCell == targetCell)
+        {
+            var card = _assistCard;
+            var target = _assistReleaseTarget;
+            ClearAssistSelection(false);
+            return TryPlayCard(card, target);
+        }
+
+        if (!BuildAssistCandidates(targetCell))
+        {
+            ClearAssistSelection(true);
+            return false;
+        }
+
+        ClearAssistSelection(true);
+        _assistCandidates.Sort((a, b) =>
+        {
+            int valueCompare = a.Value.CompareTo(b.Value);
+            return valueCompare != 0 ? valueCompare : a.HandIndex.CompareTo(b.HandIndex);
+        });
+
+        _assistTargetCell = targetCell;
+        ApplyAssistCandidate(0);
+        return true;
+    }
+
+    private void PollAssistSelection()
+    {
+        if (!_hasAssistSelection)
+            return;
+
+        float scroll = Input.mouseScrollDelta.y;
+        if (Mathf.Approximately(scroll, 0f))
+            return;
+
+        TryCycleAssistSelectionInternal();
+    }
+
+    private bool TryCycleAssistSelectionInternal()
+    {
+        if (!_hasAssistSelection || _assistCandidates.Count <= 1)
+            return false;
+
+        int next = (_assistCandidateIndex + 1) % _assistCandidates.Count;
+        ApplyAssistCandidate(next);
+        return true;
+    }
+
+    private void ApplyAssistCandidate(int index)
+    {
+        if (index < 0 || index >= _assistCandidates.Count)
+            return;
+
+        var candidate = _assistCandidates[index];
+        _hasAssistSelection = true;
+        _assistCandidateIndex = index;
+        _assistCard = candidate.View;
+        _assistReleaseTarget = candidate.Target;
+        ChangeInteractionState(CardInteractionState.Hovered, candidate.View);
+    }
+
+    private bool BuildAssistCandidates(Vector2Int watchedCell)
+    {
+        _assistCandidates.Clear();
+        if (!TryResolvePlayer(out var playerHandle) || CardEffectSystem.Instance == null)
+            return false;
+
+        for (int i = 0; i < _hand.Count; i++)
+        {
+            var view = _hand[i];
+            if (view == null || view.Card == null)
+                continue;
+
+            CardReleaseRuleRegistry.CollectCandidates(view.Card, playerHandle, _assistCandidateCells);
+            for (int j = 0; j < _assistCandidateCells.Count; j++)
+            {
+                if (!CardReleaseRuleRegistry.TryResolve(view.Card, playerHandle, _assistCandidateCells[j], out var releaseTarget))
+                    continue;
+
+                if (!CardEffectSystem.Instance.TryPreviewDamageCell(playerHandle, view.Card, releaseTarget, watchedCell))
+                    continue;
+
+                _assistCandidates.Add(new AssistCandidate(view, releaseTarget, view.Card.cost, i));
+            }
+        }
+
+        return _assistCandidates.Count > 0;
+    }
+
+    private void ClearAssistSelection(bool restoreCard)
+    {
+        if (!_hasAssistSelection)
+            return;
+
+        var card = _assistCard;
+        _hasAssistSelection = false;
+        _assistCard = null;
+        _assistTargetCell = default;
+        _assistReleaseTarget = default;
+        _assistCandidateIndex = -1;
+        _assistCandidates.Clear();
+
+        if (restoreCard && _interactionState == CardInteractionState.Hovered && _stateCard == card)
+            ChangeInteractionState(CardInteractionState.Idle, null);
     }
 
     private void HandleCardHoverEnter(CardView view)
@@ -481,6 +649,8 @@ public class HandZone : MonoBehaviour
         ExitInteractionState(_interactionState, _stateCard, nextState);
         _interactionState = nextState;
         _stateCard = nextCard;
+        if (nextState != CardInteractionState.Hovered || nextCard != _assistCard)
+            ClearAssistSelection(false);
         IsAnyCardInteractionActive = nextState != CardInteractionState.Idle;
         EnterInteractionState(nextState, nextCard);
     }
@@ -733,6 +903,26 @@ public class HandZone : MonoBehaviour
         return true;
     }
 
+    public static void SetCardsLocked(bool locked)
+    {
+        CardsLocked = locked;
+        var instance = ActiveInstance;
+        if (instance == null)
+            return;
+
+        if (locked)
+        {
+            TryCancelActivePendingCard();
+            instance.ClearAssistSelection(true);
+        }
+        else
+        {
+            instance.RefillHandToTarget(true);
+        }
+
+        instance.ApplyCardInteractableState();
+    }
+
     private void PollHandState()
     {
         if (handState == null)
@@ -795,13 +985,13 @@ public class HandZone : MonoBehaviour
             var slot = slots[i];
             if (animate)
             {
-                view.SetInteractable(true);
+                view.SetInteractable(!CardsLocked);
                 view.TweenTo(slot.Position, slot.Scale, slot.Rotation, cardTweenDuration, cardEase);
             }
             else
             {
                 view.Snap(slot.Position, slot.Scale, slot.Rotation);
-                view.SetInteractable(true);
+                view.SetInteractable(!CardsLocked);
             }
         }
 
@@ -995,6 +1185,8 @@ public class HandZone : MonoBehaviour
         _draggingCard = null;
         _pendingCard = null;
         _pendingCardIndex = -1;
+        _hasAssistSelection = false;
+        _assistCard = null;
         IsAnyCardAiming = false;
         ClearCardReleaseOverlay();
 
@@ -1009,6 +1201,15 @@ public class HandZone : MonoBehaviour
         }
 
         _hand.Clear();
+    }
+
+    private void ApplyCardInteractableState()
+    {
+        for (int i = 0; i < _hand.Count; i++)
+        {
+            if (_hand[i] != null)
+                _hand[i].SetInteractable(!CardsLocked);
+        }
     }
 
     private void MoveCardToPointer(CardView view, PointerEventData eventData)
