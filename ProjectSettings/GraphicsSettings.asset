@@ -3,7 +3,7 @@
 --- !u!30 &1
 GraphicsSettings:
   m_ObjectHideFlags: 0
-  serializedVersion: 14
+  serializedVersion: 15
   m_Deferred:
     m_Mode: 1
     m_Shader: {fileID: 69, guid: 0000000000000000f000000000000000, type: 0}
@@ -13,9 +13,6 @@ GraphicsSettings:
   m_ScreenSpaceShadows:
     m_Mode: 1
     m_Shader: {fileID: 64, guid: 0000000000000000f000000000000000, type: 0}
-  m_LegacyDeferred:
-    m_Mode: 1
-    m_Shader: {fileID: 63, guid: 0000000000000000f000000000000000, type: 0}
   m_DepthNormals:
     m_Mode: 1
     m_Shader: {fileID: 62, guid: 0000000000000000f000000000000000, type: 0}
@@ -34,9 +31,19 @@ GraphicsSettings:
   - {fileID: 15104, guid: 0000000000000000f000000000000000, type: 0}
   - {fileID: 15105, guid: 0000000000000000f000000000000000, type: 0}
   - {fileID: 15106, guid: 0000000000000000f000000000000000, type: 0}
-  - {fileID: 10753, guid: 0000000000000000f000000000000000, type: 0}
   - {fileID: 10770, guid: 0000000000000000f000000000000000, type: 0}
   - {fileID: 10783, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 4800000, guid: 85c602a0612fb2445999540257cd5fa8, type: 3}
+  - {fileID: 4800000, guid: ca48d4412f96285409b2044fec58fa5b, type: 3}
+  - {fileID: 4800000, guid: b09c6e9bf9823404c9c493fa252f9935, type: 3}
+  - {fileID: 4800000, guid: a736dc5097a5b84498c255b2c83208b8, type: 3}
+  - {fileID: 4800000, guid: 4a249b3d128c38a4d8fec636588d440e, type: 3}
+  - {fileID: 4800000, guid: 7e7fb227e4454375b549859cd4d75aa4, type: 3}
+  - {fileID: 4800000, guid: 4f9f55d1d7d24cb9824799f6da6d51b2, type: 3}
+  - {fileID: 4800000, guid: 2dbdb8f66df14e44ab2dbd53d7c52201, type: 3}
+  - {fileID: 4800000, guid: 6a2a7b7b92f14948bd8134249f1d7e9d, type: 3}
+  - {fileID: 4800000, guid: 97ff89d3e93647419ff7f6eb20b6da41, type: 3}
+  - {fileID: 4800000, guid: 0c941db293a249ea94af64799e6c2aa2, type: 3}
   m_PreloadedShaders: []
   m_PreloadShadersBatchTimeLimit: -1
   m_SpritesDefaultMaterial: {fileID: 10754, guid: 0000000000000000f000000000000000,
@@ -51,6 +58,7 @@ GraphicsSettings:
   m_LightmapStripping: 0
   m_FogStripping: 0
   m_InstancingStripping: 0
+  m_BrgStripping: 0
   m_LightmapKeepPlain: 1
   m_LightmapKeepDirCombined: 1
   m_LightmapKeepDynamicPlain: 1
@@ -68,3 +76,6 @@ GraphicsSettings:
   m_SRPDefaultSettings:
     UnityEngine.Rendering.Universal.UniversalRenderPipeline: {fileID: 11400000, guid: 18dc0cd2c080841dea60987a38ce93fa,
       type: 2}
+  m_LightProbeOutsideHullStrategy: 0
+  m_CameraRelativeLightCulling: 0
+  m_CameraRelativeShadowCulling: 0

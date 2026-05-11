@@ -15,7 +15,8 @@ public enum StageEventType : byte
     EntityDestroyed,
     EntityMoved,
     PresentationBatchBegin,
-    PresentationBatchEnd
+    PresentationBatchEnd,
+    PresentationBeat
 }
 
 public sealed class IntentResolutionContext
@@ -38,6 +39,7 @@ public readonly struct StageEvent
     public readonly Vector2Int To;
     public readonly int SourceTagId;
     public readonly IntentResolutionContext ResolutionContext;
+    public readonly EnemyBeatKind EnemyBeatKind;
 
     public StageEvent(
         StageEventType type,
@@ -49,7 +51,8 @@ public readonly struct StageEvent
         Vector2Int from = default,
         Vector2Int to = default,
         int sourceTagId = 0,
-        IntentResolutionContext resolutionContext = null)
+        IntentResolutionContext resolutionContext = null,
+        EnemyBeatKind enemyBeatKind = EnemyBeatKind.None)
     {
         Type = type;
         Actor = actor;
@@ -61,6 +64,7 @@ public readonly struct StageEvent
         To = to;
         SourceTagId = sourceTagId;
         ResolutionContext = resolutionContext;
+        EnemyBeatKind = enemyBeatKind;
     }
 }
 

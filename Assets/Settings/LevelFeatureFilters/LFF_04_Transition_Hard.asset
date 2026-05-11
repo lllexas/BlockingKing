@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe74a0b229b27be469fe388b73ade974, type: 3}
   m_Name: LFF_04_Transition_Hard
   m_EditorClassIdentifier: 
-  widthRange: {x: 10, y: 22}
-  heightRange: {x: 9, y: 18}
-  areaRange: {x: 121, y: 350}
-  wallRateRange: {x: 0.32, y: 0.46}
-  effectiveBoxRange: {x: 9, y: 20}
+  widthRange: {x: 10, y: 35}
+  heightRange: {x: 10, y: 35}
+  areaRange: {x: 1, y: 2500}
+  wallRateRange: {x: 0, y: 1}
+  effectiveBoxRange: {x: 5, y: 20}

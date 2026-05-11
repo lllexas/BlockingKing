@@ -30,8 +30,14 @@ public class EntitySystem : MonoBehaviour
         Instance = this;
     }
 
+    private void OnEnable()
+    {
+        TryRegisterIntentSystem();
+    }
+
     private void OnDestroy()
     {
+        UnregisterIntentSystem();
         TickSystem.OnTick -= UpdateTick;
         if (Instance == this)
             Instance = null;
@@ -55,6 +61,7 @@ public class EntitySystem : MonoBehaviour
     private System.Collections.Generic.Queue<int> _freeIds;
     private readonly HashSet<int> _wallTerrainIds = new();
     private int _defaultFloorTerrainId;
+    private IntentSystem _registeredIntentSystem;
 
     #endregion
 
@@ -282,9 +289,43 @@ public class EntitySystem : MonoBehaviour
 
     private void UpdateTick()
     {
+        var intentSystem = IntentSystem.Instance;
+        if (intentSystem != null && !intentSystem.CanAcceptTick)
+            return;
+
         GlobalTick++;
         SpawnSystem.Instance?.Tick();
-        IntentSystem.Instance?.Tick();
+        TryRegisterIntentSystem();
+        bool intentQueueStarted = intentSystem != null && intentSystem.Tick();
+        if (!intentQueueStarted)
+            EnemyAutoAISystem.Instance?.Tick();
+    }
+
+    private void TryRegisterIntentSystem()
+    {
+        var intentSystem = IntentSystem.Instance;
+        if (intentSystem == null || _registeredIntentSystem == intentSystem)
+            return;
+
+        UnregisterIntentSystem();
+        _registeredIntentSystem = intentSystem;
+        _registeredIntentSystem.IntentQueueCompleted += HandleIntentQueueCompleted;
+    }
+
+    private void UnregisterIntentSystem()
+    {
+        if (_registeredIntentSystem == null)
+            return;
+
+        _registeredIntentSystem.IntentQueueCompleted -= HandleIntentQueueCompleted;
+        _registeredIntentSystem = null;
+    }
+
+    private void HandleIntentQueueCompleted()
+    {
+        if (!isActiveAndEnabled || !_initialized)
+            return;
+
         EnemyAutoAISystem.Instance?.Tick();
     }
 

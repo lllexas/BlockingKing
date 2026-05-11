@@ -185,8 +185,12 @@ public class GameFlowController : MonoBehaviour
         EnsureFacades();
         ApplyRunStartSettings();
 
-        if (_routeFrontend != null)
-            SetRouteVisible(false);
+        _routeFrontend = FindObjectOfType<RunRouteOnGUIFrontend>();
+        if (_routeFrontend == null)
+            _routeFrontend = gameObject.AddComponent<RunRouteOnGUIFrontend>();
+        _routeFrontend.Visible = true;
+        _routeFrontend.CloseDeck();
+        HandZone.SetCardsLocked(true);
 
         if (_roundController == null)
             _roundController = FindObjectOfType<RunRoundController>();
@@ -259,11 +263,13 @@ public class GameFlowController : MonoBehaviour
     public void EnterLevel()
     {
         IsInLevel = true;
+        HandZone.SetCardsLocked(false);
     }
 
     public void ExitLevel()
     {
         IsInLevel = false;
+        HandZone.SetCardsLocked(true);
     }
 
     private void ApplyRunStartSettings()

@@ -39,7 +39,24 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
     {
         None,
         Move,
-        AttackWall
+        AttackWall,
+        AttackOccupant
+    }
+
+    private readonly struct AggroTarget
+    {
+        public readonly EntityHandle Handle;
+        public readonly Vector2Int Position;
+        public readonly EntityType EntityType;
+        public readonly bool IsCoreBox;
+
+        public AggroTarget(EntityHandle handle, Vector2Int position, EntityType entityType, bool isCoreBox)
+        {
+            Handle = handle;
+            Position = position;
+            EntityType = entityType;
+            IsCoreBox = isCoreBox;
+        }
     }
 
     private void Awake()
@@ -88,35 +105,50 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
         if (entitySystem == null || intentSystem == null || !entitySystem.IsInitialized)
             return;
 
-        if (!TryFindCoreBox(entitySystem, out var coreHandle, out var corePosition))
+        if (!TryFindAggroTarget(entitySystem, out var aggroTarget))
             return;
 
         RefreshCurseLocks(entitySystem);
         ProcessErtongSplits(entitySystem);
         EnsureDistanceFields(entitySystem.entities);
-        BuildDistanceField(entitySystem, corePosition, _wallBreakDistanceField, true);
-        BuildDistanceField(entitySystem, corePosition, _noWallBreakDistanceField, false);
-        WriteEnemyIntents(entitySystem, intentSystem, coreHandle, corePosition);
+        BuildDistanceField(entitySystem, aggroTarget.Position, _wallBreakDistanceField, true);
+        BuildDistanceField(entitySystem, aggroTarget.Position, _noWallBreakDistanceField, false);
+        WriteEnemyIntents(entitySystem, intentSystem, aggroTarget);
     }
 
-    private bool TryFindCoreBox(EntitySystem entitySystem, out EntityHandle coreHandle, out Vector2Int corePosition)
+    private bool TryFindAggroTarget(EntitySystem entitySystem, out AggroTarget target)
     {
         var entities = entitySystem.entities;
+        int playerIndex = -1;
         for (int i = 0; i < entities.entityCount; i++)
         {
-            if (entities.coreComponents[i].EntityType != EntityType.Box)
+            ref var core = ref entities.coreComponents[i];
+            if (core.EntityType == EntityType.Player && playerIndex < 0)
+                playerIndex = i;
+
+            if (core.EntityType != EntityType.Box || !entities.propertyComponents[i].IsCore)
                 continue;
 
-            if (!entities.propertyComponents[i].IsCore)
-                continue;
-
-            coreHandle = entitySystem.GetHandleFromId(entities.coreComponents[i].Id);
-            corePosition = entities.coreComponents[i].Position;
+            target = new AggroTarget(
+                entitySystem.GetHandleFromId(core.Id),
+                core.Position,
+                core.EntityType,
+                true);
             return true;
         }
 
-        coreHandle = EntityHandle.None;
-        corePosition = Vector2Int.zero;
+        if (playerIndex >= 0)
+        {
+            var player = entities.coreComponents[playerIndex];
+            target = new AggroTarget(
+                entitySystem.GetHandleFromId(player.Id),
+                player.Position,
+                player.EntityType,
+                false);
+            return true;
+        }
+
+        target = default;
         return false;
     }
 
@@ -198,14 +230,16 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
         if (entityType == EntityType.Wall)
             return allowWallBreak ? Mathf.Max(2, CombatStats.GetCurrentHealth(entities.statusComponents[index]) + 1) : -1;
 
+        if (entityType == EntityType.Player)
+            return 1;
+
         return -1;
     }
 
     private void WriteEnemyIntents(
         EntitySystem entitySystem,
         IntentSystem intentSystem,
-        EntityHandle coreHandle,
-        Vector2Int corePosition)
+        AggroTarget aggroTarget)
     {
         var entities = entitySystem.entities;
         _reservedMoveCells.Clear();
@@ -227,20 +261,20 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
             bool canBreakWalls = !isGrenadier && !isArtillery && !isCurseCaster;
             int moveDistance = isErtong ? 4 : isGuokui ? 2 : 1;
 
-            if (isCurseCaster && TryMaintainCurseLock(entitySystem, core.Id, core.Position, corePosition))
+            if (isCurseCaster && aggroTarget.IsCoreBox && TryMaintainCurseLock(entitySystem, core.Id, core.Position, aggroTarget.Position))
                 continue;
 
-            if (AllowAttack && TryBuildSpecialAttack(entitySystem, core.Position, props, corePosition, out var specialAttackIntent))
+            if (AllowAttack &&
+                TryFindBlockingPlayerTarget(entitySystem, core.Position, canBreakWalls ? _wallBreakDistanceField : _noWallBreakDistanceField, out var blockingPlayerPosition) &&
+                TryBuildAttackAgainstTarget(entitySystem, core.Position, props, blockingPlayerPosition, out var blockingPlayerAttackIntent))
             {
-                intentSystem.SetIntent(enemyHandle, IntentType.Attack, specialAttackIntent);
+                intentSystem.SetIntent(enemyHandle, IntentType.Attack, blockingPlayerAttackIntent);
                 continue;
             }
 
-            if (AllowAttack && !isGrenadier && !isCrossbow && !isArtillery && !isCurseCaster && IsCrossAdjacent(core.Position, corePosition))
+            if (AllowAttack && TryBuildAttackAgainstTarget(entitySystem, core.Position, props, aggroTarget.Position, out var aggroAttackIntent))
             {
-                var attackIntent = intentSystem.Request<AttackIntent>();
-                attackIntent.Setup(corePosition);
-                intentSystem.SetIntent(enemyHandle, IntentType.Attack, attackIntent);
+                intentSystem.SetIntent(enemyHandle, IntentType.Attack, aggroAttackIntent);
                 continue;
             }
 
@@ -260,6 +294,14 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
                 continue;
             }
 
+            if (actionType == EnemyActionType.AttackOccupant)
+            {
+                var attackIntent = intentSystem.Request<AttackIntent>();
+                attackIntent.Setup(targetPosition);
+                intentSystem.SetIntent(enemyHandle, IntentType.Attack, attackIntent);
+                continue;
+            }
+
             if (actionType == EnemyActionType.Move)
             {
                 var moveIntent = intentSystem.Request<MoveIntent>();
@@ -270,11 +312,49 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
         }
     }
 
-    private bool TryBuildSpecialAttack(
+    private bool TryFindBlockingPlayerTarget(
+        EntitySystem entitySystem,
+        Vector2Int enemyPosition,
+        int[] movementField,
+        out Vector2Int playerPosition)
+    {
+        playerPosition = default;
+        if (movementField == null)
+            return false;
+
+        var entities = entitySystem.entities;
+        int enemyDistance = GetDistanceFieldValue(entities, movementField, enemyPosition);
+        if (enemyDistance <= 0)
+            return false;
+
+        for (int i = 0; i < entities.entityCount; i++)
+        {
+            if (entities.coreComponents[i].EntityType != EntityType.Player)
+                continue;
+
+            Vector2Int candidate = entities.coreComponents[i].Position;
+            int playerDistance = GetDistanceFieldValue(entities, movementField, candidate);
+            if (playerDistance >= 0 && playerDistance < enemyDistance)
+            {
+                playerPosition = candidate;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static int GetDistanceFieldValue(EntityComponents entities, int[] distanceField, Vector2Int position)
+    {
+        int index = ToMapIndex(entities, position);
+        return index >= 0 && index < distanceField.Length ? distanceField[index] : -1;
+    }
+
+    private bool TryBuildAttackAgainstTarget(
         EntitySystem entitySystem,
         Vector2Int enemyPosition,
         PropertyComponent props,
-        Vector2Int corePosition,
+        Vector2Int targetPosition,
         out AttackIntent attackIntent)
     {
         attackIntent = null;
@@ -282,18 +362,27 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
         if (IsEnemyKind(props, _grenadierTagId, "Grenadier") ||
             IsEnemyKind(props, _crossbowTagId, "Crossbow", "Arbalest"))
         {
-            if (!IsInCrossRange(enemyPosition, corePosition, rangedAttackRange))
+            if (!IsInCrossRange(enemyPosition, targetPosition, rangedAttackRange))
                 return false;
 
             attackIntent = IntentSystem.Instance.Request<AttackIntent>();
-            attackIntent.Setup(corePosition);
+            attackIntent.Setup(targetPosition);
             return true;
         }
 
         if (IsEnemyKind(props, _artilleryTagId, "Artillery", "Cannon"))
-            return TryBuildArtilleryAttack(entitySystem, enemyPosition, corePosition, out attackIntent);
+            return TryBuildArtilleryAttack(entitySystem, enemyPosition, targetPosition, out attackIntent);
 
-        return false;
+        if (IsEnemyKind(props, _curseCasterTagId, "Curse", "Caster", "Sorcerer"))
+            return false;
+
+        if (!IsCrossAdjacent(enemyPosition, targetPosition))
+            return false;
+
+        attackIntent = IntentSystem.Instance.Request<AttackIntent>();
+        attackIntent.Setup(targetPosition);
+        return true;
+
     }
 
     private void RefreshCurseLocks(EntitySystem entitySystem)
@@ -555,7 +644,7 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
                 continue;
 
             int score = nextDistance * 100
-                + (candidateAction == EnemyActionType.AttackWall ? 8 : CountEnemyNeighbors(entitySystem, next, enemyId) * 16)
+                + (candidateAction != EnemyActionType.Move ? 8 : CountEnemyNeighbors(entitySystem, next, enemyId) * 16)
                 + StableTieBreak(enemyId, i);
 
             if (score >= bestScore)
@@ -610,9 +699,12 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
             return EnemyActionType.None;
 
         EntityType entityType = entitySystem.entities.coreComponents[index].EntityType;
-        return entityType == EntityType.Wall
-            ? EnemyActionType.AttackWall
-            : EnemyActionType.None;
+        return entityType switch
+        {
+            EntityType.Wall => EnemyActionType.AttackWall,
+            EntityType.Player => EnemyActionType.AttackOccupant,
+            _ => EnemyActionType.None
+        };
     }
 
     private bool TryEnsureWallAttackTarget(EntitySystem entitySystem, Vector2Int targetPosition)

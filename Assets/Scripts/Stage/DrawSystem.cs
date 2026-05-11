@@ -37,6 +37,8 @@ public class DrawSystem : MonoBehaviour
     [SerializeField] private Material coreBoxGlassMaterial;
     [SerializeField] private Material enemyMaterial;
     [SerializeField] private Material wallMaterial;
+    [SerializeField] private Material unitFallbackMaterial;
+    [SerializeField] private Material boxGlassFallbackMaterial;
 
     [Header("Enemy Colors")]
     [SerializeField] private Color enemyGoColor = new(0.92f, 0.88f, 0.78f);
@@ -110,6 +112,9 @@ public class DrawSystem : MonoBehaviour
     private bool _hasIntentContext;
     private bool _hasBatchContext;
     private bool _hasActiveIntentSlot;
+    private bool _loggedEntitySystemUnavailable;
+    private bool _loggedEmptyEntities;
+    private bool _loggedStatsFontUnavailable;
 
     private void Awake()
     {
@@ -171,7 +176,15 @@ public class DrawSystem : MonoBehaviour
     {
         var entitySystem = EntitySystem.Instance;
         if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+        {
+            if (!_loggedEntitySystemUnavailable)
+            {
+                Debug.LogWarning("[DrawSystem] EntitySystem is unavailable or not initialized. Entity meshes and stats text will not draw.");
+                _loggedEntitySystemUnavailable = true;
+            }
+
             return;
+        }
 
         _playerCount = 0;
         _boxCount = 0;
@@ -182,6 +195,21 @@ public class DrawSystem : MonoBehaviour
         _wallCount = 0;
 
         var entities = entitySystem.entities;
+        if (entities.entityCount <= 0)
+        {
+            if (!_loggedEmptyEntities)
+            {
+                Debug.LogWarning("[DrawSystem] EntitySystem has no entities. Entity meshes and stats text will not draw.");
+                _loggedEmptyEntities = true;
+            }
+
+            HideUnusedStatTexts();
+            return;
+        }
+
+        _loggedEntitySystemUnavailable = false;
+        _loggedEmptyEntities = false;
+
         for (int i = 0; i < entities.entityCount; i++)
         {
             ref var core = ref entities.coreComponents[i];
@@ -504,7 +532,17 @@ public class DrawSystem : MonoBehaviour
     {
         var font = ResolveStatsFont();
         if (font == null || font.atlasTexture == null)
+        {
+            if (!_loggedStatsFontUnavailable)
+            {
+                Debug.LogWarning("[DrawSystem] TMP font is unavailable. Stats text will not draw. Assign Stats Font or configure TMP Settings default font.");
+                _loggedStatsFontUnavailable = true;
+            }
+
             return;
+        }
+
+        _loggedStatsFontUnavailable = false;
 
         if (_runtimeStatsVisibleMaterial != null
             && _runtimeStatsOccludedMaterial != null
@@ -658,6 +696,7 @@ public class DrawSystem : MonoBehaviour
         _registeredBus.On(StageEventType.EntityDestroyed, OnStageEvent);
         _registeredBus.On(StageEventType.PresentationBatchBegin, OnStageEvent, 100);
         _registeredBus.On(StageEventType.PresentationBatchEnd, OnStageEvent, -100);
+        _registeredBus.On(StageEventType.PresentationBeat, OnStageEvent, 100);
     }
 
     private void UnregisterEventBus()
@@ -672,6 +711,7 @@ public class DrawSystem : MonoBehaviour
         _registeredBus.Off(StageEventType.EntityDestroyed, OnStageEvent);
         _registeredBus.Off(StageEventType.PresentationBatchBegin, OnStageEvent);
         _registeredBus.Off(StageEventType.PresentationBatchEnd, OnStageEvent);
+        _registeredBus.Off(StageEventType.PresentationBeat, OnStageEvent);
         _registeredBus = null;
     }
 
@@ -713,6 +753,13 @@ public class DrawSystem : MonoBehaviour
                 break;
             case StageEventType.PresentationBatchEnd:
                 _hasBatchContext = false;
+                _hasIntentContext = false;
+                _hasActiveIntentSlot = false;
+                break;
+            case StageEventType.PresentationBeat:
+                _hasIntentContext = true;
+                _hasActiveIntentSlot = false;
+                EnsureIntentBeat();
                 _hasIntentContext = false;
                 _hasActiveIntentSlot = false;
                 break;
@@ -891,18 +938,21 @@ public class DrawSystem : MonoBehaviour
         if (wallMesh == null)
             wallMesh = CreatePrimitiveMesh(PrimitiveType.Cube);
 
+        EnsureUnitFallbackMaterial();
+        EnsureBoxGlassFallbackMaterial();
+
         if (playerMaterial == null)
-            playerMaterial = CreateMaterial(new Color(0.2f, 0.55f, 1f));
+            playerMaterial = CreateUnitMaterial(new Color(0.2f, 0.55f, 1f));
         if (boxMaterial == null)
-            boxMaterial = CreateMaterial(new Color(0.9f, 0.65f, 0.25f));
+            boxMaterial = CreateUnitMaterial(new Color(0.9f, 0.65f, 0.25f));
         if (coreBoxMaterial == null)
-            coreBoxMaterial = CreateMaterial(new Color(0.12f, 0.55f, 1f));
+            coreBoxMaterial = CreateUnitMaterial(new Color(0.12f, 0.55f, 1f));
         if (boxGlassMaterial == null)
             boxGlassMaterial = CreateGlassMaterial(new Color(1f, 0.75f, 0.22f, 1f));
         if (coreBoxGlassMaterial == null)
             coreBoxGlassMaterial = CreateGlassMaterial(new Color(0.12f, 0.7f, 1f, 1f));
         if (enemyMaterial == null)
-            enemyMaterial = CreateMaterial(enemyGoColor);
+            enemyMaterial = CreateUnitMaterial(enemyGoColor);
         EnsureEnemyMaterials();
         if (playerMaterial != null)
             playerMaterial.enableInstancing = true;
@@ -930,12 +980,12 @@ public class DrawSystem : MonoBehaviour
     {
         SetMaterialColor(enemyMaterial, enemyGoColor);
         _enemyMaterialsByKind[(int)EnemyVisualKind.Go] = enemyMaterial;
-        _enemyMaterialsByKind[(int)EnemyVisualKind.Grenadier] ??= CreateMaterial(enemyGrenadierColor);
-        _enemyMaterialsByKind[(int)EnemyVisualKind.Crossbow] ??= CreateMaterial(enemyCrossbowColor);
-        _enemyMaterialsByKind[(int)EnemyVisualKind.Artillery] ??= CreateMaterial(enemyArtilleryColor);
-        _enemyMaterialsByKind[(int)EnemyVisualKind.CurseCaster] ??= CreateMaterial(enemyCurseCasterColor);
-        _enemyMaterialsByKind[(int)EnemyVisualKind.Guokui] ??= CreateMaterial(enemyGuokuiColor);
-        _enemyMaterialsByKind[(int)EnemyVisualKind.Ertong] ??= CreateMaterial(enemyErtongColor);
+        _enemyMaterialsByKind[(int)EnemyVisualKind.Grenadier] ??= CreateUnitMaterial(enemyGrenadierColor);
+        _enemyMaterialsByKind[(int)EnemyVisualKind.Crossbow] ??= CreateUnitMaterial(enemyCrossbowColor);
+        _enemyMaterialsByKind[(int)EnemyVisualKind.Artillery] ??= CreateUnitMaterial(enemyArtilleryColor);
+        _enemyMaterialsByKind[(int)EnemyVisualKind.CurseCaster] ??= CreateUnitMaterial(enemyCurseCasterColor);
+        _enemyMaterialsByKind[(int)EnemyVisualKind.Guokui] ??= CreateUnitMaterial(enemyGuokuiColor);
+        _enemyMaterialsByKind[(int)EnemyVisualKind.Ertong] ??= CreateUnitMaterial(enemyErtongColor);
     }
 
     private void ResetEnemyCounts()
@@ -977,15 +1027,64 @@ public class DrawSystem : MonoBehaviour
         return mesh;
     }
 
-    private static Material CreateMaterial(Color color)
+    private void EnsureUnitFallbackMaterial()
     {
-        var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+        if (unitFallbackMaterial != null)
+        {
+            unitFallbackMaterial.enableInstancing = true;
+            return;
+        }
+
+        unitFallbackMaterial = Resources.Load<Material>("DrawSystemLitFallback");
+        if (unitFallbackMaterial != null)
+        {
+            unitFallbackMaterial.enableInstancing = true;
+            return;
+        }
+
+        Debug.LogWarning("[DrawSystem] Unit fallback material was not assigned and Resources/DrawSystemLitFallback was not found. Falling back to Shader.Find; this may fail in Player builds if the shader is stripped.");
+    }
+
+    private Material CreateUnitMaterial(Color color)
+    {
+        if (unitFallbackMaterial != null)
+        {
+            var clonedMaterial = new Material(unitFallbackMaterial);
+            SetMaterialColor(clonedMaterial, color);
+            return clonedMaterial;
+        }
+
+        var shader = FindFirstShader(
+            "Universal Render Pipeline/Lit",
+            "Universal Render Pipeline/Simple Lit",
+            "Standard");
+        if (shader == null)
+        {
+            Debug.LogError("[DrawSystem] Could not find a lit unit shader. Assign Unit Fallback Material or create Assets/Resources/DrawSystemLitFallback.mat.");
+            return null;
+        }
+
         var material = new Material(shader);
-        material.color = color;
-        material.SetColor("_Color", color);
-        material.SetColor("_BaseColor", color);
-        material.enableInstancing = true;
+        SetMaterialColor(material, color);
         return material;
+    }
+
+    private void EnsureBoxGlassFallbackMaterial()
+    {
+        if (boxGlassFallbackMaterial != null)
+        {
+            boxGlassFallbackMaterial.enableInstancing = true;
+            return;
+        }
+
+        boxGlassFallbackMaterial = Resources.Load<Material>("DrawSystemBoxGlassFallback");
+        if (boxGlassFallbackMaterial != null)
+        {
+            boxGlassFallbackMaterial.enableInstancing = true;
+            return;
+        }
+
+        Debug.LogWarning("[DrawSystem] Box glass fallback material was not assigned and Resources/DrawSystemBoxGlassFallback was not found. Falling back to Shader.Find; this may fail in Player builds if the shader is stripped.");
     }
 
     private static void SetMaterialColor(Material material, Color color)
@@ -999,11 +1098,27 @@ public class DrawSystem : MonoBehaviour
         material.enableInstancing = true;
     }
 
-    private static Material CreateGlassMaterial(Color color)
+    private Material CreateGlassMaterial(Color color)
     {
-        var shader = Shader.Find("BlockingKing/BoxGlass")
-                     ?? Shader.Find("Universal Render Pipeline/Unlit")
-                     ?? Shader.Find("Unlit/Color");
+        if (boxGlassFallbackMaterial != null)
+        {
+            var clonedMaterial = new Material(boxGlassFallbackMaterial)
+            {
+                renderQueue = 3050
+            };
+            SetMaterialColor(clonedMaterial, color);
+            return clonedMaterial;
+        }
+
+        var shader = FindFirstShader(
+            "BlockingKing/BoxGlass",
+            "Universal Render Pipeline/Unlit",
+            "Unlit/Color");
+        if (shader == null)
+        {
+            Debug.LogError("[DrawSystem] Could not find a glass shader. Assign Box Glass Fallback Material or create Assets/Resources/DrawSystemBoxGlassFallback.mat.");
+            return null;
+        }
 
         var material = new Material(shader);
         material.color = color;
@@ -1012,6 +1127,18 @@ public class DrawSystem : MonoBehaviour
         material.renderQueue = 3050;
         material.enableInstancing = true;
         return material;
+    }
+
+    private static Shader FindFirstShader(params string[] shaderNames)
+    {
+        foreach (string shaderName in shaderNames)
+        {
+            var shader = Shader.Find(shaderName);
+            if (shader != null)
+                return shader;
+        }
+
+        return null;
     }
 
     private readonly struct StatTextPair

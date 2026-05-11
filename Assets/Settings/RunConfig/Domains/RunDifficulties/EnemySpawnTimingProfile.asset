@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a32b034486745a947be0b4923ee02d5c, type: 3}
+  m_Name: EnemySpawnTimingProfile
+  m_EditorClassIdentifier: 
+  tableId: 
+  displayName: 
+  description: 
+  enabled: 1
+  rows:
+  - roundIndex: 1
+    label: 
+    spawnInterval: 10
+    initialDelay: 10
+    jitter: 1
+  - roundIndex: 2
+    label: 
+    spawnInterval: 9
+    initialDelay: 9
+    jitter: 1
+  - roundIndex: 3
+    label: 
+    spawnInterval: 8
+    initialDelay: 9
+    jitter: 1
+  - roundIndex: 4
+    label: 
+    spawnInterval: 7
+    initialDelay: 7
+    jitter: 1

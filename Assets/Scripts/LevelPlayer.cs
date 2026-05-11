@@ -81,6 +81,8 @@ public class LevelPlayer : MonoBehaviour
 
     [Header("ECS")]
     [SerializeField] private int maxEntityCount = 256;
+    [SerializeField, Tooltip("Controls how enemy move/attack presentation is grouped.")]
+    private EnemyIntentPresentationMode enemyIntentPresentationMode = EnemyIntentPresentationMode.AllInOneBatch;
 
     [Header("Play Mode")]
     [SerializeField] private LevelPlayMode defaultPlayMode = LevelPlayMode.Classic;
@@ -297,18 +299,23 @@ public class LevelPlayer : MonoBehaviour
         _isSettled = false;
         _lastResult = LevelPlayResult.None;
 
+        GameFlowController.Instance?.EnterLevel();
         _playRule.Begin(this, request);
         ApplyRunPlayerStatusToPlayerEntity();
         ConfigureSpawnDifficulty(request, _activeDifficulty);
 
-        GameFlowController.Instance?.EnterLevel();
         TickSystem.OnTick -= HandleTick;
         TickSystem.OnTick += HandleTick;
 
         if (_playRule.ShouldStartSpawningOnBegin)
+        {
             SpawnSystem.Instance?.StartSpawning();
+            EnemyAutoAISystem.Instance?.Tick();
+        }
         else
+        {
             SpawnSystem.Instance?.StopSpawning();
+        }
 
         Debug.Log($"[LevelPlayer] Playback started: {_level.levelName}, mode={_playMode}, steps={_remainingSteps}");
         _playRule.Evaluate(this);
@@ -319,7 +326,8 @@ public class LevelPlayer : MonoBehaviour
         TickSystem.OnTick -= HandleTick;
         _playRule?.End(this);
         SpawnSystem.Instance?.StopSpawning();
-        HandZone.SetCardsLocked(false);
+        var flow = GameFlowController.Instance;
+        HandZone.SetCardsLocked(flow == null || !flow.IsInLevel);
         _playRule = null;
         _isPlaying = false;
         _activeDifficulty = RunDifficultySnapshot.Default;
@@ -585,6 +593,7 @@ public class LevelPlayer : MonoBehaviour
         status.BaseMaxHealth = maxHp;
         status.MaxHealthModifier = 0;
         status.DamageTaken = Mathf.Max(0, maxHp - currentHp);
+        ApplyPlayerStatusToCoreBoxes(entitySystem, maxHp, currentHp);
     }
 
     private void SyncRunPlayerStatusFromPlayerEntity()
@@ -623,6 +632,35 @@ public class LevelPlayer : MonoBehaviour
         }
 
         return false;
+    }
+
+    private static void ApplyPlayerStatusToCoreBoxes(EntitySystem entitySystem, int maxHp, int currentHp)
+    {
+        if (entitySystem?.entities == null)
+            return;
+
+        var entities = entitySystem.entities;
+        maxHp = Mathf.Max(1, maxHp);
+        currentHp = Mathf.Clamp(currentHp, 0, maxHp);
+        for (int i = 0; i < entities.entityCount; i++)
+        {
+            if (entities.coreComponents[i].EntityType != EntityType.Box || !entities.propertyComponents[i].IsCore)
+                continue;
+
+            ref var status = ref entities.statusComponents[i];
+            status.BaseMaxHealth = maxHp;
+            status.MaxHealthModifier = 0;
+            status.DamageTaken = Mathf.Max(0, maxHp - currentHp);
+        }
+    }
+
+    private bool IsPlayerAlive()
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || !TryFindPlayerIndex(entitySystem, out int playerIndex))
+            return false;
+
+        return CombatStats.GetCurrentHealth(entitySystem.entities.statusComponents[playerIndex]) > 0;
     }
 
     internal int AwardClassicPhaseOneGold(int count)
@@ -898,7 +936,8 @@ public class LevelPlayer : MonoBehaviour
             entitySystem = gameObject.AddComponent<EntitySystem>();
 
         EnsureRuntimeSystem<EventBusSystem>();
-        EnsureRuntimeSystem<IntentSystem>();
+        var intentSystem = EnsureRuntimeSystem<IntentSystem>();
+        intentSystem.ConfigureEnemyIntentPresentation(enemyIntentPresentationMode);
         EnsureRuntimeSystem<MoveSystem>();
         EnsureRuntimeSystem<AttackSystem>();
         var cardEffectSystem = EnsureRuntimeSystem<CardEffectSystem>();
@@ -907,6 +946,7 @@ public class LevelPlayer : MonoBehaviour
         var auraResolutionSystem = EnsureRuntimeSystem<AuraResolutionSystem>();
         var drawSystem = EnsureRuntimeSystem<DrawSystem>();
         EnsureRuntimeSystem<EnemyIntentOverlaySystem>();
+        EnsureRuntimeSystem<StageBeatAudioSystem>();
         EnsureRuntimeSystem<UserInputReader>();
         drawSystem.SetWallMaterial(_materialInstance);
 
@@ -992,9 +1032,34 @@ public class LevelPlayer : MonoBehaviour
 
         spawnSystem.ConfigureDifficultyProfile(
             difficulty.EnemySpawnDifficultyProfile,
+            difficulty.EnemySpawnTimingProfile,
             difficulty.OverallDifficulty,
             routeLayer,
             routeLayerCount);
+
+        RearmEnemyTargetCounters(ResolveTagID("Target.Enemy", DefaultTargetEnemyTagID));
+    }
+
+    private void RearmEnemyTargetCounters(int targetEnemyTagID)
+    {
+        if (targetEnemyTagID <= 0)
+            return;
+
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+            return;
+
+        var entities = entitySystem.entities;
+        for (int i = 0; i < entities.entityCount; i++)
+        {
+            if (entities.coreComponents[i].EntityType != EntityType.Target ||
+                entities.propertyComponents[i].SourceTagId != targetEnemyTagID)
+            {
+                continue;
+            }
+
+            SetupEnemyTargetCounter(entitySystem, i, targetEnemyTagID);
+        }
     }
 
     private RunDifficultySnapshot ResolveDifficulty(LevelPlayRequest request)
@@ -1014,7 +1079,7 @@ public class LevelPlayer : MonoBehaviour
             if (snapshot.OverallDifficulty <= 0f && request.OverallDifficulty > 0f)
                 snapshot.OverallDifficulty = request.OverallDifficulty;
 #pragma warning restore CS0618
-            if (snapshot.EnemySpawnDifficultyProfile != null || snapshot.OverallDifficulty > 0f)
+            if (snapshot.EnemySpawnDifficultyProfile != null || snapshot.EnemySpawnTimingProfile != null || snapshot.OverallDifficulty > 0f)
             {
                 if (snapshot.EnemyHealthMultiplier <= 0f)
                     snapshot.EnemyHealthMultiplier = 1f;
@@ -1234,16 +1299,29 @@ public class LevelPlayer : MonoBehaviour
         }
 
         if (_materialInstance == null)
-            _materialInstance = new Material(Shader.Find("BlockingKing/LevelGeometric")
-                                          ?? Shader.Find("Universal Render Pipeline/Lit"));
+        {
+            var shader = Shader.Find("BlockingKing/LevelGeometric");
+            if (shader == null)
+            {
+                Debug.LogError("[LevelPlayer] Shader.Find failed: BlockingKing/LevelGeometric. Add it to Always Included Shaders or reference a material in scene/assets.");
+                shader = Shader.Find("Universal Render Pipeline/Lit");
+            }
+
+            _materialInstance = new Material(shader);
+        }
     }
 
     private void EnsureOutsideDiamond(float mapWidth, float mapHeight)
     {
         if (_outsideDiamondMaterial == null)
         {
-            var shader = Shader.Find("BlockingKing/OutsideDiamond")
-                         ?? Shader.Find("Universal Render Pipeline/Unlit");
+            var shader = Shader.Find("BlockingKing/OutsideDiamond");
+            if (shader == null)
+            {
+                Debug.LogError("[LevelPlayer] Shader.Find failed: BlockingKing/OutsideDiamond. Add it to Always Included Shaders or reference a material in scene/assets.");
+                shader = Shader.Find("Universal Render Pipeline/Unlit");
+            }
+
             _outsideDiamondMaterial = new Material(shader)
             {
                 name = "OutsideDiamond_Runtime",
@@ -1356,10 +1434,19 @@ public class LevelPlayer : MonoBehaviour
         ref var props = ref entitySystem.entities.propertyComponents[index];
 
         EntityBP bp = _config != null ? _config.GetTagEntityBP(tagId) : null;
-        props.SpawnInterval = bp != null && bp.spawnInterval > 0 ? bp.spawnInterval : 3;
+        int fallbackInterval = bp != null && bp.spawnInterval > 0 ? bp.spawnInterval : 3;
+        Vector2Int spawnPosition = entitySystem.entities.coreComponents[index].Position;
+        var spawnSystem = SpawnSystem.Instance ?? GetComponent<SpawnSystem>();
+        props.SpawnInterval = spawnSystem != null
+            ? spawnSystem.ResolveSpawnInterval(fallbackInterval, spawnPosition, entitySystem.GlobalTick)
+            : fallbackInterval;
         props.SpawnEntityBP = bp != null ? bp.spawnEntityBP : null;
 
-        counter.NextTick = entitySystem.GlobalTick + (initialDelay >= 0 ? initialDelay : props.SpawnInterval);
+        int fallbackDelay = initialDelay >= 0 ? initialDelay : props.SpawnInterval;
+        int resolvedDelay = spawnSystem != null
+            ? spawnSystem.ResolveInitialSpawnDelay(fallbackDelay, spawnPosition, entitySystem.GlobalTick)
+            : fallbackDelay;
+        counter.NextTick = entitySystem.GlobalTick + resolvedDelay;
         Debug.Log($"[LevelPlayer] Target.Enemy counter armed: index={index}, interval={props.SpawnInterval}, nextTick={counter.NextTick}, spawnBP={(props.SpawnEntityBP != null ? props.SpawnEntityBP.name : "<default>")}");
     }
 
@@ -1578,6 +1665,12 @@ public class LevelPlayer : MonoBehaviour
 
         public void Evaluate(LevelPlayer player)
         {
+            if (!player.IsPlayerAlive())
+            {
+                player.SettleLevel(LevelPlayResult.Failure, "player destroyed");
+                return;
+            }
+
             if (_phase != Phase.CombatUnlocked)
                 return;
 
@@ -1749,6 +1842,12 @@ public class LevelPlayer : MonoBehaviour
 
         public void Evaluate(LevelPlayer player)
         {
+            if (!player.IsPlayerAlive())
+            {
+                player.SettleLevel(LevelPlayResult.Failure, "player destroyed");
+                return;
+            }
+
             if (player.AreAllBoxesOnTargets())
             {
                 player.SettleLevel(LevelPlayResult.Success, "all boxes are on targets");
@@ -1788,6 +1887,12 @@ public class LevelPlayer : MonoBehaviour
 
         public void Evaluate(LevelPlayer player)
         {
+            if (!player.IsPlayerAlive())
+            {
+                player.SettleLevel(LevelPlayResult.Failure, "player destroyed");
+                return;
+            }
+
             if (player.IsAnyCoreBoxOnTarget())
             {
                 if (!_completionRewardsGranted)

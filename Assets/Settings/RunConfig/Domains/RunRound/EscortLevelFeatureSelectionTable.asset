@@ -26,33 +26,13 @@ MonoBehaviour:
   - enabled: 1
     roundIndex: 2
     label: 
-    filter: {fileID: 11400000, guid: b6b6cb72a57318e4abf57ab9cd5cc0e4, type: 2}
+    filter: {fileID: 11400000, guid: caa50719e1a6baf43ad0c1e41d27e256, type: 2}
   - enabled: 1
     roundIndex: 3
     label: 
-    filter: {fileID: 11400000, guid: caa50719e1a6baf43ad0c1e41d27e256, type: 2}
+    filter: {fileID: 11400000, guid: d00f4075664dfb5419792a018813d309, type: 2}
   - enabled: 1
     roundIndex: 4
     label: 
-    filter: {fileID: 11400000, guid: caa50719e1a6baf43ad0c1e41d27e256, type: 2}
-  - enabled: 1
-    roundIndex: 5
-    label: 
-    filter: {fileID: 11400000, guid: d00f4075664dfb5419792a018813d309, type: 2}
-  - enabled: 1
-    roundIndex: 6
-    label: 
-    filter: {fileID: 11400000, guid: d00f4075664dfb5419792a018813d309, type: 2}
-  - enabled: 1
-    roundIndex: 7
-    label: 
     filter: {fileID: 11400000, guid: 2527bb498156f884e988344a13d6ac24, type: 2}
-  - enabled: 1
-    roundIndex: 8
-    label: 
-    filter: {fileID: 11400000, guid: 2527bb498156f884e988344a13d6ac24, type: 2}
-  - enabled: 1
-    roundIndex: 9
-    label: 
-    filter: {fileID: 11400000, guid: e4fecdb43954aed42a7b472ab7d3cb44, type: 2}
   useEntryManualWeight: 0

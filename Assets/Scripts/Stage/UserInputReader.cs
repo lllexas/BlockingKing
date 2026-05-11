@@ -251,6 +251,24 @@ public class UserInputReader : MonoBehaviour
         return false;
     }
 
+    private bool TrySubmitNoop()
+    {
+        if (!TryResolvePlayer(out var playerHandle))
+            return false;
+
+        var intent = IntentSystem.Instance.Request<NoopIntent>();
+        intent.Setup();
+
+        if (IntentSystem.Instance.SetPlayerIntent(playerHandle, IntentType.Noop, intent))
+        {
+            TickSystem.PushTick();
+            return true;
+        }
+
+        IntentSystem.Instance.Return(intent);
+        return false;
+    }
+
     private void OnDisable()
     {
         ClearBufferedMove();
@@ -309,6 +327,9 @@ public class UserInputReader : MonoBehaviour
             return false;
 
         Vector2Int startPosition = entitySystem.entities.coreComponents[playerIndex].Position;
+        if (targetPosition == startPosition)
+            return TrySubmitNoop();
+
         TrackMousePathMemory(startPosition, targetPosition);
         if (!TryBuildPreferredPath(entitySystem, startPosition, targetPosition, mode, _pathMoveDirections))
             return false;
@@ -760,7 +781,11 @@ public class UserInputReader : MonoBehaviour
         if (TryBuildRememberedPath(entitySystem, start, target, mode, result))
             return true;
 
-        return TryBuildPath(entitySystem, start, target, mode, result);
+        if (!TryBuildPath(entitySystem, start, target, mode, result))
+            return false;
+
+        SyncMousePathMemoryFromDirections(start, result);
+        return true;
     }
 
     private bool TryBuildRememberedPath(
@@ -859,6 +884,24 @@ public class UserInputReader : MonoBehaviour
     {
         destination.Clear();
         AppendDirections(destination, source);
+    }
+
+    private void SyncMousePathMemoryFromDirections(Vector2Int start, Queue<Vector2Int> directions)
+    {
+        _mousePathMemoryCells.Clear();
+        _hasMousePathMemoryStart = true;
+        _mousePathMemoryStart = start;
+        _mousePathMemoryCells.Add(start);
+
+        Vector2Int current = start;
+        foreach (var direction in directions)
+        {
+            current += direction;
+            _mousePathMemoryCells.Add(current);
+        }
+
+        while (_mousePathMemoryCells.Count > pathMemoryMaxCells)
+            _mousePathMemoryCells.RemoveAt(0);
     }
 
     private static int ManhattanDistance(Vector2Int first, Vector2Int second)

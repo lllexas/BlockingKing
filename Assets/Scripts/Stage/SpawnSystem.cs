@@ -11,6 +11,7 @@ public class SpawnSystem : MonoBehaviour, ITickSystem
     private EntityBP _defaultEnemyBP;
     private int _defaultEnemyTagId;
     private EnemySpawnDifficultyProfileSO _difficultyProfile;
+    private EnemySpawnTimingProfileSO _timingProfile;
     private float _overallDifficulty = 1f;
     private int _routeLayer;
     private int _routeLayerCount = 1;
@@ -34,12 +35,24 @@ public class SpawnSystem : MonoBehaviour, ITickSystem
         _defaultEnemyTagId = defaultEnemyTagId;
     }
 
-    public void ConfigureDifficultyProfile(EnemySpawnDifficultyProfileSO profile, float overallDifficulty, int routeLayer, int routeLayerCount)
+    public void ConfigureDifficultyProfile(
+        EnemySpawnDifficultyProfileSO profile,
+        EnemySpawnTimingProfileSO timingProfile,
+        float overallDifficulty,
+        int routeLayer,
+        int routeLayerCount)
     {
         _difficultyProfile = profile;
+        _timingProfile = timingProfile;
         _overallDifficulty = Mathf.Max(0f, overallDifficulty);
-        _routeLayer = Mathf.Max(0, routeLayer);
+        _routeLayer = Mathf.Max(1, routeLayer);
         _routeLayerCount = Mathf.Max(1, routeLayerCount);
+    }
+
+    [System.Obsolete("Use ConfigureDifficultyProfile(profile, timingProfile, overallDifficulty, routeLayer, routeLayerCount).")]
+    public void ConfigureDifficultyProfile(EnemySpawnDifficultyProfileSO profile, float overallDifficulty, int routeLayer, int routeLayerCount)
+    {
+        ConfigureDifficultyProfile(profile, null, overallDifficulty, routeLayer, routeLayerCount);
     }
 
     public void StartSpawning()
@@ -148,7 +161,7 @@ public class SpawnSystem : MonoBehaviour, ITickSystem
         ApplyBP(entitySystem, handle, intent.EntityBP);
         ref var props = ref entitySystem.entities.propertyComponents[actorIndex];
         ref var counter = ref entitySystem.entities.counterComponents[actorIndex];
-        int interval = props.SpawnInterval > 0 ? props.SpawnInterval : 3;
+        int interval = ResolveSpawnInterval(props.SpawnInterval, intent.Origin, entitySystem.GlobalTick);
         counter.NextTick = entitySystem.GlobalTick + interval;
         Debug.Log($"[SpawnSystem] Spawned enemy at {intent.Origin}.");
         return true;
@@ -176,7 +189,7 @@ public class SpawnSystem : MonoBehaviour, ITickSystem
         ApplyBP(entitySystem, handle, props.SpawnEntityBP);
 
         ref var counter = ref entitySystem.entities.counterComponents[actorIndex];
-        int interval = props.SpawnInterval > 0 ? props.SpawnInterval : 3;
+        int interval = ResolveSpawnInterval(props.SpawnInterval, origin, entitySystem.GlobalTick);
         counter.NextTick = entitySystem.GlobalTick + interval;
         Debug.Log($"[SpawnSystem] Immediately spawned enemy at {origin}.");
         return true;
@@ -233,6 +246,22 @@ public class SpawnSystem : MonoBehaviour, ITickSystem
             tick,
             spawnPosition,
             fallback);
+    }
+
+    public int ResolveSpawnInterval(int fallback, Vector2Int spawnPosition, int globalTick)
+    {
+        fallback = fallback > 0 ? fallback : 3;
+        return _timingProfile != null
+            ? _timingProfile.ResolveInterval(fallback, _routeLayer, spawnPosition, globalTick)
+            : Mathf.Max(1, fallback);
+    }
+
+    public int ResolveInitialSpawnDelay(int fallback, Vector2Int spawnPosition, int globalTick)
+    {
+        fallback = fallback >= 0 ? fallback : ResolveSpawnInterval(3, spawnPosition, globalTick);
+        return _timingProfile != null
+            ? _timingProfile.ResolveInitialDelay(fallback, _routeLayer, spawnPosition, globalTick)
+            : Mathf.Max(0, fallback);
     }
 
 }

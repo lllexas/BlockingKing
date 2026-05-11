@@ -917,10 +917,13 @@ public class HandZone : MonoBehaviour
         }
         else
         {
+            instance.SetVisualVisible(true);
             instance.RefillHandToTarget(true);
         }
 
         instance.ApplyCardInteractableState();
+        if (locked)
+            instance.SetVisualVisible(false);
     }
 
     private void PollHandState()
@@ -1210,6 +1213,25 @@ public class HandZone : MonoBehaviour
             if (_hand[i] != null)
                 _hand[i].SetInteractable(!CardsLocked);
         }
+    }
+
+    private void SetVisualVisible(bool visible)
+    {
+        SetGameObjectVisible(cardLayer, visible, gameObject);
+        SetGameObjectVisible(drawPileAnchor, visible);
+        SetGameObjectVisible(discardPileAnchor, visible);
+        SetGameObjectVisible(drawPileCountText, visible);
+        SetGameObjectVisible(discardPileCountText, visible);
+        SetGameObjectVisible(handCountText, visible);
+    }
+
+    private static void SetGameObjectVisible(Component component, bool visible, GameObject protectedRoot = null)
+    {
+        if (component == null || component.gameObject == protectedRoot)
+            return;
+
+        if (component.gameObject.activeSelf != visible)
+            component.gameObject.SetActive(visible);
     }
 
     private void MoveCardToPointer(CardView view, PointerEventData eventData)

@@ -49,6 +49,32 @@ public class RunRouteOnGUIFrontend : MonoBehaviour
         if (!visible)
             return;
 
+        var flow = GameFlowController.Instance;
+        if (flow != null && flow.IsInLevel)
+        {
+            CloseDeck();
+            return;
+        }
+
+        if (flow != null && flow.Mode == GameFlowMode.RoundFlow)
+        {
+            int oldRoundDepth = GUI.depth;
+            GUI.depth = 20;
+            EnsureStyles();
+            if (_showingDeck)
+                DrawDeckFullscreen();
+            else
+                DrawDeckButton();
+            GUI.depth = oldRoundDepth;
+            return;
+        }
+
+        if (flow != null && flow.Mode != GameFlowMode.RouteMap)
+        {
+            CloseDeck();
+            return;
+        }
+
         int oldDepth = GUI.depth;
         GUI.depth = 20;
 

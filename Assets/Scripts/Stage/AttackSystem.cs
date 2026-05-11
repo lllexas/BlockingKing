@@ -63,7 +63,54 @@ public class AttackSystem : MonoBehaviour
 
         ref var status = ref entitySystem.entities.statusComponents[targetIndex];
         CombatStats.DealDamage(ref status, damage);
+        if (core.EntityType == EntityType.Box && entitySystem.entities.propertyComponents[targetIndex].IsCore)
+            SyncCoreBoxHealthToPlayer(entitySystem, targetIndex);
+        else if (core.EntityType == EntityType.Player)
+            SyncPlayerHealthToCoreBoxes(entitySystem, targetIndex);
+
         Debug.Log($"[AttackSystem] Hit {core.EntityType} at {targetPosition}, damage={damage}, health={CombatStats.GetCurrentHealth(status)}");
+    }
+
+    private static void SyncCoreBoxHealthToPlayer(EntitySystem entitySystem, int coreBoxIndex)
+    {
+        var entities = entitySystem.entities;
+        ref var coreBoxStatus = ref entities.statusComponents[coreBoxIndex];
+        int currentHealth = CombatStats.GetCurrentHealth(coreBoxStatus);
+        int maxHealth = CombatStats.GetMaxHealth(coreBoxStatus);
+
+        for (int i = 0; i < entities.entityCount; i++)
+        {
+            if (entities.coreComponents[i].EntityType != EntityType.Player)
+                continue;
+
+            ref var playerStatus = ref entities.statusComponents[i];
+            playerStatus.BaseMaxHealth = maxHealth;
+            playerStatus.MaxHealthModifier = 0;
+            playerStatus.DamageTaken = Mathf.Max(0, maxHealth - currentHealth);
+            return;
+        }
+    }
+
+    private static void SyncPlayerHealthToCoreBoxes(EntitySystem entitySystem, int playerIndex)
+    {
+        var entities = entitySystem.entities;
+        ref var playerStatus = ref entities.statusComponents[playerIndex];
+        int currentHealth = CombatStats.GetCurrentHealth(playerStatus);
+        int maxHealth = CombatStats.GetMaxHealth(playerStatus);
+
+        for (int i = 0; i < entities.entityCount; i++)
+        {
+            if (entities.coreComponents[i].EntityType != EntityType.Box ||
+                !entities.propertyComponents[i].IsCore)
+            {
+                continue;
+            }
+
+            ref var coreBoxStatus = ref entities.statusComponents[i];
+            coreBoxStatus.BaseMaxHealth = maxHealth;
+            coreBoxStatus.MaxHealthModifier = 0;
+            coreBoxStatus.DamageTaken = Mathf.Max(0, maxHealth - currentHealth);
+        }
     }
 
     private static bool CanReceiveAttackDamage(EntitySystem entitySystem, int targetIndex)

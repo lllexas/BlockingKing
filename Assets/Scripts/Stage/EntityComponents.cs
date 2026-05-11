@@ -17,6 +17,7 @@ public enum EntityType : byte
 public enum IntentType : byte
 {
     None,
+    Noop,
     Move,
     Attack,
     Card,

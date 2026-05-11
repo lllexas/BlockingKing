@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe74a0b229b27be469fe388b73ade974, type: 3}
   m_Name: LFF_01_Tiny_Intro
   m_EditorClassIdentifier: 
-  widthRange: {x: 5, y: 13}
-  heightRange: {x: 3, y: 11}
-  areaRange: {x: 15, y: 120}
-  wallRateRange: {x: 0.35, y: 0.55}
+  widthRange: {x: 4, y: 15}
+  heightRange: {x: 4, y: 15}
+  areaRange: {x: 1, y: 2500}
+  wallRateRange: {x: 0, y: 1}
   effectiveBoxRange: {x: 1, y: 3}

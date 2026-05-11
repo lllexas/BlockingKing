@@ -13,12 +13,15 @@ MonoBehaviour:
   m_Name: RunRoundConfig
   m_EditorClassIdentifier: 
   totalRounds: 4
+  encounterCyclesPerRound: 3
   seed: 1
   levelSourceDatabase: {fileID: 11400000, guid: e325a568aeaa77f48b99e73805a9d309,
     type: 2}
   classicFeatureSelectionTable: {fileID: 11400000, guid: a0350858e1ecb1c4e9f2062dbed7a95e,
     type: 2}
   escortFeatureSelectionTable: {fileID: 11400000, guid: b5c845c92a60d29418529ae16d3bf4b6,
+    type: 2}
+  escortGenerationConfig: {fileID: 11400000, guid: 833472435a1bff94e88223ad28cfc796,
     type: 2}
   skipRewardPool: {fileID: 11400000, guid: f2c8ceb48b0599d4693918f2c0890794, type: 2}
   classicEscortAlternationGold: 2

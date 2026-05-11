@@ -15,6 +15,8 @@ MonoBehaviour:
   overallDifficulty: 1
   enemySpawnDifficultyProfile: {fileID: 11400000, guid: 5a47c3e21b914f8ba0d6c9e2f13579bd,
     type: 2}
+  enemySpawnTimingProfile: {fileID: 11400000, guid: 4f5167c647f5629408371fda471ff1a4,
+    type: 2}
   enemyHealthMultiplierByProgress:
     serializedVersion: 2
     m_Curve:

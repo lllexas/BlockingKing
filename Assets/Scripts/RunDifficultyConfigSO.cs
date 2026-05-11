@@ -8,6 +8,7 @@ public class RunDifficultyConfigSO : ScriptableObject
     public float overallDifficulty = 1f;
 
     public EnemySpawnDifficultyProfileSO enemySpawnDifficultyProfile;
+    public EnemySpawnTimingProfileSO enemySpawnTimingProfile;
 
     public AnimationCurve enemyHealthMultiplierByProgress = AnimationCurve.Linear(0f, 1f, 1f, 1f);
     public AnimationCurve enemyAttackMultiplierByProgress = AnimationCurve.Linear(0f, 1f, 1f, 1f);
@@ -24,7 +25,8 @@ public class RunDifficultyConfigSO : ScriptableObject
             EnemyHealthMultiplier = EvaluateMultiplier(enemyHealthMultiplierByProgress, progress),
             EnemyAttackMultiplier = EvaluateMultiplier(enemyAttackMultiplierByProgress, progress),
             RewardMultiplier = EvaluateMultiplier(rewardMultiplierByProgress, progress),
-            EnemySpawnDifficultyProfile = enemySpawnDifficultyProfile
+            EnemySpawnDifficultyProfile = enemySpawnDifficultyProfile,
+            EnemySpawnTimingProfile = enemySpawnTimingProfile
         };
     }
 
@@ -56,6 +58,7 @@ public struct RunDifficultySnapshot
     public float EnemyAttackMultiplier;
     public float RewardMultiplier;
     public EnemySpawnDifficultyProfileSO EnemySpawnDifficultyProfile;
+    public EnemySpawnTimingProfileSO EnemySpawnTimingProfile;
 
     public static RunDifficultySnapshot Default => new RunDifficultySnapshot
     {
@@ -64,6 +67,7 @@ public struct RunDifficultySnapshot
         EnemyHealthMultiplier = 1f,
         EnemyAttackMultiplier = 1f,
         RewardMultiplier = 1f,
-        EnemySpawnDifficultyProfile = null
+        EnemySpawnDifficultyProfile = null,
+        EnemySpawnTimingProfile = null
     };
 }
