@@ -9,32 +9,40 @@ public class ShopItemPoolSO : ContentPoolSO<ShopItemPoolSO.Entry, ShopSO.ShopIte
     [Serializable]
     public sealed class Entry : PoolEntryBase
     {
+        [TableColumnWidth(72)]
+        public ShopSO.ShopItemKind kind = ShopSO.ShopItemKind.Card;
+
+        [ShowIf(nameof(IsCard))]
+        [TableColumnWidth(120)]
         [AssetsOnly]
         public CardSO card;
 
-        public string itemId;
-        public ShopSO.ShopItemKind kind = ShopSO.ShopItemKind.Card;
-        public string inventoryItemId;
-        public string inventoryItemType;
+        [ShowIf(nameof(IsInventoryItem))]
+        [TableColumnWidth(120)]
+        [AssetsOnly]
+        public ItemSO item;
 
+        [TableColumnWidth(70)]
         [Min(1)]
         public int count = 1;
 
+        [TableColumnWidth(80)]
         [Min(0)]
         public int price = 50;
 
         [TextArea(1, 3)]
         public string description;
 
+        private bool IsCard => kind == ShopSO.ShopItemKind.Card;
+        private bool IsInventoryItem => kind == ShopSO.ShopItemKind.InventoryItem;
+
         public ShopSO.ShopItem ToShopItem()
         {
             return new ShopSO.ShopItem
             {
-                itemId = itemId,
                 kind = kind,
                 card = card,
-                inventoryItemId = inventoryItemId,
-                inventoryItemType = inventoryItemType,
+                item = item,
                 count = count,
                 price = price,
                 description = description
@@ -42,6 +50,7 @@ public class ShopItemPoolSO : ContentPoolSO<ShopItemPoolSO.Entry, ShopSO.ShopIte
         }
     }
 
+    [TableList(AlwaysExpanded = true, DrawScrollView = true, MinScrollViewHeight = 160)]
     public List<Entry> entries = new List<Entry>();
 
     public override IReadOnlyList<Entry> Entries => entries;

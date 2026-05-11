@@ -86,10 +86,22 @@ public class LevelPlayer : MonoBehaviour
     [SerializeField] private LevelPlayMode defaultPlayMode = LevelPlayMode.Classic;
     [SerializeField, Min(1)] private int defaultStepLimit = 30;
 
-    [Header("Escort Rewards")]
+    [Header("Fallback Rewards")]
+    [Tooltip("Fallback only. Used when no RunRewardConfigSO is provided by LevelPlayRequest or GameFlowController.")]
     [SerializeField, Min(0)] private int escortRewardBoxGold = 2;
+    [Tooltip("Fallback only. Used when no RunRewardConfigSO is provided by LevelPlayRequest or GameFlowController.")]
     [SerializeField, Min(0)] private int escortCompletionGold = 5;
-    [SerializeField] private List<CardSO> escortCompletionCardRewards = new List<CardSO>();
+    [Tooltip("Fallback only. Used when no RunRewardConfigSO is provided by LevelPlayRequest or GameFlowController.")]
+    [SerializeField] private RewardPoolSO escortCompletionRewardPool;
+
+    [Tooltip("Fallback only. Used when no RunRewardConfigSO is provided by LevelPlayRequest or GameFlowController.")]
+    [SerializeField, Min(0)] private int classicPhaseOneFirstBoxGold = 3;
+    [Tooltip("Fallback only. Used when no RunRewardConfigSO is provided by LevelPlayRequest or GameFlowController.")]
+    [SerializeField, Min(0)] private int classicPhaseOneBoxGoldStep = 3;
+    [Tooltip("Fallback only. Used when no RunRewardConfigSO is provided by LevelPlayRequest or GameFlowController.")]
+    [SerializeField, Min(0)] private int classicPhaseTwoFirstBoxGold = 3;
+    [Tooltip("Fallback only. Used when no RunRewardConfigSO is provided by LevelPlayRequest or GameFlowController.")]
+    [SerializeField, Min(0)] private int classicPhaseTwoBoxGoldStep = 1;
 
     private LevelData _level;
     private TileMappingConfig _config;
@@ -286,6 +298,7 @@ public class LevelPlayer : MonoBehaviour
         _lastResult = LevelPlayResult.None;
 
         _playRule.Begin(this, request);
+        ApplyRunPlayerStatusToPlayerEntity();
         ConfigureSpawnDifficulty(request, _activeDifficulty);
 
         GameFlowController.Instance?.EnterLevel();
@@ -539,6 +552,7 @@ public class LevelPlayer : MonoBehaviour
         if (_isSettled)
             return;
 
+        SyncRunPlayerStatusFromPlayerEntity();
         _isSettled = true;
         _lastResult = result;
         StopPlayback();
@@ -552,18 +566,114 @@ public class LevelPlayer : MonoBehaviour
         GameFlowController.Instance?.OnRouteClassicLevelSettled(result);
     }
 
-    internal int AwardGoldByArithmeticSequence(int count, int firstAmount, int stepAmount, string reason)
+    private void ApplyRunPlayerStatusToPlayerEntity()
     {
-        if (count <= 0)
-            return 0;
+        var statusFacade = NekoGraph.GraphHub.Instance?.GetFacade<RunPlayerStatusFacade>();
+        if (statusFacade == null)
+            return;
 
-        int amount = 0;
-        for (int i = 0; i < count; i++)
-            amount += firstAmount + i * stepAmount;
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized)
+            return;
 
-        AwardGold(amount, reason);
+        if (!TryFindPlayerIndex(entitySystem, out int playerIndex))
+            return;
+
+        ref var status = ref entitySystem.entities.statusComponents[playerIndex];
+        int maxHp = Mathf.Max(1, statusFacade.MaxHp);
+        int currentHp = Mathf.Clamp(statusFacade.CurrentHp, 0, maxHp);
+        status.BaseMaxHealth = maxHp;
+        status.MaxHealthModifier = 0;
+        status.DamageTaken = Mathf.Max(0, maxHp - currentHp);
+    }
+
+    private void SyncRunPlayerStatusFromPlayerEntity()
+    {
+        var statusFacade = NekoGraph.GraphHub.Instance?.GetFacade<RunPlayerStatusFacade>();
+        if (statusFacade == null)
+            return;
+
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized)
+            return;
+
+        if (!TryFindPlayerIndex(entitySystem, out int playerIndex))
+            return;
+
+        var status = entitySystem.entities.statusComponents[playerIndex];
+        statusFacade.SetHp(
+            CombatStats.GetCurrentHealth(status),
+            CombatStats.GetMaxHealth(status));
+    }
+
+    private static bool TryFindPlayerIndex(EntitySystem entitySystem, out int index)
+    {
+        index = -1;
+        if (entitySystem?.entities == null)
+            return false;
+
+        var entities = entitySystem.entities;
+        for (int i = 0; i < entities.entityCount; i++)
+        {
+            if (entities.coreComponents[i].EntityType == EntityType.Player)
+            {
+                index = i;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    internal int AwardClassicPhaseOneGold(int count)
+    {
+        int amount = _activeRewardSettings != null
+            ? _activeRewardSettings.GetClassicPhaseOneBoxGold(count, _activeDifficulty)
+            : RunRewardConfigSO.CalculateArithmeticSequence(count, classicPhaseOneFirstBoxGold, classicPhaseOneBoxGoldStep);
+
+        AwardGold(amount, "classic phase one boxes");
         return amount;
     }
+
+    internal int AwardClassicPhaseTwoGold(int count)
+    {
+        int amount = _activeRewardSettings != null
+            ? _activeRewardSettings.GetClassicPhaseTwoBoxGold(count, _activeDifficulty)
+            : RunRewardConfigSO.CalculateArithmeticSequence(count, classicPhaseTwoFirstBoxGold, classicPhaseTwoBoxGoldStep);
+
+        AwardGold(amount, "classic phase two boxes");
+        return amount;
+    }
+
+    internal int PreviewClassicPhaseOneGold(int count)
+    {
+        return _activeRewardSettings != null
+            ? _activeRewardSettings.GetClassicPhaseOnePreviewGold(count)
+            : RunRewardConfigSO.CalculateArithmeticSequence(count, classicPhaseOneFirstBoxGold, classicPhaseOneBoxGoldStep);
+    }
+
+    internal int PreviewClassicPhaseTwoGold(int count)
+    {
+        return _activeRewardSettings != null
+            ? _activeRewardSettings.GetClassicPhaseTwoPreviewGold(count)
+            : RunRewardConfigSO.CalculateArithmeticSequence(count, classicPhaseTwoFirstBoxGold, classicPhaseTwoBoxGoldStep);
+    }
+
+    internal int ClassicPhaseOneFirstBoxGold => _activeRewardSettings != null
+        ? _activeRewardSettings.classicPhaseOneFirstBoxGold
+        : classicPhaseOneFirstBoxGold;
+
+    internal int ClassicPhaseOneBoxGoldStep => _activeRewardSettings != null
+        ? _activeRewardSettings.classicPhaseOneBoxGoldStep
+        : classicPhaseOneBoxGoldStep;
+
+    internal int ClassicPhaseTwoFirstBoxGold => _activeRewardSettings != null
+        ? _activeRewardSettings.classicPhaseTwoFirstBoxGold
+        : classicPhaseTwoFirstBoxGold;
+
+    internal int ClassicPhaseTwoBoxGoldStep => _activeRewardSettings != null
+        ? _activeRewardSettings.classicPhaseTwoBoxGoldStep
+        : classicPhaseTwoBoxGoldStep;
 
     internal bool AwardGold(int amount, string reason)
     {
@@ -618,35 +728,14 @@ public class LevelPlayer : MonoBehaviour
     {
         AwardGold(GetEscortCompletionGold(), "escort completion");
 
-        var cardRewards = GetEscortCompletionCardRewards();
-        if (cardRewards == null || cardRewards.Count == 0)
+        var rewardPool = GetEscortCompletionRewardPool();
+        if (rewardPool == null || !rewardPool.TryRollReward(null, out var reward) || reward == null)
             return;
 
-        var deck = NekoGraph.GraphHub.Instance?.GetFacade<CardDeckFacade>();
-        if (deck == null)
-        {
-            deck = new CardDeckFacade();
-            NekoGraph.GraphHub.Instance?.RegisterFacade(deck);
-        }
-
-        if (deck == null)
-        {
-            Debug.LogWarning("[LevelPlayer] Escort card rewards skipped because CardDeckFacade is missing.");
+        if (reward.rollFromPool && (!reward.TryResolveReward(null, out reward) || reward == null))
             return;
-        }
 
-        int granted = 0;
-        for (int i = 0; i < cardRewards.Count; i++)
-        {
-            var card = cardRewards[i];
-            if (card == null)
-                continue;
-
-            if (deck.AddCard(card, 1))
-                granted++;
-        }
-
-        Debug.Log($"[LevelPlayer] Escort card rewards granted: {granted}");
+        RewardResource.ExecuteReward(reward);
     }
 
     internal int ConvertUnoccupiedClassicTargetsToEnemyTargets()
@@ -966,11 +1055,11 @@ public class LevelPlayer : MonoBehaviour
             : escortCompletionGold;
     }
 
-    private IReadOnlyList<CardSO> GetEscortCompletionCardRewards()
+    private RewardPoolSO GetEscortCompletionRewardPool()
     {
         return _activeRewardSettings != null
-            ? _activeRewardSettings.escortCompletionCardRewards
-            : escortCompletionCardRewards;
+            ? _activeRewardSettings.escortCompletionRewardPool
+            : escortCompletionRewardPool;
     }
 
     private void HandleTick()
@@ -1182,14 +1271,14 @@ public class LevelPlayer : MonoBehaviour
         {
             Vector3.up, Vector3.up, Vector3.up, Vector3.up
         });
-        mesh.SetTriangles(new[] { 0, 1, 2, 1, 3, 2 }, 0);
+        mesh.SetTriangles(new[] { 0, 2, 1, 1, 2, 3 }, 0);
         mesh.RecalculateBounds();
 
         _outsideDiamondGO = new GameObject(OutsideDiamondObjectName);
         _outsideDiamondGO.transform.SetParent(transform);
         _outsideDiamondGO.transform.position = new Vector3(
             mapWidth * cellSize * 0.5f,
-            -0.01f,  // 略低于地板，地板存在处被深度遮挡
+            -0.001f, // 略低于地板，地板存在处被深度遮挡
             mapHeight * cellSize * 0.5f);
         _outsideDiamondGO.AddComponent<MeshFilter>().mesh = mesh;
         _outsideDiamondGO.AddComponent<MeshRenderer>().sharedMaterial = _outsideDiamondMaterial;
@@ -1496,7 +1585,7 @@ public class LevelPlayer : MonoBehaviour
                 return;
 
             int phaseTwoBoxCount = player.CountBoxesOnTargetsExcluding(_phaseOneSettledBoxIds);
-            _phaseTwoGold = player.AwardGoldByArithmeticSequence(phaseTwoBoxCount, 3, 1, "classic phase two boxes");
+            _phaseTwoGold = player.AwardClassicPhaseTwoGold(phaseTwoBoxCount);
             player.SettleLevel(LevelPlayResult.Success, "classic phase two completed");
         }
 
@@ -1508,7 +1597,7 @@ public class LevelPlayer : MonoBehaviour
             {
                 player.EnsureClassicPhaseStyles();
                 int boxCount = player.CountBoxesOnTargets();
-                int previewGold = CalculateArithmeticSequence(boxCount, 3, 3);
+                int previewGold = player.PreviewClassicPhaseOneGold(boxCount);
                 string text = $"经典阶段一  箱子: {boxCount}  预期金币: {previewGold}";
                 float width = Mathf.Min(560f, Screen.width - 32f);
                 var rect = new Rect((Screen.width - width) * 0.5f, 18f, width, 42f);
@@ -1525,7 +1614,7 @@ public class LevelPlayer : MonoBehaviour
 
             player.EnsureClassicPhaseStyles();
             int newBoxes = player.CountBoxesOnTargetsExcluding(_phaseOneSettledBoxIds);
-            int preview = CalculateArithmeticSequence(newBoxes, 3, 1);
+            int preview = player.PreviewClassicPhaseTwoGold(newBoxes);
             int enemyCount = player.CountEnemiesAlive();
             string combatText = $"经典阶段二  新箱子: {newBoxes}  预期金币: {preview}  怪物: {enemyCount}  魔化目标: {_convertedTargetCount}";
             float combatWidth = Mathf.Min(640f, Screen.width - 32f);
@@ -1550,19 +1639,19 @@ public class LevelPlayer : MonoBehaviour
 
             if (_phase == Phase.PuzzleOnly)
             {
-                estimatedGold = CalculateArithmeticSequence(boxCount, 3, 3);
+                estimatedGold = player.PreviewClassicPhaseOneGold(boxCount);
                 detailLine1 = $"箱子 ×{boxCount}";
                 if (boxCount > 0)
-                    detailLine2 = BuildArithmeticString(boxCount, 3, 3) + $" = {estimatedGold} G";
+                    detailLine2 = BuildArithmeticString(boxCount, player.ClassicPhaseOneFirstBoxGold, player.ClassicPhaseOneBoxGoldStep) + $" = {estimatedGold} G";
             }
             else
             {
                 int newBoxes = player.CountBoxesOnTargetsExcluding(_phaseOneSettledBoxIds);
-                int phaseTwoEstimate = CalculateArithmeticSequence(newBoxes, 3, 1);
+                int phaseTwoEstimate = player.PreviewClassicPhaseTwoGold(newBoxes);
                 estimatedGold = _phaseOneGold + phaseTwoEstimate;
                 detailLine1 = $"阶段一 +{_phaseOneGold}G  |  阶段二 +{phaseTwoEstimate}G";
                 if (newBoxes > 0)
-                    detailLine2 = "新箱 " + BuildArithmeticString(newBoxes, 3, 1) + $" = {phaseTwoEstimate} G";
+                    detailLine2 = "新箱 " + BuildArithmeticString(newBoxes, player.ClassicPhaseTwoFirstBoxGold, player.ClassicPhaseTwoBoxGoldStep) + $" = {phaseTwoEstimate} G";
             }
 
             player._casinoGoldStyle.normal.textColor = goldPulse;
@@ -1626,7 +1715,7 @@ public class LevelPlayer : MonoBehaviour
 
             _phaseOneBoxCount = player.CountBoxesOnTargets();
             player.CollectBoxIdsOnTargets(_phaseOneSettledBoxIds);
-            _phaseOneGold = player.AwardGoldByArithmeticSequence(_phaseOneBoxCount, 3, 3, "classic phase one boxes");
+            _phaseOneGold = player.AwardClassicPhaseOneGold(_phaseOneBoxCount);
             _convertedTargetCount = player.ConvertUnoccupiedClassicTargetsToEnemyTargets();
             _phase = Phase.CombatUnlocked;
             HandZone.SetCardsLocked(false);
@@ -1636,17 +1725,6 @@ public class LevelPlayer : MonoBehaviour
             player._playRule.Evaluate(player);
         }
 
-        private static int CalculateArithmeticSequence(int count, int firstAmount, int stepAmount)
-        {
-            if (count <= 0)
-                return 0;
-
-            int amount = 0;
-            for (int i = 0; i < count; i++)
-                amount += firstAmount + i * stepAmount;
-
-            return amount;
-        }
     }
 
     private sealed class StepLimitPlayRule : ILevelPlayRule

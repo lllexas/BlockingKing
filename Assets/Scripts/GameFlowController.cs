@@ -1,10 +1,18 @@
 using NekoGraph;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public enum GameFlowMode
 {
     DirectLevel,
-    RouteMap
+    RouteMap,
+    RoundFlow
+}
+
+public enum RouteMapStartupMode
+{
+    AutoStart,
+    RunSetup
 }
 
 public class GameFlowController : MonoBehaviour
@@ -13,26 +21,30 @@ public class GameFlowController : MonoBehaviour
 
     [SerializeField] private GameFlowMode mode = GameFlowMode.DirectLevel;
     [SerializeField] private RunConfigSO runConfig;
-    [SerializeField] private RunRouteConfigSO settings;
+    [SerializeField, FormerlySerializedAs("settings")] private RunRouteConfigSO routeSettings;
     [SerializeField] private RunStartSettings runStartSettings;
     [SerializeField] private bool ensureRouteOnGUI = true;
+    [SerializeField] private RouteMapStartupMode routeMapStartupMode = RouteMapStartupMode.AutoStart;
 
     public GameFlowMode Mode => mode;
     public bool ShouldLevelPlayerAutoBuild => mode == GameFlowMode.DirectLevel;
     public bool IsInLevel { get; private set; }
-    public RunRouteConfigSO RouteSettings => runConfig != null && runConfig.routeSettings != null ? runConfig.routeSettings : settings;
+    public RunConfigSO CurrentRunConfig => runConfig;
+    public RunRouteConfigSO RouteSettings => runConfig != null && runConfig.routeSettings != null ? runConfig.routeSettings : routeSettings;
+    public RunRoundConfigSO RoundSettings => runConfig != null ? runConfig.roundSettings : null;
     public RunDifficultyConfigSO DifficultySettings => runConfig != null ? runConfig.difficultySettings : null;
     public RunRewardConfigSO RewardSettings => runConfig != null ? runConfig.rewardSettings : null;
     public RunStartSettings RunStartSettings => runConfig != null && runConfig.startSettings != null ? runConfig.startSettings : runStartSettings;
     public float OverallDifficulty => DifficultySettings != null
         ? Mathf.Max(0f, DifficultySettings.overallDifficulty)
-        : RouteSettings != null ? Mathf.Max(0f, RouteSettings.overallDifficulty) : 1f;
+        : 1f;
     public EnemySpawnDifficultyProfileSO EnemySpawnDifficultyProfile => DifficultySettings != null
         ? DifficultySettings.enemySpawnDifficultyProfile
-        : RouteSettings != null ? RouteSettings.enemySpawnDifficultyProfile : null;
+        : null;
     public int RouteLayerCount => RouteSettings != null ? RouteSettings.GetResolvedLayerCount() : 1;
 
     private RunRouteOnGUIFrontend _routeFrontend;
+    private RunRoundController _roundController;
     private int _observedStageRunVersion;
     private float _routeNodeStartedAt;
     private bool _runStartApplied;
@@ -59,7 +71,15 @@ public class GameFlowController : MonoBehaviour
         }
 
         if (mode == GameFlowMode.RouteMap)
-            InitializeRouteMap();
+        {
+            if (routeMapStartupMode == RouteMapStartupMode.AutoStart)
+                InitializeRouteMap();
+            else
+                ShowRunSetup();
+        }
+
+        if (mode == GameFlowMode.RoundFlow)
+            InitializeRoundFlow();
     }
 
     private void Update()
@@ -67,10 +87,10 @@ public class GameFlowController : MonoBehaviour
         if (mode == GameFlowMode.DirectLevel && !_runStartApplied)
             ApplyRunStartSettings();
 
-        if (mode != GameFlowMode.RouteMap)
-            return;
-
-        TryCompleteEncounterRouteNode();
+        if (mode == GameFlowMode.RouteMap)
+            TryCompleteEncounterRouteNode();
+        else if (mode == GameFlowMode.RoundFlow)
+            TryCompleteRoundEventStage();
     }
 
     private void OnDestroy()
@@ -96,6 +116,9 @@ public class GameFlowController : MonoBehaviour
 
         if (hub.GetFacade<RunInventoryFacade>() == null)
             hub.RegisterFacade(new RunInventoryFacade());
+
+        if (hub.GetFacade<RunPlayerStatusFacade>() == null)
+            hub.RegisterFacade(new RunPlayerStatusFacade());
     }
 
     public void InitializeRouteMap()
@@ -137,6 +160,49 @@ public class GameFlowController : MonoBehaviour
         SetRouteVisible(true);
     }
 
+    private void ShowRunSetup()
+    {
+        EnsureFacades();
+
+        if (FindObjectOfType<RunSetupOnGUIFrontend>() == null)
+            gameObject.AddComponent<RunSetupOnGUIFrontend>();
+    }
+
+    public void StartRun(RunConfigSO config, GameFlowMode targetMode = GameFlowMode.RoundFlow)
+    {
+        runConfig = config;
+        mode = targetMode;
+        _runStartApplied = false;
+
+        if (mode == GameFlowMode.RouteMap)
+            InitializeRouteMap();
+        else if (mode == GameFlowMode.RoundFlow)
+            InitializeRoundFlow();
+    }
+
+    public void InitializeRoundFlow()
+    {
+        EnsureFacades();
+        ApplyRunStartSettings();
+
+        if (_routeFrontend != null)
+            SetRouteVisible(false);
+
+        if (_roundController == null)
+            _roundController = FindObjectOfType<RunRoundController>();
+
+        if (_roundController == null)
+            _roundController = gameObject.AddComponent<RunRoundController>();
+
+        if (FindObjectOfType<RunStageOnGUIFrontend>() == null)
+            gameObject.AddComponent<RunStageOnGUIFrontend>();
+
+        if (FindObjectOfType<RunShopOnGUIFrontend>() == null)
+            gameObject.AddComponent<RunShopOnGUIFrontend>();
+
+        _roundController.StartRun(runConfig, RoundSettings);
+    }
+
     public void OnRouteClassicLevelStarted()
     {
         EnterLevel();
@@ -152,6 +218,15 @@ public class GameFlowController : MonoBehaviour
     public void OnRouteClassicLevelSettled(LevelPlayResult result)
     {
         ExitLevel();
+        if (mode == GameFlowMode.RoundFlow)
+        {
+            if (_roundController == null)
+                _roundController = FindObjectOfType<RunRoundController>();
+
+            _roundController?.OnCombatSettled(result);
+            return;
+        }
+
         var routeFacade = GraphHub.Instance?.GetFacade<RunRouteFacade>();
         if (routeFacade != null && routeFacade.ActiveRouteNodeIsClassicLevel)
         {
@@ -171,6 +246,14 @@ public class GameFlowController : MonoBehaviour
         var stageFacade = GraphHub.Instance?.GetFacade<RunStageFacade>();
         _observedStageRunVersion = stageFacade?.LoadedStageRunVersion ?? 0;
         SetRouteVisible(false);
+    }
+
+    public void OnRoundEventStageStarted()
+    {
+        ExitLevel();
+        _routeNodeStartedAt = Time.time;
+        var stageFacade = GraphHub.Instance?.GetFacade<RunStageFacade>();
+        _observedStageRunVersion = stageFacade?.LoadedStageRunVersion ?? 0;
     }
 
     public void EnterLevel()
@@ -209,8 +292,19 @@ public class GameFlowController : MonoBehaviour
         if (inventory == null)
             return;
 
+        var status = GraphHub.Instance?.GetFacade<RunPlayerStatusFacade>();
+        if (status == null)
+        {
+            status = new RunPlayerStatusFacade();
+            GraphHub.Instance?.RegisterFacade(status);
+        }
+
+        if (status == null)
+            return;
+
         if (deck.ReplaceWithStartingDeck(startSettings.startingDeck) &&
-            inventory.Reset(startSettings.startingGold))
+            inventory.Reset(startSettings.startingGold) &&
+            status.Reset(startSettings.startingMaxHp, startSettings.startingHp))
         {
             _runStartApplied = true;
         }
@@ -248,6 +342,27 @@ public class GameFlowController : MonoBehaviour
         stageFacade.ClearLoadedStage();
         routeFacade.CompleteActiveRouteNode();
         SetRouteVisible(true);
+    }
+
+    private void TryCompleteRoundEventStage()
+    {
+        if (_roundController == null)
+            _roundController = FindObjectOfType<RunRoundController>();
+
+        if (_roundController == null || _roundController.State != RunRoundState.EventStage)
+            return;
+
+        var stageFacade = GraphHub.Instance?.GetFacade<RunStageFacade>();
+        if (stageFacade == null ||
+            stageFacade.LoadedStageRunVersion != _observedStageRunVersion ||
+            Time.time - _routeNodeStartedAt < 0.05f ||
+            !stageFacade.IsLoadedStageComplete())
+        {
+            return;
+        }
+
+        stageFacade.ClearLoadedStage();
+        _roundController.OnEventStageCompleted();
     }
 
     private void SetRouteVisible(bool isVisible)

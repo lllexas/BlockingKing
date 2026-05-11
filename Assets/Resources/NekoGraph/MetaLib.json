@@ -13,5 +13,20 @@
     "Description": null,
     "CustomFields": {},
     "EffectiveID": "TestEvent"
+  },
+  "EventHealth01": {
+    "ID": "EventHealth01",
+    "PackID": "EventHealth01",
+    "Kind": 1,
+    "Storage": 0,
+    "ResourcePath": "RunStage/EventHealth/EventHealth01",
+    "ObjectType": null,
+    "GraphType": "Base",
+    "DisplayName": "EventHealth01",
+    "Author": "NekoTeam",
+    "Version": "1.0.0",
+    "Description": null,
+    "CustomFields": {},
+    "EffectiveID": "EventHealth01"
   }
 }

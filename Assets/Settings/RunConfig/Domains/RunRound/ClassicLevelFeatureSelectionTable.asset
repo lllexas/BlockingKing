@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 823c7de33b6a4dbe9b14e275f224c5ff, type: 3}
+  m_Name: ClassicLevelFeatureSelectionTable
+  m_EditorClassIdentifier: 
+  tableId: 
+  displayName: 
+  description: 
+  enabled: 1
+  sourceDatabase: {fileID: 0}
+  fallbackFilter: {fileID: 11400000, guid: b6b6cb72a57318e4abf57ab9cd5cc0e4, type: 2}
+  rows:
+  - enabled: 1
+    roundIndex: 1
+    label: 
+    filter: {fileID: 11400000, guid: b6b6cb72a57318e4abf57ab9cd5cc0e4, type: 2}
+  - enabled: 1
+    roundIndex: 2
+    label: 
+    filter: {fileID: 11400000, guid: caa50719e1a6baf43ad0c1e41d27e256, type: 2}
+  - enabled: 1
+    roundIndex: 3
+    label: 
+    filter: {fileID: 11400000, guid: d00f4075664dfb5419792a018813d309, type: 2}
+  - enabled: 1
+    roundIndex: 4
+    label: 
+    filter: {fileID: 11400000, guid: 2527bb498156f884e988344a13d6ac24, type: 2}
+  - enabled: 1
+    roundIndex: 5
+    label: 
+    filter: {fileID: 11400000, guid: e4fecdb43954aed42a7b472ab7d3cb44, type: 2}
+  - enabled: 1
+    roundIndex: 6
+    label: 
+    filter: {fileID: 11400000, guid: e007830bb6b424041980c0377c9cc3d9, type: 2}
+  - enabled: 1
+    roundIndex: 7
+    label: 
+    filter: {fileID: 11400000, guid: 76bd20e35303dab469f917a3cef273e4, type: 2}
+  - enabled: 1
+    roundIndex: 8
+    label: 
+    filter: {fileID: 11400000, guid: 22be04aa11b99dc44bb94f9106b33ffb, type: 2}
+  - enabled: 1
+    roundIndex: 9
+    label: 
+    filter: {fileID: 11400000, guid: 49bf508fc7dbe534ea678c5ef1c0014d, type: 2}
+  useEntryManualWeight: 0

@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83f5b0d26e4a4bbfb0dc7e62ac5a1005, type: 3}
+  m_Name: ShopItemPool
+  m_EditorClassIdentifier: 
+  poolId: 
+  displayName: 
+  enabled: 1
+  entries:
+  - weight: 6
+    enabled: 1
+    kind: 0
+    card: {fileID: 11400000, guid: 9d5f1bb0a33f4c9fac4d84fbd7f35002, type: 2}
+    item: {fileID: 0}
+    count: 1
+    price: 30
+    description: 
+  - weight: 6
+    enabled: 1
+    kind: 0
+    card: {fileID: 11400000, guid: 6c487c18f75142e8b6adf5039bd7a003, type: 2}
+    item: {fileID: 0}
+    count: 1
+    price: 30
+    description: 
+  - weight: 2
+    enabled: 1
+    kind: 0
+    card: {fileID: 11400000, guid: 18c1970efa71d4f4ab9ffadb20dcfb44, type: 2}
+    item: {fileID: 0}
+    count: 1
+    price: 60
+    description: 
+  - weight: 6
+    enabled: 1
+    kind: 0
+    card: {fileID: 11400000, guid: 596b09f52138b254ab64cfc8f5df48b7, type: 2}
+    item: {fileID: 0}
+    count: 1
+    price: 30
+    description: 
+  - weight: 3
+    enabled: 1
+    kind: 0
+    card: {fileID: 11400000, guid: 3e462c14dbbc4dfb8a9ebcb5894e9005, type: 2}
+    item: {fileID: 0}
+    count: 1
+    price: 50
+    description: 
+  - weight: 6
+    enabled: 1
+    kind: 0
+    card: {fileID: 11400000, guid: 2ce0f5c8f3df4d97a4e12a80d672b001, type: 2}
+    item: {fileID: 0}
+    count: 1
+    price: 30
+    description: 
+  - weight: 1
+    enabled: 1
+    kind: 1
+    card: {fileID: 0}
+    item: {fileID: 11400000, guid: 4ba7abc55099c6a4c80794815be49481, type: 2}
+    count: 1
+    price: 0
+    description: 

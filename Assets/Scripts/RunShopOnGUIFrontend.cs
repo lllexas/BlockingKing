@@ -7,6 +7,8 @@ public class RunShopOnGUIFrontend : MonoBehaviour
 {
     private readonly HashSet<int> _soldOutIndices = new HashSet<int>();
     private ShopPayload _currentShop;
+    private ShopSO _directShop;
+    private System.Action _directCloseCallback;
     private Vector2 _scroll;
     private bool _subscribed;
     private GUIStyle _boxStyle;
@@ -59,6 +61,20 @@ public class RunShopOnGUIFrontend : MonoBehaviour
             return;
 
         _currentShop = payload;
+        _directShop = null;
+        _directCloseCallback = null;
+        _soldOutIndices.Clear();
+        _scroll = Vector2.zero;
+    }
+
+    public void OpenDirect(ShopSO shop, System.Action closeCallback = null)
+    {
+        if (shop == null)
+            return;
+
+        _currentShop = null;
+        _directShop = shop;
+        _directCloseCallback = closeCallback;
         _soldOutIndices.Clear();
         _scroll = Vector2.zero;
     }
@@ -66,7 +82,7 @@ public class RunShopOnGUIFrontend : MonoBehaviour
     private void OnGUI()
     {
         var payload = _currentShop;
-        var shop = payload?.Shop;
+        var shop = _directShop != null ? _directShop : payload?.Shop;
         if (shop == null)
             return;
 
@@ -165,7 +181,7 @@ public class RunShopOnGUIFrontend : MonoBehaviour
         if (item.kind == ShopSO.ShopItemKind.Card)
             return item.card != null;
 
-        return !string.IsNullOrWhiteSpace(item.inventoryItemId);
+        return item.item != null || !string.IsNullOrWhiteSpace(item.inventoryItemId);
     }
 
     private void TryBuy(int index, ShopSO.ShopItem item)
@@ -205,14 +221,22 @@ public class RunShopOnGUIFrontend : MonoBehaviour
             return deck != null && deck.AddCard(item.card, Mathf.Max(1, item.count));
         }
 
-        return inventory.AddItem(
-            item.inventoryItemId,
-            item.inventoryItemType,
-            Mathf.Max(1, item.count));
+        string itemId = item.item != null ? item.item.ResolvedItemId : item.inventoryItemId;
+        string itemType = item.item != null ? item.item.itemType : item.inventoryItemType;
+        return inventory.AddItem(itemId, itemType, Mathf.Max(1, item.count));
     }
 
     private void LeaveShop()
     {
+        if (_directShop != null)
+        {
+            _directShop = null;
+            var callback = _directCloseCallback;
+            _directCloseCallback = null;
+            callback?.Invoke();
+            return;
+        }
+
         if (_currentShop == null)
             return;
 
@@ -262,6 +286,9 @@ public class RunShopOnGUIFrontend : MonoBehaviour
 
         if (item.kind == ShopSO.ShopItemKind.Card && item.card != null)
             return string.IsNullOrWhiteSpace(item.card.description) ? "卡牌" : item.card.description;
+
+        if (item.kind == ShopSO.ShopItemKind.InventoryItem && item.item != null)
+            return string.IsNullOrWhiteSpace(item.item.description) ? "道具" : item.item.description;
 
         return string.IsNullOrWhiteSpace(item.inventoryItemType) ? "道具" : item.inventoryItemType;
     }

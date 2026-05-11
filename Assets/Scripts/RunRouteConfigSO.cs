@@ -7,74 +7,6 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "RunRouteConfig", menuName = "BlockingKing/Run/Route Config")]
 public class RunRouteConfigSO : ScriptableObject
 {
-    [Serializable]
-    public sealed class ClassicLevelStageSource
-    {
-        [TableColumnWidth(140)]
-        public string stageId;
-
-        [TableColumnWidth(76)]
-        public string stageType;
-
-        [MinValue(1)]
-        [TableColumnWidth(48)]
-        public int weight = 1;
-
-        [AssetsOnly]
-        public LevelData levelData;
-    }
-
-    [Serializable]
-    public sealed class EncounterStageSource
-    {
-        [TableColumnWidth(140)]
-        public string stageId;
-
-        [TableColumnWidth(76)]
-        public string stageType = "Encounter";
-
-        [MinValue(1)]
-        [TableColumnWidth(48)]
-        public int weight = 1;
-
-        [AssetsOnly]
-        public TextAsset stagePack;
-    }
-
-    [Serializable]
-    public sealed class ShopStageSource
-    {
-        [TableColumnWidth(140)]
-        public string stageId;
-
-        [TableColumnWidth(76)]
-        public string stageType = "Shop";
-
-        [MinValue(1)]
-        [TableColumnWidth(48)]
-        public int weight = 1;
-
-        [AssetsOnly]
-        public ShopSO shop;
-    }
-
-    [Serializable]
-    public sealed class EscortStageSource
-    {
-        [TableColumnWidth(140)]
-        public string stageId = "Escort";
-
-        [TableColumnWidth(76)]
-        public string stageType = "Escort";
-
-        [MinValue(1)]
-        [TableColumnWidth(48)]
-        public int weight = 1;
-
-        [AssetsOnly]
-        public LevelCollageGenerationSettings collageGenerationSettings;
-    }
-
     [Title("Route Layout")]
     [HorizontalGroup("Route", Width = 120)]
     [MinValue(1)]
@@ -89,13 +21,6 @@ public class RunRouteConfigSO : ScriptableObject
 
     [AssetsOnly]
     public RunRouteShapeConfigSO shapeConfig;
-
-    [Title("Difficulty")]
-    [Min(0)]
-    public float overallDifficulty = 1f;
-
-    [AssetsOnly]
-    public EnemySpawnDifficultyProfileSO enemySpawnDifficultyProfile;
 
     [Title("Stage Type")]
     [AssetsOnly]
@@ -120,137 +45,26 @@ public class RunRouteConfigSO : ScriptableObject
     [AssetsOnly]
     public StagePoolSO escortStagePool;
 
-    [ShowInInspector, ReadOnly, LabelText("Stage Sources")]
-    [HorizontalGroup("Route")]
-    private int StageSourceCount => BuildRouteStageSources().Count;
-
-    [Title("Stage Pools")]
-    [FoldoutGroup("Classic Levels", Expanded = true)]
-    [TableList(AlwaysExpanded = true, DrawScrollView = true, MinScrollViewHeight = 120)]
-    public List<ClassicLevelStageSource> classicLevels = new List<ClassicLevelStageSource>();
-
-    [FoldoutGroup("Encounters", Expanded = true)]
-    [TableList(AlwaysExpanded = true, DrawScrollView = true, MinScrollViewHeight = 120)]
-    public List<EncounterStageSource> encounters = new List<EncounterStageSource>();
-
-    [FoldoutGroup("Shops", Expanded = true)]
-    [TableList(AlwaysExpanded = true, DrawScrollView = true, MinScrollViewHeight = 80)]
-    public List<ShopStageSource> shops = new List<ShopStageSource>();
-
-    [FoldoutGroup("Escorts", Expanded = true)]
-    [TableList(AlwaysExpanded = true, DrawScrollView = true, MinScrollViewHeight = 80)]
-    public List<EscortStageSource> escorts = new List<EscortStageSource>();
-
     [Title("Collage Defaults")]
     [AssetsOnly]
     public LevelCollageGenerationSettings defaultCollageGenerationSettings;
 
     [Title("Diagnostics")]
-    [ShowInInspector, ReadOnly, LabelText("Weight Summary")]
-    private string WeightSummary => BuildWeightSummary();
+    [ShowInInspector, ReadOnly, LabelText("Stage Sources")]
+    [HorizontalGroup("Route")]
+    private int StageSourceCount => BuildRouteStageSources().Count;
 
-    [ShowInInspector, ReadOnly, LabelText("Escort Collage Status")]
-    private string EscortCollageStatus => BuildEscortCollageStatus();
-
-    [Button(ButtonSizes.Medium), HorizontalGroup("Actions")]
-    private void NormalizeWeights()
-    {
-        foreach (var source in classicLevels ?? new List<ClassicLevelStageSource>())
-            if (source != null) source.weight = Mathf.Max(1, source.weight);
-
-        foreach (var source in encounters ?? new List<EncounterStageSource>())
-            if (source != null) source.weight = Mathf.Max(1, source.weight);
-
-        foreach (var source in shops ?? new List<ShopStageSource>())
-            if (source != null) source.weight = Mathf.Max(1, source.weight);
-
-        foreach (var source in escorts ?? new List<EscortStageSource>())
-            if (source != null) source.weight = Mathf.Max(1, source.weight);
-    }
+    [ShowInInspector, ReadOnly, LabelText("Configured Pools")]
+    private string ConfiguredPoolSummary => BuildConfiguredPoolSummary();
 
     public List<RunRouteStageSource> BuildRouteStageSources()
     {
-        if (stagePool != null)
-        {
-            var pooledSources = stagePool.BuildRouteStageSources(defaultCollageGenerationSettings);
-            if (pooledSources.Count > 0)
-                return pooledSources;
-        }
-
         var result = new List<RunRouteStageSource>();
-        foreach (var source in classicLevels ?? new List<ClassicLevelStageSource>())
-        {
-            if (source?.levelData == null)
-                continue;
-
-            result.Add(new RunRouteStageSource
-            {
-                stageId = string.IsNullOrWhiteSpace(source.stageId) ? source.levelData.name : source.stageId,
-                stageType = source.stageType,
-                weight = Mathf.Max(1, source.weight),
-                levelData = source.levelData,
-                contentKind = VFSContentKind.UnityObject,
-                contentSource = VFSContentSource.Reference,
-                unityObjectTypeName = typeof(LevelData).AssemblyQualifiedName,
-                assetPath = GetAssetPath(source.levelData),
-                referencePath = GetResourcesPath(source.levelData)
-            });
-        }
-
-        foreach (var source in encounters ?? new List<EncounterStageSource>())
-        {
-            if (source?.stagePack == null)
-                continue;
-
-            result.Add(new RunRouteStageSource
-            {
-                stageId = string.IsNullOrWhiteSpace(source.stageId) ? source.stagePack.name : source.stageId,
-                stageType = source.stageType,
-                weight = Mathf.Max(1, source.weight),
-                contentKind = VFSContentKind.Nekograph,
-                contentSource = VFSContentSource.Reference,
-                assetPath = GetAssetPath(source.stagePack),
-                referencePath = GetResourcesPath(source.stagePack)
-            });
-        }
-
-        foreach (var source in shops ?? new List<ShopStageSource>())
-        {
-            if (source?.shop == null)
-                continue;
-
-            result.Add(new RunRouteStageSource
-            {
-                stageId = string.IsNullOrWhiteSpace(source.stageId) ? source.shop.name : source.stageId,
-                stageType = string.IsNullOrWhiteSpace(source.stageType) ? "Shop" : source.stageType,
-                weight = Mathf.Max(1, source.weight),
-                shop = source.shop,
-                contentKind = VFSContentKind.UnityObject,
-                contentSource = VFSContentSource.Reference,
-                unityObjectTypeName = typeof(ShopSO).AssemblyQualifiedName,
-                assetPath = GetAssetPath(source.shop),
-                referencePath = GetResourcesPath(source.shop)
-            });
-        }
-
-        foreach (var source in escorts ?? new List<EscortStageSource>())
-        {
-            if (source == null)
-                continue;
-
-            result.Add(new RunRouteStageSource
-            {
-                stageId = string.IsNullOrWhiteSpace(source.stageId) ? "Escort" : source.stageId,
-                stageType = string.IsNullOrWhiteSpace(source.stageType) ? "Escort" : source.stageType,
-                weight = Mathf.Max(1, source.weight),
-                collageGenerationSettings = source.collageGenerationSettings != null
-                    ? source.collageGenerationSettings
-                    : defaultCollageGenerationSettings,
-                contentKind = VFSContentKind.Json,
-                contentSource = VFSContentSource.Inline
-            });
-        }
-
+        AddPoolSources(result, stagePool, null);
+        AddPoolSources(result, classicStagePool, StagePoolSO.StageEntryKind.ClassicLevel);
+        AddPoolSources(result, encounterStagePool, StagePoolSO.StageEntryKind.Encounter);
+        AddPoolSources(result, shopStagePool, StagePoolSO.StageEntryKind.Shop);
+        AddPoolSources(result, escortStagePool, StagePoolSO.StageEntryKind.Escort);
         return result;
     }
 
@@ -273,6 +87,7 @@ public class RunRouteConfigSO : ScriptableObject
         out RunRouteStageSource source)
     {
         source = null;
+        random ??= new System.Random();
         var context = new PoolEvalContext
         {
             routeLayer = Mathf.Max(0, routeLayer),
@@ -284,14 +99,13 @@ public class RunRouteConfigSO : ScriptableObject
         if (forcedKind.HasValue)
             return TryPickRouteStageSourceByKind(forcedKind.Value, context, random, out source);
 
-        if (stageTypePool != null && stageTypePool.TryRoll(context, random, out var kind))
+        if (stageTypePool != null && stageTypePool.TryRoll(context, random, out var kind) &&
+            TryPickRouteStageSourceByKind(kind, context, random, out source))
         {
-            if (TryPickRouteStageSourceByKind(kind, context, random, out source))
-                return true;
+            return true;
         }
 
-        var sources = BuildRouteStageSources();
-        source = PickWeightedStageSource(sources, random);
+        source = PickWeightedStageSource(BuildRouteStageSources(), random);
         return source != null;
     }
 
@@ -307,6 +121,7 @@ public class RunRouteConfigSO : ScriptableObject
 
     public RunRouteShape BuildShape(System.Random random)
     {
+        random ??= new System.Random();
         if (shapeConfig != null)
             return shapeConfig.BuildShape(random);
 
@@ -317,7 +132,7 @@ public class RunRouteConfigSO : ScriptableObject
         {
             int nodesInLayer = layer == 0 || layer == resolvedLayerCount - 1
                 ? 1
-                : Mathf.Clamp(random != null ? random.Next(2, resolvedLaneCount + 1) : UnityEngine.Random.Range(2, resolvedLaneCount + 1), 1, resolvedLaneCount);
+                : Mathf.Clamp(random.Next(2, resolvedLaneCount + 1), 1, resolvedLaneCount);
             shape.SetNodeCount(layer, nodesInLayer);
         }
 
@@ -337,7 +152,39 @@ public class RunRouteConfigSO : ScriptableObject
             return true;
         }
 
-        StagePoolSO pool = kind switch
+        var pool = GetTypedPool(kind);
+        if (pool != null && pool.TryRollSource(kind, defaultCollageGenerationSettings, random, out source))
+            return true;
+
+        if (stagePool != null && stagePool.TryRollSource(kind, defaultCollageGenerationSettings, random, out source))
+            return true;
+
+        source = PickWeightedStageSource(BuildRouteStageSources(kind), random);
+        return source != null;
+    }
+
+    private bool TryPickClassicLevelStageSource(PoolEvalContext context, System.Random random, out RunRouteStageSource source)
+    {
+        source = null;
+        if (classicLevelSelectionTable != null && classicLevelSelectionTable.TryRollLevel(context, random, out var level))
+        {
+            source = CreateClassicStageSource(level);
+            return source != null;
+        }
+
+        if (classicStagePool != null &&
+            classicStagePool.TryRollSource(StagePoolSO.StageEntryKind.ClassicLevel, defaultCollageGenerationSettings, random, out source))
+        {
+            return true;
+        }
+
+        return stagePool != null &&
+               stagePool.TryRollSource(StagePoolSO.StageEntryKind.ClassicLevel, defaultCollageGenerationSettings, random, out source);
+    }
+
+    private StagePoolSO GetTypedPool(StagePoolSO.StageEntryKind kind)
+    {
+        return kind switch
         {
             StagePoolSO.StageEntryKind.ClassicLevel => classicStagePool,
             StagePoolSO.StageEntryKind.Encounter => encounterStagePool,
@@ -345,59 +192,22 @@ public class RunRouteConfigSO : ScriptableObject
             StagePoolSO.StageEntryKind.Escort => escortStagePool,
             _ => null
         };
-
-        if (pool != null && pool.TryRollSource(kind, defaultCollageGenerationSettings, random, out source))
-            return true;
-
-        if (stagePool != null && stagePool.TryRollSource(kind, defaultCollageGenerationSettings, random, out source))
-            return true;
-
-        var filteredSources = BuildLegacyRouteStageSources(kind);
-        source = PickWeightedStageSource(filteredSources, random);
-        return source != null;
     }
 
-    private bool TryPickClassicLevelStageSource(PoolEvalContext context, System.Random random, out RunRouteStageSource source)
+    private List<RunRouteStageSource> BuildRouteStageSources(StagePoolSO.StageEntryKind kind)
     {
-        source = null;
+        var result = new List<RunRouteStageSource>();
+        AddPoolSources(result, GetTypedPool(kind), kind);
+        AddPoolSources(result, stagePool, kind);
+        return result;
+    }
 
-        if (classicLevelSelectionTable != null && classicLevelSelectionTable.TryRollLevel(context, random, out var level))
-        {
-            source = CreateClassicStageSource(level);
-            return source != null;
-        }
+    private void AddPoolSources(List<RunRouteStageSource> target, StagePoolSO pool, StagePoolSO.StageEntryKind? kindFilter)
+    {
+        if (target == null || pool == null)
+            return;
 
-        var pool = classicStagePool;
-        if (pool != null && pool.TryRollSource(StagePoolSO.StageEntryKind.ClassicLevel, defaultCollageGenerationSettings, random, out source))
-            return true;
-
-        if (classicLevels != null && classicLevels.Count > 0)
-        {
-            var legacy = new List<RunRouteStageSource>();
-            foreach (var sourceItem in classicLevels)
-            {
-                if (sourceItem?.levelData == null)
-                    continue;
-
-                legacy.Add(new RunRouteStageSource
-                {
-                    stageId = string.IsNullOrWhiteSpace(sourceItem.stageId) ? sourceItem.levelData.name : sourceItem.stageId,
-                    stageType = sourceItem.stageType,
-                    weight = Mathf.Max(1, sourceItem.weight),
-                    levelData = sourceItem.levelData,
-                    contentKind = VFSContentKind.UnityObject,
-                    contentSource = VFSContentSource.Reference,
-                    unityObjectTypeName = typeof(LevelData).AssemblyQualifiedName,
-                    assetPath = GetAssetPath(sourceItem.levelData),
-                    referencePath = GetResourcesPath(sourceItem.levelData)
-                });
-            }
-
-            source = PickWeightedStageSource(legacy, random);
-            return source != null;
-        }
-
-        return false;
+        target.AddRange(pool.BuildRouteStageSources(defaultCollageGenerationSettings, kindFilter));
     }
 
     private static RunRouteStageSource CreateClassicStageSource(LevelData level)
@@ -419,39 +229,12 @@ public class RunRouteConfigSO : ScriptableObject
         };
     }
 
-    private List<RunRouteStageSource> BuildLegacyRouteStageSources(StagePoolSO.StageEntryKind kind)
-    {
-        var allSources = BuildRouteStageSources();
-        var result = new List<RunRouteStageSource>();
-        foreach (var source in allSources)
-        {
-            if (source == null)
-                continue;
-
-            if (MatchesKind(source, kind))
-                result.Add(source);
-        }
-
-        return result;
-    }
-
-    private static bool MatchesKind(RunRouteStageSource source, StagePoolSO.StageEntryKind kind)
-    {
-        return kind switch
-        {
-            StagePoolSO.StageEntryKind.ClassicLevel => source.levelData != null,
-            StagePoolSO.StageEntryKind.Encounter => source.contentKind == VFSContentKind.Nekograph,
-            StagePoolSO.StageEntryKind.Shop => source.shop != null,
-            StagePoolSO.StageEntryKind.Escort => source.contentKind == VFSContentKind.Json,
-            _ => false
-        };
-    }
-
     private static RunRouteStageSource PickWeightedStageSource(IReadOnlyList<RunRouteStageSource> sources, System.Random random)
     {
         if (sources == null || sources.Count == 0)
             return null;
 
+        random ??= new System.Random();
         int totalWeight = 0;
         for (int i = 0; i < sources.Count; i++)
             totalWeight += Mathf.Max(0, sources[i]?.weight ?? 0);
@@ -473,104 +256,28 @@ public class RunRouteConfigSO : ScriptableObject
         return sources[^1];
     }
 
-    private string BuildWeightSummary()
+    private string BuildConfiguredPoolSummary()
     {
-        int classicWeight = SumClassicWeight();
-        int encounterWeight = SumEncounterWeight();
-        int shopWeight = SumShopWeight();
-        int escortWeight = SumEscortWeight();
-        int total = classicWeight + encounterWeight + shopWeight + escortWeight;
-        if (total <= 0)
-            return "No active stage sources.";
+        var parts = new List<string>();
+        AppendPoolSummary(parts, "Mixed", stagePool, null);
+        AppendPoolSummary(parts, "Classic", classicStagePool, StagePoolSO.StageEntryKind.ClassicLevel);
+        AppendPoolSummary(parts, "Encounter", encounterStagePool, StagePoolSO.StageEntryKind.Encounter);
+        AppendPoolSummary(parts, "Shop", shopStagePool, StagePoolSO.StageEntryKind.Shop);
+        AppendPoolSummary(parts, "Escort", escortStagePool, StagePoolSO.StageEntryKind.Escort);
 
-        return $"Classic {classicWeight} ({classicWeight / (float)total:P0}) | " +
-               $"Encounter {encounterWeight} ({encounterWeight / (float)total:P0}) | " +
-               $"Shop {shopWeight} ({shopWeight / (float)total:P0}) | " +
-               $"Escort {escortWeight} ({escortWeight / (float)total:P0}) | " +
-               $"Total {total}";
+        if (classicLevelSelectionTable != null)
+            parts.Add($"Classic Table: {classicLevelSelectionTable.name}");
+
+        return parts.Count > 0 ? string.Join(" | ", parts) : "No route stage pools configured.";
     }
 
-    private string BuildEscortCollageStatus()
+    private void AppendPoolSummary(List<string> parts, string label, StagePoolSO pool, StagePoolSO.StageEntryKind? kindFilter)
     {
-        if (escorts == null || escorts.Count == 0)
-            return "No Escort stages configured.";
+        if (pool == null)
+            return;
 
-        int missingSettings = 0;
-        int missingSource = 0;
-        foreach (var source in escorts)
-        {
-            if (source == null)
-                continue;
-
-            var settings = source.collageGenerationSettings != null
-                ? source.collageGenerationSettings
-                : defaultCollageGenerationSettings;
-
-            if (settings == null)
-            {
-                missingSettings++;
-                continue;
-            }
-
-            if (settings.sourceDatabase == null)
-                missingSource++;
-        }
-
-        if (missingSettings > 0)
-            return $"{missingSettings} Escort source(s) missing collage generation settings.";
-
-        if (missingSource > 0)
-            return $"{missingSource} Escort source(s) missing source database on generation settings.";
-
-        return "Escort collage settings ready.";
-    }
-
-    private int SumClassicWeight()
-    {
-        int total = 0;
-        foreach (var source in classicLevels ?? new List<ClassicLevelStageSource>())
-        {
-            if (source?.levelData != null)
-                total += Mathf.Max(1, source.weight);
-        }
-
-        return total;
-    }
-
-    private int SumEncounterWeight()
-    {
-        int total = 0;
-        foreach (var source in encounters ?? new List<EncounterStageSource>())
-        {
-            if (source?.stagePack != null)
-                total += Mathf.Max(1, source.weight);
-        }
-
-        return total;
-    }
-
-    private int SumShopWeight()
-    {
-        int total = 0;
-        foreach (var source in shops ?? new List<ShopStageSource>())
-        {
-            if (source?.shop != null)
-                total += Mathf.Max(1, source.weight);
-        }
-
-        return total;
-    }
-
-    private int SumEscortWeight()
-    {
-        int total = 0;
-        foreach (var source in escorts ?? new List<EscortStageSource>())
-        {
-            if (source != null)
-                total += Mathf.Max(1, source.weight);
-        }
-
-        return total;
+        int count = pool.BuildRouteStageSources(defaultCollageGenerationSettings, kindFilter).Count;
+        parts.Add($"{label}: {count}");
     }
 
     private static string GetAssetPath(UnityEngine.Object asset)

@@ -1,0 +1,24 @@
+fileFormatVersion: 2
+guid: c6eff52daa025544f89c334de87e88d0
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 9ef784dafb878e84c9b2e2c8c3666ac7, type: 3}
+  PreviewJson: "{\r\n  \"$type\": \"BasePackData, NekoGraph.Runtime\",\r\n  \"PackID\":
+    \"EventHealth01\",\r\n  \"Version\": \"1.0.0\",\r\n  \"ReadableFrom\": 100,\r\n 
+    \"WritableFrom\": 1000,\r\n  \"CreatedAt\": 1778498421,\r\n  \"ModifiedAt\":
+    1778498611,\r\n  \"Nodes\": {\r\n    \"$type\": \"System.Collections.Generic.Dictionary`2[[System.String,
+    mscorlib],[BaseNodeData, NekoGraph.Runtime]], mscorlib\",\r\n    \"root_0d8c826b\":
+    {\r\n      \"$type\": \"RootNodeData, NekoGraph.Runtime\",\r\n      \"_\": [],\r\n     
+    \"NodeID\": \"root_0d8c826b\",\r\n      \"Name\": \"Root\",\r\n      \"EditorPosition\":
+    {\r\n        \"$type\": \"SerializableVector2, NekoGraph.Runtime\",\r\n       
+    \"x\": 0.0,\r\n        \"y\": 0.0\r\n      },\r\n      \"OutputConnections\":
+    [],\r\n      \"IsChecked\": false\r\n    },\r\n    \"1c3573ad-0dfd-415a-a645-55c2284bb504\":
+    {\r\n      \"$type\": \"VFSNodeData, NekoGraph.Runtime\",\r\n      \"ChildNodeIDs\":
+    [],\r\n      \"ContentKind\": 2,\r\n      \"ContentSource\": 1,\r\n      \"ReferencePath\":
+    \"RunStage/EventHealth/_EventHealth01.RunMsg\",\r\n      \"AssetGuid\": \"dd6e34f645780bd41b046e35248d43d7\",\r\n...
+    (truncated)"

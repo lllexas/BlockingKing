@@ -142,11 +142,12 @@ public class RunRouteFacade : PackFacadeBase
             int nodesInLayer = shape.GetNodeCount(layer);
             var lanes = PickDistinctLanes(random, laneCount, nodesInLayer);
             var layerNodes = new List<VFSNodeData>();
+            float difficulty = GameFlowController.Instance != null ? GameFlowController.Instance.OverallDifficulty : 1f;
             for (int i = 0; i < lanes.Count; i++)
             {
                 int lane = lanes[i];
                 StagePoolSO.StageEntryKind? forcedKind = shape.TryGetForcedStageKind(layer, out var kind) ? kind : null;
-                if (!routeConfig.TryPickRouteStageSource(layer, layerCount, routeConfig.overallDifficulty, forcedKind, random, out var source) ||
+                if (!routeConfig.TryPickRouteStageSource(layer, layerCount, difficulty, forcedKind, random, out var source) ||
                     source == null)
                 {
                     continue;

@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f52d1b3c0e94f3e8a6d41b2c75a1001, type: 3}
+  m_Name: RunConfig
+  m_EditorClassIdentifier: 
+  configId: 
+  displayName: 
+  startSettings: {fileID: 11400000, guid: 815607c9e90200942a60e230ce6e6ce6, type: 2}
+  routeSettings: {fileID: 11400000, guid: 4ba5bfc132748ce4c816b96a5e32e8a5, type: 2}
+  roundSettings: {fileID: 11400000, guid: 8949a57160ca0cc4c97f5938a2d0ba9e, type: 2}
+  difficultySettings: {fileID: 11400000, guid: 41ca1ed71d52f4d4688389c4fbe45e28, type: 2}
+  rewardSettings: {fileID: 11400000, guid: f931c454a3dc5af448ab5682992462ab, type: 2}

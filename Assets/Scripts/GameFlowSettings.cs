@@ -1,6 +1,7 @@
+using System;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "GameFlowSettings", menuName = "BlockingKing/Game Flow Settings")]
+[Obsolete("Use RunConfigSO as the run entry and RunRouteConfigSO for route-only settings.")]
 public class GameFlowSettings : RunRouteConfigSO
 {
 }

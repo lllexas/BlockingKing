@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b04697c2e7054186bb22c9f6f7af645a, type: 3}
+  m_Name: RunRoundConfig
+  m_EditorClassIdentifier: 
+  totalRounds: 4
+  seed: 1
+  levelSourceDatabase: {fileID: 11400000, guid: e325a568aeaa77f48b99e73805a9d309,
+    type: 2}
+  classicFeatureSelectionTable: {fileID: 11400000, guid: a0350858e1ecb1c4e9f2062dbed7a95e,
+    type: 2}
+  escortFeatureSelectionTable: {fileID: 11400000, guid: b5c845c92a60d29418529ae16d3bf4b6,
+    type: 2}
+  skipRewardPool: {fileID: 11400000, guid: f2c8ceb48b0599d4693918f2c0890794, type: 2}
+  classicEscortAlternationGold: 2
+  shopItemPool: {fileID: 11400000, guid: 142fc223f4a12f448b400abd5adaa277, type: 2}
+  eventStagePool: {fileID: 11400000, guid: 59b7e7a3fafe2e74093c9cd4603f778d, type: 2}
+  legacyEscortGenerationSettings: {fileID: 11400000, guid: a8a37319184b4b544b565809714fbd7d,
+    type: 2}

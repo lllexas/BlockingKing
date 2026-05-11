@@ -91,6 +91,42 @@ public class StagePoolSO : ContentPoolSO<StagePoolSO.Entry, RunRouteStageSource>
         return source != null;
     }
 
+    public bool TryRollStagePack(StageEntryKind kind, System.Random random, out BasePackData pack, out string displayName)
+    {
+        pack = null;
+        displayName = null;
+        var candidates = new List<Entry>();
+        foreach (var item in entries ?? new List<Entry>())
+        {
+            if (enabled && item != null && item.enabled && item.kind == kind && item.stagePack != null)
+                candidates.Add(item);
+        }
+
+        if (candidates.Count == 0)
+            return false;
+
+        int index = random != null ? random.Next(candidates.Count) : UnityEngine.Random.Range(0, candidates.Count);
+        var entry = candidates[index];
+
+        if (entry?.stagePack == null || string.IsNullOrWhiteSpace(entry.stagePack.text))
+            return false;
+
+        try
+        {
+            pack = BasePackData.FromJson(entry.stagePack.text);
+            displayName = !string.IsNullOrWhiteSpace(entry.stageId) ? entry.stageId : entry.stagePack.name;
+            if (pack != null && string.IsNullOrWhiteSpace(pack.DisplayName))
+                pack.DisplayName = displayName;
+
+            return pack != null;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[StagePoolSO] Failed to parse stage pack '{entry.stagePack.name}': {e.Message}");
+            return false;
+        }
+    }
+
     protected override string GetEntryDisplayName(Entry entry, int index)
     {
         if (entry == null)

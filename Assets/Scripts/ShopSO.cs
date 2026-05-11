@@ -17,13 +17,20 @@ public class ShopSO : ScriptableObject
     [Serializable]
     public sealed class ShopItem
     {
-        public string itemId;
         public ShopItemKind kind = ShopItemKind.Card;
 
+        [ShowIf(nameof(IsCard))]
         [AssetsOnly]
         public CardSO card;
 
+        [ShowIf(nameof(IsInventoryItem))]
+        [AssetsOnly]
+        public ItemSO item;
+
+        [ShowIf(nameof(ShowItemFallbackFields))]
         public string inventoryItemId;
+
+        [ShowIf(nameof(ShowItemFallbackFields))]
         public string inventoryItemType;
 
         [Min(1)]
@@ -35,6 +42,10 @@ public class ShopSO : ScriptableObject
         [TextArea(1, 3)]
         public string description;
 
+        private bool IsCard => kind == ShopItemKind.Card;
+        private bool IsInventoryItem => kind == ShopItemKind.InventoryItem;
+        private bool ShowItemFallbackFields => IsInventoryItem && item == null;
+
         public string DisplayName
         {
             get
@@ -42,7 +53,10 @@ public class ShopSO : ScriptableObject
                 if (kind == ShopItemKind.Card && card != null)
                     return string.IsNullOrWhiteSpace(card.displayName) ? card.name : card.displayName;
 
-                return string.IsNullOrWhiteSpace(inventoryItemId) ? itemId : inventoryItemId;
+                if (kind == ShopItemKind.InventoryItem && item != null)
+                    return item.ResolvedDisplayName;
+
+                return inventoryItemId;
             }
         }
     }

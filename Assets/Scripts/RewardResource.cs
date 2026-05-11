@@ -21,26 +21,16 @@ public static class RewardResource
             return HandleResult.Error;
         }
 
-        var expandedRewards = reward.GetRewards();
-        if (expandedRewards != null && expandedRewards.Count > 0 && !(expandedRewards.Count == 1 && ReferenceEquals(expandedRewards[0], reward)))
+        if (!reward.TryResolveReward(null, out var resolvedReward) || resolvedReward == null)
         {
-            foreach (var expandedReward in expandedRewards)
-            {
-                if (expandedReward == null)
-                    continue;
-
-                HandleResult expandedResult = ExecuteReward(expandedReward);
-                if (expandedResult == HandleResult.Error)
-                    return expandedResult;
-            }
-
+            Debug.LogWarning("[RewardResource] Reward roll skipped because no reward could be resolved.");
             return HandleResult.Push;
         }
 
-        return ExecuteReward(reward);
+        return ExecuteReward(resolvedReward);
     }
 
-    private static HandleResult ExecuteReward(RewardSO reward)
+    public static HandleResult ExecuteReward(RewardSO reward)
     {
         switch (reward.rewardKind)
         {
@@ -49,6 +39,12 @@ public static class RewardResource
 
             case RewardSO.RewardKind.AddGold:
                 return AddGold(reward);
+
+            case RewardSO.RewardKind.AddItem:
+                return AddItem(reward);
+
+            case RewardSO.RewardKind.HealRunHp:
+                return HealRunHp(reward);
 
             default:
                 Debug.LogError($"[RewardResource] Unsupported reward kind: {reward.rewardKind}");
@@ -111,6 +107,62 @@ public static class RewardResource
         if (!inventory.AddGold(reward.goldAmount))
         {
             Debug.LogError($"[RewardResource] Failed to add gold reward: {reward.goldAmount}");
+            return HandleResult.Error;
+        }
+
+        return HandleResult.Push;
+    }
+
+    private static HandleResult AddItem(RewardSO reward)
+    {
+        string itemId = reward.item != null ? reward.item.ResolvedItemId : reward.inventoryItemId;
+        string itemType = reward.item != null ? reward.item.itemType : reward.inventoryItemType;
+        if (string.IsNullOrWhiteSpace(itemId))
+            return HandleResult.Push;
+
+        var inventory = GraphHub.Instance?.GetFacade<RunInventoryFacade>();
+        if (inventory == null)
+        {
+            inventory = new RunInventoryFacade();
+            GraphHub.Instance?.RegisterFacade(inventory);
+        }
+
+        if (inventory == null)
+        {
+            Debug.LogError("[RewardResource] RunInventoryFacade is not available.");
+            return HandleResult.Error;
+        }
+
+        if (!inventory.AddItem(itemId, itemType, Math.Max(1, reward.itemCount)))
+        {
+            Debug.LogError($"[RewardResource] Failed to add item reward: {itemId}");
+            return HandleResult.Error;
+        }
+
+        return HandleResult.Push;
+    }
+
+    private static HandleResult HealRunHp(RewardSO reward)
+    {
+        if (reward.healAmount <= 0)
+            return HandleResult.Push;
+
+        var status = GraphHub.Instance?.GetFacade<RunPlayerStatusFacade>();
+        if (status == null)
+        {
+            status = new RunPlayerStatusFacade();
+            GraphHub.Instance?.RegisterFacade(status);
+        }
+
+        if (status == null)
+        {
+            Debug.LogError("[RewardResource] RunPlayerStatusFacade is not available.");
+            return HandleResult.Error;
+        }
+
+        if (!status.Heal(reward.healAmount))
+        {
+            Debug.LogError($"[RewardResource] Failed to heal run HP: {reward.healAmount}");
             return HandleResult.Error;
         }
 

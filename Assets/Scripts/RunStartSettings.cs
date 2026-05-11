@@ -20,6 +20,13 @@ public class RunStartSettings : ScriptableObject
     [Min(0)]
     public int startingGold = 0;
 
+    [Title("Health")]
+    [Min(1)]
+    public int startingMaxHp = 30;
+
+    [Min(0)]
+    public int startingHp = 30;
+
     [Title("Hand")]
     [Min(0)]
     public int targetHandCount = 5;

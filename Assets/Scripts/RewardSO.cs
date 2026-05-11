@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using NekoGraph;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "Reward", menuName = "BlockingKing/Run Stage/Reward")]
@@ -10,7 +11,9 @@ public class RewardSO : ScriptableObject
     public enum RewardKind
     {
         AddCardsToDeck,
-        AddGold
+        AddGold,
+        AddItem,
+        HealRunHp
     }
 
     [Serializable]
@@ -20,33 +23,64 @@ public class RewardSO : ScriptableObject
         public int count = 1;
     }
 
-    [Header("Pool")]
+    [Header("Source")]
+    [Tooltip("If enabled, this RewardSO rolls one reward from rewardPool instead of applying the direct reward fields below.")]
+    public bool rollFromPool;
+
+    [ShowIf(nameof(rollFromPool))]
+    [AssetsOnly]
     public RewardPoolSO rewardPool;
 
+    [ShowIf(nameof(ShowDirectRewardFields))]
     public string rewardId;
+
+    [ShowIf(nameof(ShowDirectRewardFields))]
     public RewardKind rewardKind = RewardKind.AddCardsToDeck;
+
+    [ShowIf(nameof(IsCardReward))]
     public List<CardReward> cards = new List<CardReward>();
 
+    [ShowIf(nameof(IsGoldReward))]
     [Min(0)]
     public int goldAmount;
 
-    public IReadOnlyList<RewardSO> GetRewards()
+    [ShowIf(nameof(IsHealReward))]
+    [Min(1)]
+    public int healAmount = 1;
+
+    [ShowIf(nameof(IsItemReward))]
+    [AssetsOnly]
+    public ItemSO item;
+
+    [ShowIf(nameof(ShowItemFallbackFields))]
+    public string inventoryItemId;
+
+    [ShowIf(nameof(ShowItemFallbackFields))]
+    public string inventoryItemType;
+
+    [ShowIf(nameof(IsItemReward))]
+    [Min(1)]
+    public int itemCount = 1;
+
+    private bool IsCardReward => rewardKind == RewardKind.AddCardsToDeck;
+    private bool IsGoldReward => rewardKind == RewardKind.AddGold;
+    private bool IsItemReward => rewardKind == RewardKind.AddItem;
+    private bool IsHealReward => rewardKind == RewardKind.HealRunHp;
+    private bool ShowItemFallbackFields => IsItemReward && item == null;
+    private bool ShowDirectRewardFields => !rollFromPool;
+
+    public bool TryResolveReward(System.Random random, out RewardSO reward)
     {
-        if (rewardPool != null && rewardPool.Entries != null && rewardPool.Entries.Count > 0)
+        reward = this;
+        if (!rollFromPool)
+            return true;
+
+        if (rewardPool == null)
         {
-            var result = new List<RewardSO>();
-            foreach (var entry in rewardPool.Entries)
-            {
-                if (entry == null || !entry.enabled)
-                    continue;
-
-                result.Add(entry.ToReward());
-            }
-
-            if (result.Count > 0)
-                return result;
+            reward = null;
+            return false;
         }
 
-        return new List<RewardSO> { this };
+        return rewardPool.TryRollReward(random, out reward);
     }
 }

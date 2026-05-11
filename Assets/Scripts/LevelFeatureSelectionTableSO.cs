@@ -5,41 +5,31 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "LevelFeatureSelectionTable", menuName = "BlockingKing/Tables/Level Feature Selection Table")]
 public sealed class LevelFeatureSelectionTableSO : TableBaseSO, IPoolAnalyzable
 {
+    [System.Serializable]
+    public sealed class Row
+    {
+        public bool enabled = true;
+
+        [Min(0)]
+        public int roundIndex;
+
+        public string label;
+
+        [AssetsOnly]
+        public LevelFeatureFilterSO filter;
+    }
+
     [Title("Source Pool")]
     [AssetsOnly]
     public LevelCollageSourceDatabase sourceDatabase;
 
-    [Title("Fallback Filters")]
-    [MinMaxSlider(1, 50, true), LabelText("Width")]
-    public Vector2 widthRange = new(1, 50);
-
-    [MinMaxSlider(1, 50, true), LabelText("Height")]
-    public Vector2 heightRange = new(1, 50);
-
-    [MinMaxSlider(1, 2500, true), LabelText("Area")]
-    public Vector2 areaRange = new(1, 2500);
-
-    [MinMaxSlider(0f, 1f, true), LabelText("Wall Rate")]
-    public Vector2 wallRateRange = new(0f, 1f);
-
-    [MinMaxSlider(0, 50, true), LabelText("Effective Boxes")]
-    public Vector2 effectiveBoxRange = new(0, 50);
-
-    [Title("Context Tables")]
+    [Title("Fallback Filter")]
     [AssetsOnly]
-    public FloatRangeTableSO widthTable;
+    public LevelFeatureFilterSO fallbackFilter;
 
-    [AssetsOnly]
-    public FloatRangeTableSO heightTable;
-
-    [AssetsOnly]
-    public FloatRangeTableSO areaTable;
-
-    [AssetsOnly]
-    public FloatRangeTableSO wallRateTable;
-
-    [AssetsOnly]
-    public FloatRangeTableSO effectiveBoxTable;
+    [Title("Round Rows")]
+    [TableList(AlwaysExpanded = true, DrawScrollView = true, MinScrollViewHeight = 160)]
+    public List<Row> rows = new List<Row>();
 
     [Title("Roll")]
     [Tooltip("Off = equal chance among matching levels. On = use each database entry's manualWeight.")]
@@ -47,13 +37,19 @@ public sealed class LevelFeatureSelectionTableSO : TableBaseSO, IPoolAnalyzable
 
     public bool TryRollLevel(PoolEvalContext context, System.Random random, out LevelData level)
     {
+        return TryRollLevel(context, random, null, out level);
+    }
+
+    public bool TryRollLevel(PoolEvalContext context, System.Random random, LevelCollageSourceDatabase fallbackSourceDatabase, out LevelData level)
+    {
         level = null;
-        if (!enabled || sourceDatabase?.entries == null || sourceDatabase.entries.Count == 0)
+        var database = ResolveSourceDatabase(fallbackSourceDatabase);
+        if (!enabled || database?.entries == null || database.entries.Count == 0)
             return false;
 
         var candidates = new List<LevelCollageSourceEntry>();
         var filters = BuildFilters(context);
-        foreach (var entry in sourceDatabase.entries)
+        foreach (var entry in database.entries)
         {
             if (!IsSelectable(entry, filters))
                 continue;
@@ -79,22 +75,28 @@ public sealed class LevelFeatureSelectionTableSO : TableBaseSO, IPoolAnalyzable
 
     public PoolAnalysisResult Analyze(PoolEvalContext context)
     {
+        return Analyze(context, null);
+    }
+
+    public PoolAnalysisResult Analyze(PoolEvalContext context, LevelCollageSourceDatabase fallbackSourceDatabase)
+    {
+        var database = ResolveSourceDatabase(fallbackSourceDatabase);
         var result = new PoolAnalysisResult
         {
             poolId = tableId,
             displayName = GetResolvedDisplayName()
         };
 
-        if (sourceDatabase?.entries == null)
+        if (database?.entries == null)
         {
             PoolAnalysisMath.Finalize(result);
             return result;
         }
 
         var filters = BuildFilters(context);
-        for (int i = 0; i < sourceDatabase.entries.Count; i++)
+        for (int i = 0; i < database.entries.Count; i++)
         {
-            var entry = sourceDatabase.entries[i];
+            var entry = database.entries[i];
             bool selectable = enabled && IsSelectable(entry, filters);
             result.entries.Add(new PoolEntryAnalysis
             {
@@ -111,18 +113,70 @@ public sealed class LevelFeatureSelectionTableSO : TableBaseSO, IPoolAnalyzable
         return result;
     }
 
+    public LevelCollageSourceDatabase ResolveSourceDatabase(LevelCollageSourceDatabase fallbackSourceDatabase = null)
+    {
+        return sourceDatabase != null ? sourceDatabase : fallbackSourceDatabase;
+    }
+
     private FeatureFilters BuildFilters(PoolEvalContext context)
+    {
+        var row = ResolveRow(context.routeLayer);
+        if (row?.filter != null)
+        {
+            return BuildFilters(row.filter, GetRowDisplayName(row));
+        }
+
+        if (fallbackFilter != null)
+            return BuildFilters(fallbackFilter, "Fallback");
+
+        return new FeatureFilters
+        {
+            width = new Vector2(1, 50),
+            height = new Vector2(1, 50),
+            area = new Vector2(1, 2500),
+            wallRate = new Vector2(0f, 1f),
+            effectiveBoxes = new Vector2(0, 50),
+            sourceLabel = "Built-in fallback"
+        };
+    }
+
+    private static FeatureFilters BuildFilters(LevelFeatureFilterSO filter, string sourceLabel)
     {
         return new FeatureFilters
         {
-            width = widthTable != null ? Normalize(widthTable.Evaluate(context, widthRange), 1f) : Normalize(widthRange, 1f),
-            height = heightTable != null ? Normalize(heightTable.Evaluate(context, heightRange), 1f) : Normalize(heightRange, 1f),
-            area = areaTable != null ? Normalize(areaTable.Evaluate(context, areaRange), 1f) : Normalize(areaRange, 1f),
-            wallRate = wallRateTable != null ? Normalize01(wallRateTable.Evaluate(context, wallRateRange)) : Normalize01(wallRateRange),
-            effectiveBoxes = effectiveBoxTable != null
-                ? Normalize(effectiveBoxTable.Evaluate(context, effectiveBoxRange), 0f)
-                : Normalize(effectiveBoxRange, 0f)
+            width = Normalize(filter.widthRange, 1f),
+            height = Normalize(filter.heightRange, 1f),
+            area = Normalize(filter.areaRange, 1f),
+            wallRate = Normalize01(filter.wallRateRange),
+            effectiveBoxes = Normalize(filter.effectiveBoxRange, 0f),
+            sourceLabel = sourceLabel
         };
+    }
+
+    private Row ResolveRow(int roundIndex)
+    {
+        if (rows == null || rows.Count == 0)
+            return null;
+
+        Row best = null;
+        int bestRound = int.MinValue;
+        roundIndex = Mathf.Max(0, roundIndex);
+
+        for (int i = 0; i < rows.Count; i++)
+        {
+            var row = rows[i];
+            if (row == null || !row.enabled)
+                continue;
+
+            int rowRound = Mathf.Max(0, row.roundIndex);
+            if (rowRound > roundIndex || rowRound < bestRound)
+                continue;
+
+            best = row;
+            bestRound = rowRound;
+        }
+
+        return best;
     }
 
     private static bool IsSelectable(LevelCollageSourceEntry entry, FeatureFilters filters)
@@ -168,7 +222,15 @@ public sealed class LevelFeatureSelectionTableSO : TableBaseSO, IPoolAnalyzable
         if (!selectable)
             return $"Filtered out by {filters}";
 
-        return "OK";
+        return $"OK ({filters.sourceLabel})";
+    }
+
+    private static string GetRowDisplayName(Row row)
+    {
+        if (row != null && !string.IsNullOrWhiteSpace(row.label))
+            return row.label;
+
+        return row != null ? $"Round {Mathf.Max(0, row.roundIndex)}" : "Fallback";
     }
 
     private static bool InRange(float value, Vector2 range)
@@ -197,10 +259,11 @@ public sealed class LevelFeatureSelectionTableSO : TableBaseSO, IPoolAnalyzable
         public Vector2 area;
         public Vector2 wallRate;
         public Vector2 effectiveBoxes;
+        public string sourceLabel;
 
         public override string ToString()
         {
-            return $"W {width.x:0.#}-{width.y:0.#}, H {height.x:0.#}-{height.y:0.#}, Area {area.x:0.#}-{area.y:0.#}, Wall {wallRate.x:0.##}-{wallRate.y:0.##}, Eff {effectiveBoxes.x:0.#}-{effectiveBoxes.y:0.#}";
+            return $"{sourceLabel}: W {width.x:0.#}-{width.y:0.#}, H {height.x:0.#}-{height.y:0.#}, Area {area.x:0.#}-{area.y:0.#}, Wall {wallRate.x:0.##}-{wallRate.y:0.##}, Eff {effectiveBoxes.x:0.#}-{effectiveBoxes.y:0.#}";
         }
     }
 }

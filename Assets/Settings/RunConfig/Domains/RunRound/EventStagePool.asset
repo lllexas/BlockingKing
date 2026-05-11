@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 84bea5e39589c3b4b8537d8dce1e69fb, type: 3}
+  m_Name: EventStagePool
+  m_EditorClassIdentifier: 
+  poolId: 
+  displayName: 
+  enabled: 1
+  entries:
+  - weight: 1
+    enabled: 1
+    stageId: 
+    stagePack: {fileID: 9027929339269108002, guid: 0882665189f29da4a83a8c705ac67096,
+      type: 3}
+  - weight: 1
+    enabled: 1
+    stageId: 
+    stagePack: {fileID: 9027929339269108002, guid: c6eff52daa025544f89c334de87e88d0,
+      type: 3}
