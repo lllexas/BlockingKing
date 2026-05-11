@@ -60,3 +60,33 @@ MonoBehaviour:
     tagName: Target.Enemy
     entityBP: {fileID: 0}
     color: {r: 0.55, g: 0.04, b: 0.08, a: 1}
+  - editorTile: {fileID: 11400000, guid: 030fa1c7fe2cde14dab1a36ba2e9a7b9, type: 2}
+    tagID: 9
+    tagName: Enemy.Grenadier
+    entityBP: {fileID: 11400000, guid: d8a5f2c17b6e4f8e9a2c3d4b5e6f7081, type: 2}
+    color: {r: 0.95, g: 0.45, b: 0.18, a: 1}
+  - editorTile: {fileID: 11400000, guid: 030fa1c7fe2cde14dab1a36ba2e9a7b9, type: 2}
+    tagID: 10
+    tagName: Enemy.Crossbow
+    entityBP: {fileID: 11400000, guid: e1b4c7d9a2f34b56c8d9012e3f4a5b6c, type: 2}
+    color: {r: 0.35, g: 0.72, b: 1, a: 1}
+  - editorTile: {fileID: 11400000, guid: 030fa1c7fe2cde14dab1a36ba2e9a7b9, type: 2}
+    tagID: 11
+    tagName: Enemy.Artillery
+    entityBP: {fileID: 11400000, guid: f2c5a8d1e4b74c69a0b123d456e789ab, type: 2}
+    color: {r: 0.74, g: 0.42, b: 1, a: 1}
+  - editorTile: {fileID: 11400000, guid: 030fa1c7fe2cde14dab1a36ba2e9a7b9, type: 2}
+    tagID: 12
+    tagName: Enemy.CurseCaster
+    entityBP: {fileID: 11400000, guid: a7b9c1d2e3f4456789abcdef01234567, type: 2}
+    color: {r: 0.45, g: 0.14, b: 0.95, a: 1}
+  - editorTile: {fileID: 11400000, guid: 030fa1c7fe2cde14dab1a36ba2e9a7b9, type: 2}
+    tagID: 13
+    tagName: Enemy.Guokui
+    entityBP: {fileID: 11400000, guid: b8c2d4e6f8a04123b5c7d9e1f3a56789, type: 2}
+    color: {r: 0.85, g: 0.85, b: 0.28, a: 1}
+  - editorTile: {fileID: 11400000, guid: 030fa1c7fe2cde14dab1a36ba2e9a7b9, type: 2}
+    tagID: 14
+    tagName: Enemy.Ertong
+    entityBP: {fileID: 11400000, guid: c9d3e5f7a9b1426384c6d8e0f2a45678, type: 2}
+    color: {r: 0.95, g: 0.2, b: 0.58, a: 1}

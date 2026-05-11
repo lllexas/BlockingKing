@@ -10,6 +10,10 @@ public class SpawnSystem : MonoBehaviour, ITickSystem
 
     private EntityBP _defaultEnemyBP;
     private int _defaultEnemyTagId;
+    private EnemySpawnDifficultyProfileSO _difficultyProfile;
+    private float _overallDifficulty = 1f;
+    private int _routeLayer;
+    private int _routeLayerCount = 1;
     private bool _isActive;
     private bool _warnedMissingIntentSystem;
 
@@ -28,6 +32,14 @@ public class SpawnSystem : MonoBehaviour, ITickSystem
     {
         _defaultEnemyBP = defaultEnemyBP;
         _defaultEnemyTagId = defaultEnemyTagId;
+    }
+
+    public void ConfigureDifficultyProfile(EnemySpawnDifficultyProfileSO profile, float overallDifficulty, int routeLayer, int routeLayerCount)
+    {
+        _difficultyProfile = profile;
+        _overallDifficulty = Mathf.Max(0f, overallDifficulty);
+        _routeLayer = Mathf.Max(0, routeLayer);
+        _routeLayerCount = Mathf.Max(1, routeLayerCount);
     }
 
     public void StartSpawning()
@@ -183,16 +195,16 @@ public class SpawnSystem : MonoBehaviour, ITickSystem
 
     private void ApplyBP(EntitySystem entitySystem, EntityHandle handle, EntityBP spawnEntityBP)
     {
-        EntityBP bp = spawnEntityBP != null ? spawnEntityBP : _defaultEnemyBP;
-        if (bp == null)
-            return;
-
         int index = entitySystem.GetIndex(handle);
         if (index < 0)
             return;
 
         ref var properties = ref entitySystem.entities.propertyComponents[index];
         ref var core = ref entitySystem.entities.coreComponents[index];
+        EntityBP bp = ResolveSpawnBP(entitySystem, spawnEntityBP, core.Position);
+        if (bp == null)
+            return;
+
         ref var status = ref entitySystem.entities.statusComponents[index];
         status.BaseMaxHealth = Mathf.Max(1, bp.health);
         status.BaseAttack = Mathf.Max(0, bp.attack);
@@ -204,6 +216,23 @@ public class SpawnSystem : MonoBehaviour, ITickSystem
         properties.SourceBP = bp;
 
         entitySystem.PublishEntityCreated(handle);
+    }
+
+    private EntityBP ResolveSpawnBP(EntitySystem entitySystem, EntityBP spawnEntityBP, Vector2Int spawnPosition)
+    {
+        EntityBP fallback = spawnEntityBP != null ? spawnEntityBP : _defaultEnemyBP;
+
+        if (_difficultyProfile == null)
+            return fallback;
+
+        int tick = entitySystem != null ? entitySystem.GlobalTick : 0;
+        return _difficultyProfile.Roll(
+            _overallDifficulty,
+            _routeLayer,
+            _routeLayerCount,
+            tick,
+            spawnPosition,
+            fallback);
     }
 
 }

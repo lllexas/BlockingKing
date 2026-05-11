@@ -77,6 +77,22 @@ public class TerrainDrawSystem : MonoBehaviour
         _dirty = true;
     }
 
+    public void ReplaceTargetTag(int x, int y, int oldTagId, int newTagId)
+    {
+        if (_targetTags == null)
+            return;
+
+        for (int i = 0; i < _targetTags.Count; i++)
+        {
+            if (_targetTags[i].x == x && _targetTags[i].y == y && _targetTags[i].tagID == oldTagId)
+            {
+                _targetTags[i] = new LevelTagEntry { x = x, y = y, tagID = newTagId };
+                _dirty = true;
+                return;
+            }
+        }
+    }
+
     public void Clear()
     {
         _floorMatrices.Clear();

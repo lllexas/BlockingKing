@@ -10,6 +10,18 @@ public class DrawSystem : MonoBehaviour
     public static DrawSystem Instance { get; private set; }
 
     private const int BatchSize = 1023;
+    private const int EnemyVisualKindCount = 7;
+
+    private enum EnemyVisualKind
+    {
+        Go = 0,
+        Grenadier = 1,
+        Crossbow = 2,
+        Artillery = 3,
+        CurseCaster = 4,
+        Guokui = 5,
+        Ertong = 6
+    }
 
     [Header("Mesh")]
     [SerializeField] private Mesh playerMesh;
@@ -25,6 +37,15 @@ public class DrawSystem : MonoBehaviour
     [SerializeField] private Material coreBoxGlassMaterial;
     [SerializeField] private Material enemyMaterial;
     [SerializeField] private Material wallMaterial;
+
+    [Header("Enemy Colors")]
+    [SerializeField] private Color enemyGoColor = new(0.92f, 0.88f, 0.78f);
+    [SerializeField] private Color enemyGrenadierColor = new(0.95f, 0.45f, 0.18f);
+    [SerializeField] private Color enemyCrossbowColor = new(0.35f, 0.72f, 1f);
+    [SerializeField] private Color enemyArtilleryColor = new(0.74f, 0.42f, 1f);
+    [SerializeField] private Color enemyCurseCasterColor = new(0.45f, 0.14f, 0.95f);
+    [SerializeField] private Color enemyGuokuiColor = new(0.85f, 0.85f, 0.28f);
+    [SerializeField] private Color enemyErtongColor = new(0.95f, 0.2f, 0.58f);
 
     [Header("Transform")]
     [SerializeField] private float cellSize = 1f;
@@ -65,7 +86,7 @@ public class DrawSystem : MonoBehaviour
     private readonly Matrix4x4[] _coreBoxMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _boxGlassMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _coreBoxGlassMatrices = new Matrix4x4[BatchSize];
-    private readonly Matrix4x4[] _enemyMatrices = new Matrix4x4[BatchSize];
+    private readonly Matrix4x4[][] _enemyMatricesByKind = new Matrix4x4[EnemyVisualKindCount][];
     private readonly Matrix4x4[] _wallMatrices = new Matrix4x4[BatchSize];
     private readonly List<StatTextPair> _statTexts = new();
     private int _playerCount;
@@ -73,12 +94,13 @@ public class DrawSystem : MonoBehaviour
     private int _coreBoxCount;
     private int _boxGlassCount;
     private int _coreBoxGlassCount;
-    private int _enemyCount;
+    private readonly int[] _enemyCountsByKind = new int[EnemyVisualKindCount];
     private int _wallCount;
     private int _statTextCount;
     private Material _runtimeStatsVisibleMaterial;
     private Material _runtimeStatsOccludedMaterial;
     private Material _runtimeStatsMaterialSource;
+    private readonly Material[] _enemyMaterialsByKind = new Material[EnemyVisualKindCount];
     private TMP_FontAsset _runtimeStatsTextFont;
     private EventBusSystem _registeredBus;
     private float _nextBeatStartTime;
@@ -156,7 +178,7 @@ public class DrawSystem : MonoBehaviour
         _coreBoxCount = 0;
         _boxGlassCount = 0;
         _coreBoxGlassCount = 0;
-        _enemyCount = 0;
+        ResetEnemyCounts();
         _wallCount = 0;
 
         var entities = entitySystem.entities;
@@ -175,7 +197,7 @@ public class DrawSystem : MonoBehaviour
                         AddStatsText(i, core.EntityType, core.Position, CombatStats.GetAttack(entities.statusComponents[i]), CombatStats.GetCurrentHealth(entities.statusComponents[i]));
                     break;
                 case EntityType.Enemy:
-                    AddEnemy(i, core.Position);
+                    AddEnemy(i, core.Position, entities.propertyComponents[i]);
                     AddStatsText(i, core.EntityType, core.Position, CombatStats.GetAttack(entities.statusComponents[i]), CombatStats.GetCurrentHealth(entities.statusComponents[i]));
                     break;
                 case EntityType.Wall:
@@ -228,11 +250,12 @@ public class DrawSystem : MonoBehaviour
             FlushBoxGlass();
     }
 
-    private void AddEnemy(int entityIndex, Vector2Int gridPos)
+    private void AddEnemy(int entityIndex, Vector2Int gridPos, PropertyComponent properties)
     {
-        _enemyMatrices[_enemyCount++] = Matrix4x4.TRS(GetVisualPosition(entityIndex, EntityType.Enemy, gridPos), Quaternion.identity, enemyScale);
-        if (_enemyCount == BatchSize)
-            FlushEnemies();
+        int kind = (int)ResolveEnemyVisualKind(properties);
+        _enemyMatricesByKind[kind][_enemyCountsByKind[kind]++] = Matrix4x4.TRS(GetVisualPosition(entityIndex, EntityType.Enemy, gridPos), Quaternion.identity, enemyScale);
+        if (_enemyCountsByKind[kind] == BatchSize)
+            FlushEnemyKind(kind);
     }
 
     private void AddWall(int entityIndex, Vector2Int gridPos)
@@ -319,17 +342,25 @@ public class DrawSystem : MonoBehaviour
 
     private void FlushEnemies()
     {
-        if (_enemyCount == 0)
+        for (int i = 0; i < EnemyVisualKindCount; i++)
+            FlushEnemyKind(i);
+    }
+
+    private void FlushEnemyKind(int kind)
+    {
+        int count = _enemyCountsByKind[kind];
+        if (count == 0)
             return;
 
-        if (enemyMesh == null || enemyMaterial == null)
+        var material = kind >= 0 && kind < _enemyMaterialsByKind.Length ? _enemyMaterialsByKind[kind] : enemyMaterial;
+        if (enemyMesh == null || material == null)
         {
-            _enemyCount = 0;
+            _enemyCountsByKind[kind] = 0;
             return;
         }
 
-        Graphics.DrawMeshInstanced(enemyMesh, 0, enemyMaterial, _enemyMatrices, _enemyCount);
-        _enemyCount = 0;
+        Graphics.DrawMeshInstanced(enemyMesh, 0, material, _enemyMatricesByKind[kind], count);
+        _enemyCountsByKind[kind] = 0;
     }
 
     private void FlushWalls()
@@ -849,6 +880,8 @@ public class DrawSystem : MonoBehaviour
 
     private void EnsureResources()
     {
+        EnsureEnemyBuffers();
+
         if (playerMesh == null)
             playerMesh = CreatePrimitiveMesh(PrimitiveType.Capsule);
         if (boxMesh == null)
@@ -869,7 +902,8 @@ public class DrawSystem : MonoBehaviour
         if (coreBoxGlassMaterial == null)
             coreBoxGlassMaterial = CreateGlassMaterial(new Color(0.12f, 0.7f, 1f, 1f));
         if (enemyMaterial == null)
-            enemyMaterial = CreateMaterial(new Color(0.92f, 0.88f, 0.78f));
+            enemyMaterial = CreateMaterial(enemyGoColor);
+        EnsureEnemyMaterials();
         if (playerMaterial != null)
             playerMaterial.enableInstancing = true;
         if (boxMaterial != null)
@@ -886,6 +920,55 @@ public class DrawSystem : MonoBehaviour
             wallMaterial.enableInstancing = true;
     }
 
+    private void EnsureEnemyBuffers()
+    {
+        for (int i = 0; i < EnemyVisualKindCount; i++)
+            _enemyMatricesByKind[i] ??= new Matrix4x4[BatchSize];
+    }
+
+    private void EnsureEnemyMaterials()
+    {
+        SetMaterialColor(enemyMaterial, enemyGoColor);
+        _enemyMaterialsByKind[(int)EnemyVisualKind.Go] = enemyMaterial;
+        _enemyMaterialsByKind[(int)EnemyVisualKind.Grenadier] ??= CreateMaterial(enemyGrenadierColor);
+        _enemyMaterialsByKind[(int)EnemyVisualKind.Crossbow] ??= CreateMaterial(enemyCrossbowColor);
+        _enemyMaterialsByKind[(int)EnemyVisualKind.Artillery] ??= CreateMaterial(enemyArtilleryColor);
+        _enemyMaterialsByKind[(int)EnemyVisualKind.CurseCaster] ??= CreateMaterial(enemyCurseCasterColor);
+        _enemyMaterialsByKind[(int)EnemyVisualKind.Guokui] ??= CreateMaterial(enemyGuokuiColor);
+        _enemyMaterialsByKind[(int)EnemyVisualKind.Ertong] ??= CreateMaterial(enemyErtongColor);
+    }
+
+    private void ResetEnemyCounts()
+    {
+        for (int i = 0; i < _enemyCountsByKind.Length; i++)
+            _enemyCountsByKind[i] = 0;
+    }
+
+    private static EnemyVisualKind ResolveEnemyVisualKind(PropertyComponent properties)
+    {
+        string bpName = properties.SourceBP != null ? properties.SourceBP.name : string.Empty;
+        if (Contains(bpName, "Grenadier"))
+            return EnemyVisualKind.Grenadier;
+        if (Contains(bpName, "Crossbow") || Contains(bpName, "Arbalest"))
+            return EnemyVisualKind.Crossbow;
+        if (Contains(bpName, "Artillery") || Contains(bpName, "Cannon"))
+            return EnemyVisualKind.Artillery;
+        if (Contains(bpName, "Curse") || Contains(bpName, "Caster") || Contains(bpName, "Sorcerer"))
+            return EnemyVisualKind.CurseCaster;
+        if (Contains(bpName, "Guokui"))
+            return EnemyVisualKind.Guokui;
+        if (Contains(bpName, "Ertong"))
+            return EnemyVisualKind.Ertong;
+
+        return EnemyVisualKind.Go;
+    }
+
+    private static bool Contains(string value, string token)
+    {
+        return !string.IsNullOrEmpty(value) &&
+               value.IndexOf(token, System.StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
     private static Mesh CreatePrimitiveMesh(PrimitiveType primitiveType)
     {
         var go = GameObject.CreatePrimitive(primitiveType);
@@ -899,8 +982,21 @@ public class DrawSystem : MonoBehaviour
         var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
         var material = new Material(shader);
         material.color = color;
+        material.SetColor("_Color", color);
+        material.SetColor("_BaseColor", color);
         material.enableInstancing = true;
         return material;
+    }
+
+    private static void SetMaterialColor(Material material, Color color)
+    {
+        if (material == null)
+            return;
+
+        material.color = color;
+        material.SetColor("_Color", color);
+        material.SetColor("_BaseColor", color);
+        material.enableInstancing = true;
     }
 
     private static Material CreateGlassMaterial(Color color)

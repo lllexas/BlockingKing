@@ -88,6 +88,13 @@ public class MoveSystem : MonoBehaviour
         if (!CanPush(core.EntityType))
             return false;
 
+        if (core.EntityType == EntityType.Box &&
+            entities.propertyComponents[actorIndex].IsCore &&
+            EnemyAutoAISystem.IsCoreBoxMovementLocked(actor))
+        {
+            return false;
+        }
+
         var next = core.Position + direction;
         if (!entitySystem.IsInsideMap(next) || entitySystem.IsWall(next))
             return false;

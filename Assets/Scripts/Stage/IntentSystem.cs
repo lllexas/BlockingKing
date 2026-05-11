@@ -10,10 +10,14 @@ public class IntentSystem : MonoBehaviour
 {
     public static IntentSystem Instance { get; private set; }
 
+    [SerializeField] private bool batchAllEnemyIntentsTogether = true;
+
     private readonly Dictionary<Type, Stack<Intent>> _pools = new();
     private readonly List<EntityHandle> _activeIntentEntities = new();
     private readonly List<IntentExecutionStep> _executionSteps = new();
+    private readonly List<EntityHandle> _enemyIntentBatch = new();
     private readonly List<EntityHandle> _enemyMoveBatch = new();
+    private readonly List<EntityHandle> _enemyAttackBatch = new();
     private readonly List<EntityHandle> _spawnBatch = new();
     private EntityHandle _playerIntentActor = EntityHandle.None;
     private Coroutine _runner;
@@ -137,7 +141,9 @@ public class IntentSystem : MonoBehaviour
     private void BuildExecutionSteps(EntitySystem entitySystem)
     {
         _executionSteps.Clear();
+        _enemyIntentBatch.Clear();
         _enemyMoveBatch.Clear();
+        _enemyAttackBatch.Clear();
         _spawnBatch.Clear();
 
         if (_playerIntentActor != EntityHandle.None)
@@ -149,9 +155,15 @@ public class IntentSystem : MonoBehaviour
             if (actor == _playerIntentActor)
                 continue;
 
-            if (CanBatchEnemyMove(entitySystem, actor))
+            if (batchAllEnemyIntentsTogether && CanBatchEnemyIntent(entitySystem, actor))
             {
-                _enemyMoveBatch.Add(actor);
+                _enemyIntentBatch.Add(actor);
+                continue;
+            }
+
+            if (!batchAllEnemyIntentsTogether && TryGetEnemyIntentBatch(entitySystem, actor, out var typedEnemyBatch))
+            {
+                typedEnemyBatch.Add(actor);
                 continue;
             }
 
@@ -167,11 +179,21 @@ public class IntentSystem : MonoBehaviour
         if (_spawnBatch.Count > 0)
             _executionSteps.Insert(_playerIntentActor != EntityHandle.None ? 1 : 0, IntentExecutionStep.Batch(_spawnBatch));
 
-        if (_enemyMoveBatch.Count > 0)
-            _executionSteps.Insert(_playerIntentActor != EntityHandle.None ? 1 + (_spawnBatch.Count > 0 ? 1 : 0) : (_spawnBatch.Count > 0 ? 1 : 0), IntentExecutionStep.Batch(_enemyMoveBatch));
+        if (_enemyIntentBatch.Count > 0)
+            _executionSteps.Insert(_playerIntentActor != EntityHandle.None ? 1 + (_spawnBatch.Count > 0 ? 1 : 0) : (_spawnBatch.Count > 0 ? 1 : 0), IntentExecutionStep.Batch(_enemyIntentBatch));
+
+        if (!batchAllEnemyIntentsTogether)
+        {
+            int insertIndex = _playerIntentActor != EntityHandle.None ? 1 + (_spawnBatch.Count > 0 ? 1 : 0) : (_spawnBatch.Count > 0 ? 1 : 0);
+            if (_enemyMoveBatch.Count > 0)
+                _executionSteps.Insert(insertIndex++, IntentExecutionStep.Batch(_enemyMoveBatch));
+
+            if (_enemyAttackBatch.Count > 0)
+                _executionSteps.Insert(insertIndex, IntentExecutionStep.Batch(_enemyAttackBatch));
+        }
     }
 
-    private static bool CanBatchEnemyMove(EntitySystem entitySystem, EntityHandle actor)
+    private static bool CanBatchEnemyIntent(EntitySystem entitySystem, EntityHandle actor)
     {
         if (entitySystem == null || !entitySystem.IsValid(actor))
             return false;
@@ -180,9 +202,38 @@ public class IntentSystem : MonoBehaviour
         if (index < 0)
             return false;
 
-        return entitySystem.entities.coreComponents[index].EntityType == EntityType.Enemy
-               && entitySystem.entities.intentComponents[index].Type == IntentType.Move
-               && entitySystem.entities.intentComponents[index].Intent is MoveIntent;
+        if (entitySystem.entities.coreComponents[index].EntityType != EntityType.Enemy)
+            return false;
+
+        ref var intent = ref entitySystem.entities.intentComponents[index];
+        return (intent.Type == IntentType.Move && intent.Intent is MoveIntent) ||
+               (intent.Type == IntentType.Attack && intent.Intent is AttackIntent);
+    }
+
+    private bool TryGetEnemyIntentBatch(EntitySystem entitySystem, EntityHandle actor, out List<EntityHandle> batch)
+    {
+        batch = null;
+        if (entitySystem == null || !entitySystem.IsValid(actor))
+            return false;
+
+        int index = entitySystem.GetIndex(actor);
+        if (index < 0 || entitySystem.entities.coreComponents[index].EntityType != EntityType.Enemy)
+            return false;
+
+        ref var intent = ref entitySystem.entities.intentComponents[index];
+        if (intent.Type == IntentType.Move && intent.Intent is MoveIntent)
+        {
+            batch = _enemyMoveBatch;
+            return true;
+        }
+
+        if (intent.Type == IntentType.Attack && intent.Intent is AttackIntent)
+        {
+            batch = _enemyAttackBatch;
+            return true;
+        }
+
+        return false;
     }
 
     private static bool CanBatchSpawn(EntitySystem entitySystem, EntityHandle actor)
@@ -430,7 +481,9 @@ public class IntentSystem : MonoBehaviour
         _pools.Clear();
         _activeIntentEntities.Clear();
         _executionSteps.Clear();
+        _enemyIntentBatch.Clear();
         _enemyMoveBatch.Clear();
+        _enemyAttackBatch.Clear();
         _spawnBatch.Clear();
         _playerIntentActor = EntityHandle.None;
         if (_runner != null)

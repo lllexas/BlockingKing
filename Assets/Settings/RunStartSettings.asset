@@ -16,6 +16,7 @@ MonoBehaviour:
   description: "\u8BF7\u8F93\u5165\u6587\u672C"
   icon: {fileID: 21300000, guid: 5889f3968634a8542a9d9b69ab53de31, type: 3}
   startingDeck: {fileID: 11400000, guid: fdbf1dec9888b004a9aa6479537bbb31, type: 2}
+  startingGold: 35
   targetHandCount: 4
   maxHandCount: 10
   autoRefill: 1

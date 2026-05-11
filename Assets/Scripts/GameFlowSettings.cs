@@ -87,6 +87,13 @@ public class GameFlowSettings : ScriptableObject
     [HorizontalGroup("Route", Width = 120)]
     public int seed;
 
+    [Title("Difficulty")]
+    [MinValue(0)]
+    public float overallDifficulty = 1f;
+
+    [AssetsOnly]
+    public EnemySpawnDifficultyProfileSO enemySpawnDifficultyProfile;
+
     [ShowInInspector, ReadOnly, LabelText("Stage Sources")]
     [HorizontalGroup("Route")]
     private int StageSourceCount => BuildRouteStageSources().Count;

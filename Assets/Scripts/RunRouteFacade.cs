@@ -224,7 +224,11 @@ public class RunRouteFacade : PackFacadeBase
             {
                 Level = level,
                 Mode = ResolveLevelPlayMode(side.stageType),
-                StepLimit = ResolveStepLimit(side.stageType, 30)
+                StepLimit = ResolveStepLimit(side.stageType, 30),
+                EnemySpawnDifficultyProfile = GameFlowController.Instance?.EnemySpawnDifficultyProfile,
+                OverallDifficulty = GameFlowController.Instance != null ? GameFlowController.Instance.OverallDifficulty : 1f,
+                RouteLayer = side.layer,
+                RouteLayerCount = GameFlowController.Instance != null ? GameFlowController.Instance.RouteLayerCount : 1
             });
 
             if (!started)

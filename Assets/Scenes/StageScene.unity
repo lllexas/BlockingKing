@@ -1702,6 +1702,7 @@ GameObject:
   - component: {fileID: 2039827882}
   - component: {fileID: 2039827890}
   - component: {fileID: 2039827891}
+  - component: {fileID: 2039827892}
   m_Layer: 0
   m_Name: LevelPlayer
   m_TagString: Untagged
@@ -1732,6 +1733,9 @@ MonoBehaviour:
   maxEntityCount: 1024
   defaultPlayMode: 1
   defaultStepLimit: 30
+  escortRewardBoxGold: 2
+  escortCompletionGold: 5
+  escortCompletionCardRewards: []
 --- !u!4 &2039827881
 Transform:
   m_ObjectHideFlags: 0
@@ -1771,6 +1775,13 @@ MonoBehaviour:
   coreBoxGlassMaterial: {fileID: 0}
   enemyMaterial: {fileID: 0}
   wallMaterial: {fileID: 2100000, guid: 391fd5930ef59f1489fdef6fc7e9fade, type: 2}
+  enemyGoColor: {r: 0.92, g: 0.88, b: 0.78, a: 1}
+  enemyGrenadierColor: {r: 0.95, g: 0.45, b: 0.18, a: 1}
+  enemyCrossbowColor: {r: 0.35, g: 0.72, b: 1, a: 1}
+  enemyArtilleryColor: {r: 0.74, g: 0.42, b: 1, a: 1}
+  enemyCurseCasterColor: {r: 0.45, g: 0.14, b: 0.95, a: 1}
+  enemyGuokuiColor: {r: 0.85, g: 0.85, b: 0.28, a: 1}
+  enemyErtongColor: {r: 0.95, g: 0.2, b: 0.58, a: 1}
   cellSize: 1
   playerScale: {x: 0.7, y: 1, z: 0.7}
   boxScale: {x: 0.45, y: 0.45, z: 0.45}
@@ -1856,11 +1867,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   movePreInputWindow: 0.1
-  activePathPreviewColor: {r: 0.25, g: 0.85, b: 1, a: 0.42}
   leftPathHoverColor: {r: 0.2, g: 0.85, b: 1, a: 0.18}
   rightPathHoverColor: {r: 1, g: 0.72, b: 0.25, a: 0.16}
+  leftActivePathColor: {r: 0.25, g: 0.85, b: 1, a: 0.42}
+  rightActivePathColor: {r: 1, g: 0.72, b: 0.25, a: 0.38}
   pathPreviewHeight: 0.014
   pathPreviewPriority: 5
+--- !u!114 &2039827892
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2039827879}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8182fea8370148441a0f7ac1be2a4eb6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  batchAllEnemyIntentsTogether: 1
 --- !u!1 &2084633140
 GameObject:
   m_ObjectHideFlags: 0

@@ -19,6 +19,9 @@ public class GameFlowController : MonoBehaviour
     public GameFlowMode Mode => mode;
     public bool ShouldLevelPlayerAutoBuild => mode == GameFlowMode.DirectLevel;
     public bool IsInLevel { get; private set; }
+    public float OverallDifficulty => settings != null ? Mathf.Max(0f, settings.overallDifficulty) : 1f;
+    public EnemySpawnDifficultyProfileSO EnemySpawnDifficultyProfile => settings != null ? settings.enemySpawnDifficultyProfile : null;
+    public int RouteLayerCount => settings != null ? Mathf.Max(1, settings.layerCount) : 1;
 
     private RunRouteOnGUIFrontend _routeFrontend;
     private int _observedStageRunVersion;

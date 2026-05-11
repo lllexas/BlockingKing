@@ -31,6 +31,10 @@ public sealed class LevelPlayRequest
     public TileMappingConfig Config;
     public LevelPlayMode Mode = LevelPlayMode.Classic;
     public int StepLimit = 30;
+    public EnemySpawnDifficultyProfileSO EnemySpawnDifficultyProfile;
+    public float OverallDifficulty = 1f;
+    public int RouteLayer;
+    public int RouteLayerCount = 1;
 }
 
 /// <summary>
@@ -74,6 +78,11 @@ public class LevelPlayer : MonoBehaviour
     [SerializeField] private LevelPlayMode defaultPlayMode = LevelPlayMode.Classic;
     [SerializeField, Min(1)] private int defaultStepLimit = 30;
 
+    [Header("Escort Rewards")]
+    [SerializeField, Min(0)] private int escortRewardBoxGold = 2;
+    [SerializeField, Min(0)] private int escortCompletionGold = 5;
+    [SerializeField] private List<CardSO> escortCompletionCardRewards = new List<CardSO>();
+
     private LevelData _level;
     private TileMappingConfig _config;
     private GameObject _meshGO;
@@ -89,6 +98,12 @@ public class LevelPlayer : MonoBehaviour
     private GUIStyle _stepLimitShadowStyle;
     private GUIStyle _classicPhaseStyle;
     private GUIStyle _classicPhaseShadowStyle;
+    private GUIStyle _casinoTitleStyle;
+    private GUIStyle _casinoTitleShadowStyle;
+    private GUIStyle _casinoGoldStyle;
+    private GUIStyle _casinoGoldShadowStyle;
+    private GUIStyle _casinoDetailStyle;
+    private GUIStyle _casinoPanelStyle;
     private readonly HashSet<Vector2Int> _targetCells = new();
     private readonly HashSet<Vector2Int> _coreTargetCells = new();
 
@@ -257,6 +272,7 @@ public class LevelPlayer : MonoBehaviour
         _lastResult = LevelPlayResult.None;
 
         _playRule.Begin(this, request);
+        ConfigureSpawnDifficulty(request);
 
         GameFlowController.Instance?.EnterLevel();
         TickSystem.OnTick -= HandleTick;
@@ -274,6 +290,7 @@ public class LevelPlayer : MonoBehaviour
     public void StopPlayback()
     {
         TickSystem.OnTick -= HandleTick;
+        _playRule?.End(this);
         SpawnSystem.Instance?.StopSpawning();
         HandZone.SetCardsLocked(false);
         _playRule = null;
@@ -388,20 +405,68 @@ public class LevelPlayer : MonoBehaviour
         return count;
     }
 
-    internal bool HasAnyEnemyAlive()
+    internal int CountBoxesOnTargetsExcluding(HashSet<int> excludedBoxIds)
     {
         var entitySystem = EntitySystem.Instance;
         if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
-            return false;
+            return 0;
+
+        int count = 0;
+        var entities = entitySystem.entities;
+        for (int i = 0; i < entities.entityCount; i++)
+        {
+            ref var core = ref entities.coreComponents[i];
+            if (core.EntityType != EntityType.Box || !_targetCells.Contains(core.Position))
+                continue;
+
+            if (excludedBoxIds != null && excludedBoxIds.Contains(core.Id))
+                continue;
+
+            count++;
+        }
+
+        return count;
+    }
+
+    internal void CollectBoxIdsOnTargets(HashSet<int> results)
+    {
+        if (results == null)
+            return;
+
+        results.Clear();
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+            return;
 
         var entities = entitySystem.entities;
         for (int i = 0; i < entities.entityCount; i++)
         {
+            ref var core = ref entities.coreComponents[i];
+            if (core.EntityType == EntityType.Box && _targetCells.Contains(core.Position))
+                results.Add(core.Id);
+        }
+    }
+
+    internal int CountEnemiesAlive()
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+            return 0;
+
+        int count = 0;
+        var entities = entitySystem.entities;
+        for (int i = 0; i < entities.entityCount; i++)
+        {
             if (entities.coreComponents[i].EntityType == EntityType.Enemy)
-                return true;
+                count++;
         }
 
-        return false;
+        return count;
+    }
+
+    internal bool HasAnyEnemyAlive()
+    {
+        return CountEnemiesAlive() > 0;
     }
 
     internal bool IsAnyCoreBoxAlive()
@@ -480,18 +545,90 @@ public class LevelPlayer : MonoBehaviour
         for (int i = 0; i < count; i++)
             amount += firstAmount + i * stepAmount;
 
+        AwardGold(amount, reason);
+        return amount;
+    }
+
+    internal bool AwardGold(int amount, string reason)
+    {
+        if (amount <= 0)
+            return false;
+
         var inventory = NekoGraph.GraphHub.Instance?.GetFacade<RunInventoryFacade>();
-        if (inventory != null)
+        if (inventory == null)
         {
-            inventory.AddGold(amount);
-        }
-        else
-        {
-            Debug.LogWarning($"[LevelPlayer] Gold reward skipped because RunInventoryFacade is missing: amount={amount}, reason={reason}");
+            inventory = new RunInventoryFacade();
+            NekoGraph.GraphHub.Instance?.RegisterFacade(inventory);
         }
 
-        Debug.Log($"[LevelPlayer] Gold awarded: amount={amount}, count={count}, reason={reason}");
-        return amount;
+        if (inventory == null || !inventory.AddGold(amount))
+        {
+            Debug.LogWarning($"[LevelPlayer] Gold reward skipped: amount={amount}, reason={reason}");
+            return false;
+        }
+
+        Debug.Log($"[LevelPlayer] Gold awarded: amount={amount}, reason={reason}");
+        return true;
+    }
+
+    internal bool TryConsumeEscortRewardBox(EntityHandle boxHandle, Vector2Int cell)
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || !entitySystem.IsValid(boxHandle))
+            return false;
+
+        int boxIndex = entitySystem.GetIndex(boxHandle);
+        if (boxIndex < 0 ||
+            entitySystem.entities.coreComponents[boxIndex].EntityType != EntityType.Box ||
+            entitySystem.entities.propertyComponents[boxIndex].IsCore)
+        {
+            return false;
+        }
+
+        if (!TryFindEscortRewardTargetAtCell(entitySystem, cell, out var targetHandle))
+            return false;
+
+        AwardGold(escortRewardBoxGold, "escort reward box");
+        entitySystem.DestroyEntity(boxHandle);
+        if (entitySystem.IsValid(targetHandle))
+            entitySystem.DestroyEntity(targetHandle);
+
+        Debug.Log($"[LevelPlayer] Escort reward box consumed at {cell}, gold={escortRewardBoxGold}");
+        return true;
+    }
+
+    internal void AwardEscortCompletionRewards()
+    {
+        AwardGold(escortCompletionGold, "escort completion");
+
+        if (escortCompletionCardRewards == null || escortCompletionCardRewards.Count == 0)
+            return;
+
+        var deck = NekoGraph.GraphHub.Instance?.GetFacade<CardDeckFacade>();
+        if (deck == null)
+        {
+            deck = new CardDeckFacade();
+            NekoGraph.GraphHub.Instance?.RegisterFacade(deck);
+        }
+
+        if (deck == null)
+        {
+            Debug.LogWarning("[LevelPlayer] Escort card rewards skipped because CardDeckFacade is missing.");
+            return;
+        }
+
+        int granted = 0;
+        for (int i = 0; i < escortCompletionCardRewards.Count; i++)
+        {
+            var card = escortCompletionCardRewards[i];
+            if (card == null)
+                continue;
+
+            if (deck.AddCard(card, 1))
+                granted++;
+        }
+
+        Debug.Log($"[LevelPlayer] Escort card rewards granted: {granted}");
     }
 
     internal int ConvertUnoccupiedClassicTargetsToEnemyTargets()
@@ -505,29 +642,51 @@ public class LevelPlayer : MonoBehaviour
         if (targetEnemyTagID <= 0)
             return 0;
 
+        // 先收集所有待转换的实体ID（避免遍历中修改数组）
+        var idsToConvert = new List<int>();
         var entities = entitySystem.entities;
-        int converted = 0;
         for (int i = 0; i < entities.entityCount; i++)
         {
             if (entities.coreComponents[i].EntityType != EntityType.Target)
                 continue;
-
             if (entities.propertyComponents[i].SourceTagId != targetTagID)
                 continue;
-
             var pos = entities.coreComponents[i].Position;
             if (!_targetCells.Contains(pos) || IsBoxOnCell(entitySystem, pos))
                 continue;
-
-            var handle = entitySystem.GetHandleFromId(entities.coreComponents[i].Id);
-            ApplyEntityBP(entitySystem, handle, targetEnemyTagID);
-            SetupEnemyTargetCounter(entitySystem, i, targetEnemyTagID, 0);
-            converted++;
-
-            SpawnSystem.Instance?.SpawnImmediatelyFromTarget(handle);
+            idsToConvert.Add(entities.coreComponents[i].Id);
         }
 
-        Debug.Log($"[LevelPlayer] Converted classic targets to Target.Enemy: {converted}");
+        var terrainDrawSystem = GetComponent<TerrainDrawSystem>();
+        int converted = 0;
+
+        foreach (int entityId in idsToConvert)
+        {
+            var handle = entitySystem.GetHandleFromId(entityId);
+            if (!entitySystem.IsValid(handle))
+                continue;
+
+            int index = entitySystem.GetIndex(handle);
+            if (index < 0)
+                continue;
+
+            var pos = entities.coreComponents[index].Position;
+            if (IsBoxOnCell(entitySystem, pos))
+                continue;
+
+            // 销毁旧 Target 实体，走正式流程重建为 Target.Enemy
+            entitySystem.DestroyEntity(handle);
+
+            var newHandle = CreateTaggedEntity(entitySystem, EntityType.Target, pos, targetEnemyTagID, false);
+            SetupEnemyTargetCounter(entitySystem, newHandle, targetEnemyTagID);
+            converted++;
+
+            SpawnSystem.Instance?.SpawnImmediatelyFromTarget(newHandle);
+
+            terrainDrawSystem?.ReplaceTargetTag(pos.x, pos.y, targetTagID, targetEnemyTagID);
+        }
+
+        Debug.Log($"[LevelPlayer] Converted classic targets to Target.Enemy (destroy+recreate): {converted}");
         return converted;
     }
 
@@ -633,7 +792,7 @@ public class LevelPlayer : MonoBehaviour
         EnsureRuntimeSystem<AttackSystem>();
         var cardEffectSystem = EnsureRuntimeSystem<CardEffectSystem>();
         EnsureRuntimeSystem<CombatResolutionSystem>();
-        EnsureRuntimeSystem<EnemyAutoAISystem>();
+        var enemyAutoAISystem = EnsureRuntimeSystem<EnemyAutoAISystem>();
         var auraResolutionSystem = EnsureRuntimeSystem<AuraResolutionSystem>();
         var drawSystem = EnsureRuntimeSystem<DrawSystem>();
         EnsureRuntimeSystem<EnemyIntentOverlaySystem>();
@@ -652,8 +811,21 @@ public class LevelPlayer : MonoBehaviour
         int targetCoreTagID = ResolveTagID("Target.Core", DefaultTargetCoreTagID);
         int targetEnemyTagID = ResolveTagID("Target.Enemy", DefaultTargetEnemyTagID);
         int enemyGoTagID = ResolveTagID("Enemy.Go", 4);
+        int enemyGrenadierTagID = ResolveTagID("Enemy.Grenadier", -1);
+        int enemyCrossbowTagID = ResolveTagID("Enemy.Crossbow", -1);
+        int enemyArtilleryTagID = ResolveTagID("Enemy.Artillery", -1);
+        int enemyCurseCasterTagID = ResolveTagID("Enemy.CurseCaster", -1);
+        int enemyGuokuiTagID = ResolveTagID("Enemy.Guokui", -1);
+        int enemyErtongTagID = ResolveTagID("Enemy.Ertong", -1);
         int unstableWallTagID = ResolveTagID("Wall.Unstable", -1);
         ConfigureCardWallHealth(cardEffectSystem, unstableWallTagID);
+        ConfigureEnemyWallBreakHealth(enemyAutoAISystem, unstableWallTagID);
+        enemyAutoAISystem.ConfigureSpecialEnemyTags(enemyGrenadierTagID, enemyCrossbowTagID, enemyArtilleryTagID);
+        enemyAutoAISystem.ConfigureAdvancedEnemyTags(
+            enemyCurseCasterTagID,
+            enemyGuokuiTagID,
+            enemyErtongTagID,
+            _config != null && enemyGuokuiTagID > 0 ? _config.GetTagEntityBP(enemyGuokuiTagID) : null);
         int enemyTargetCount = 0;
 
         foreach (var tag in _level.tags)
@@ -671,11 +843,19 @@ public class LevelPlayer : MonoBehaviour
                 CreateTaggedEntity(entitySystem, EntityType.Target, pos, tag.tagID, false);
             else if (targetEnemyTagID > 0 && tag.tagID == targetEnemyTagID)
             {
-                CreateTaggedEntity(entitySystem, EntityType.Target, pos, tag.tagID, false);
-                SetupEnemyTargetCounter(entitySystem, tag.tagID);
+                var targetHandle = CreateTaggedEntity(entitySystem, EntityType.Target, pos, tag.tagID, false);
+                SetupEnemyTargetCounter(entitySystem, targetHandle, tag.tagID);
                 enemyTargetCount++;
             }
-            else if (tag.tagID == enemyGoTagID)
+            else if (IsEnemyTag(
+                         tag.tagID,
+                         enemyGoTagID,
+                         enemyGrenadierTagID,
+                         enemyCrossbowTagID,
+                         enemyArtilleryTagID,
+                         enemyCurseCasterTagID,
+                         enemyGuokuiTagID,
+                         enemyErtongTagID))
                 CreateTaggedEntity(entitySystem, EntityType.Enemy, pos, tag.tagID);
             else if (unstableWallTagID > 0 && tag.tagID == unstableWallTagID)
                 CreateUnstableWall(entitySystem, pos, tag.tagID);
@@ -685,6 +865,29 @@ public class LevelPlayer : MonoBehaviour
         spawnSystem.Initialize(_config?.GetTagEntityBP(enemyGoTagID), enemyGoTagID);
 
         Debug.Log($"[LevelPlayer] ECS 已初始化，实体数={entitySystem.entities.entityCount}, Target.Enemy={enemyTargetCount}, targetEnemyTagID={targetEnemyTagID}");
+    }
+
+    private void ConfigureSpawnDifficulty(LevelPlayRequest request)
+    {
+        var spawnSystem = SpawnSystem.Instance ?? GetComponent<SpawnSystem>();
+        if (spawnSystem == null)
+            return;
+
+        var flow = GameFlowController.Instance;
+        var profile = request?.EnemySpawnDifficultyProfile;
+        if (profile == null && flow != null)
+            profile = flow.EnemySpawnDifficultyProfile;
+
+        float difficulty = request != null ? request.OverallDifficulty : 1f;
+        if (flow != null && (request == null || request.EnemySpawnDifficultyProfile == null))
+            difficulty = flow.OverallDifficulty;
+
+        int routeLayer = request != null ? request.RouteLayer : 0;
+        int routeLayerCount = request != null ? request.RouteLayerCount : 1;
+        if (routeLayerCount <= 1 && flow != null)
+            routeLayerCount = flow.RouteLayerCount;
+
+        spawnSystem.ConfigureDifficultyProfile(profile, difficulty, routeLayer, routeLayerCount);
     }
 
     private void HandleTick()
@@ -736,6 +939,56 @@ public class LevelPlayer : MonoBehaviour
         {
             normal = { textColor = new Color(0f, 0f, 0f, 0.72f) }
         };
+    }
+
+    private void EnsureCasinoStyles()
+    {
+        _casinoTitleStyle ??= new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleLeft,
+            fontSize = 22,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = new Color(1f, 0.9f, 0.4f, 1f) }
+        };
+
+        _casinoTitleShadowStyle ??= new GUIStyle(_casinoTitleStyle)
+        {
+            normal = { textColor = new Color(0f, 0f, 0f, 0.8f) }
+        };
+
+        _casinoGoldStyle ??= new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = 40,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = new Color(1f, 0.85f, 0.05f, 1f) }
+        };
+
+        _casinoGoldShadowStyle ??= new GUIStyle(_casinoGoldStyle)
+        {
+            normal = { textColor = new Color(0f, 0f, 0f, 0.8f) }
+        };
+
+        _casinoDetailStyle ??= new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleLeft,
+            fontSize = 15,
+            fontStyle = FontStyle.Normal,
+            normal = { textColor = new Color(1f, 0.85f, 0.4f, 0.85f) }
+        };
+
+        if (_casinoPanelStyle == null)
+        {
+            var bgTex = new Texture2D(1, 1);
+            bgTex.SetPixel(0, 0, new Color(0.05f, 0.02f, 0f, 0.82f));
+            bgTex.Apply();
+            _casinoPanelStyle = new GUIStyle(GUI.skin.box)
+            {
+                normal = { background = bgTex },
+                padding = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0)
+            };
+        }
     }
 
     private T EnsureRuntimeSystem<T>() where T : Component
@@ -844,10 +1097,13 @@ public class LevelPlayer : MonoBehaviour
             return;
 
         EntityBP bp = _config != null ? _config.GetTagEntityBP(tagId) : null;
+        ref var properties = ref entitySystem.entities.propertyComponents[index];
+        properties.SourceTagId = tagId;
+        properties.SourceBP = bp;
+
         if (bp == null)
             return;
 
-        ref var properties = ref entitySystem.entities.propertyComponents[index];
         ref var status = ref entitySystem.entities.statusComponents[index];
         status.BaseMaxHealth = Mathf.Max(1, bp.health);
         status.BaseAttack = Mathf.Max(0, bp.attack);
@@ -855,13 +1111,11 @@ public class LevelPlayer : MonoBehaviour
         status.AttackModifier = 0;
         status.MaxHealthModifier = 0;
         properties.Attack = CombatStats.GetAttack(status);
-        properties.SourceTagId = tagId;
-        properties.SourceBP = bp;
     }
 
-    private void SetupEnemyTargetCounter(EntitySystem entitySystem, int tagId)
+    private void SetupEnemyTargetCounter(EntitySystem entitySystem, EntityHandle handle, int tagId)
     {
-        int index = entitySystem.entities.entityCount - 1;
+        int index = entitySystem.GetIndex(handle);
         if (index < 0)
             return;
 
@@ -898,6 +1152,34 @@ public class LevelPlayer : MonoBehaviour
                entitySystem.entities.coreComponents[index].EntityType == EntityType.Box;
     }
 
+    private bool TryFindEscortRewardTargetAtCell(EntitySystem entitySystem, Vector2Int cell, out EntityHandle targetHandle)
+    {
+        targetHandle = EntityHandle.None;
+        if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+            return false;
+
+        int targetTagID = ResolveTagID("target", DefaultTargetTagID);
+        int targetEnemyTagID = ResolveTagID("Target.Enemy", DefaultTargetEnemyTagID);
+        var entities = entitySystem.entities;
+        for (int i = 0; i < entities.entityCount; i++)
+        {
+            if (entities.coreComponents[i].EntityType != EntityType.Target ||
+                entities.coreComponents[i].Position != cell)
+            {
+                continue;
+            }
+
+            int sourceTagId = entities.propertyComponents[i].SourceTagId;
+            if (sourceTagId != targetTagID && sourceTagId != targetEnemyTagID)
+                continue;
+
+            targetHandle = entitySystem.GetHandleFromId(entities.coreComponents[i].Id);
+            return entitySystem.IsValid(targetHandle);
+        }
+
+        return false;
+    }
+
     private void ConfigureCardWallHealth(CardEffectSystem cardEffectSystem, int unstableWallTagID)
     {
         if (cardEffectSystem == null || unstableWallTagID <= 0 || _config == null)
@@ -908,6 +1190,18 @@ public class LevelPlayer : MonoBehaviour
             return;
 
         cardEffectSystem.ConfigureMaterializedTerrainWallHealth(wallBP.health);
+    }
+
+    private void ConfigureEnemyWallBreakHealth(EnemyAutoAISystem enemyAutoAISystem, int unstableWallTagID)
+    {
+        if (enemyAutoAISystem == null || unstableWallTagID <= 0 || _config == null)
+            return;
+
+        EntityBP wallBP = _config.GetTagEntityBP(unstableWallTagID);
+        if (wallBP == null)
+            return;
+
+        enemyAutoAISystem.ConfigureMaterializedTerrainWallHealth(wallBP.health);
     }
 
     private List<LevelTagEntry> GetLevelMarkerTags()
@@ -968,6 +1262,20 @@ public class LevelPlayer : MonoBehaviour
         return fallback;
     }
 
+    private static bool IsEnemyTag(int tagId, params int[] enemyTagIds)
+    {
+        if (tagId <= 0 || enemyTagIds == null)
+            return false;
+
+        for (int i = 0; i < enemyTagIds.Length; i++)
+        {
+            if (enemyTagIds[i] > 0 && enemyTagIds[i] == tagId)
+                return true;
+        }
+
+        return false;
+    }
+
     private List<int> GetWallTerrainIds()
     {
         var result = new List<int>();
@@ -1001,6 +1309,7 @@ public class LevelPlayer : MonoBehaviour
     {
         bool ShouldStartSpawningOnBegin { get; }
         void Begin(LevelPlayer player, LevelPlayRequest request);
+        void End(LevelPlayer player);
         void OnTick(LevelPlayer player);
         void Evaluate(LevelPlayer player);
     }
@@ -1018,6 +1327,7 @@ public class LevelPlayer : MonoBehaviour
         private int _phaseOneGold;
         private int _phaseTwoGold;
         private int _convertedTargetCount;
+        private readonly HashSet<int> _phaseOneSettledBoxIds = new();
 
         public bool ShouldStartSpawningOnBegin => false;
 
@@ -1029,10 +1339,15 @@ public class LevelPlayer : MonoBehaviour
             _phaseOneGold = 0;
             _phaseTwoGold = 0;
             _convertedTargetCount = 0;
+            _phaseOneSettledBoxIds.Clear();
             HandZone.SetCardsLocked(true);
         }
 
         public void OnTick(LevelPlayer player)
+        {
+        }
+
+        public void End(LevelPlayer player)
         {
         }
 
@@ -1044,13 +1359,15 @@ public class LevelPlayer : MonoBehaviour
             if (!player.AreAllBoxesOnTargets() || player.HasAnyEnemyAlive())
                 return;
 
-            int phaseTwoBoxCount = Mathf.Max(0, player.CountBoxesOnTargets() - _phaseOneBoxCount);
+            int phaseTwoBoxCount = player.CountBoxesOnTargetsExcluding(_phaseOneSettledBoxIds);
             _phaseTwoGold = player.AwardGoldByArithmeticSequence(phaseTwoBoxCount, 3, 1, "classic phase two boxes");
             player.SettleLevel(LevelPlayResult.Success, "classic phase two completed");
         }
 
         public void DrawGUI(LevelPlayer player)
         {
+            DrawCasinoPanel(player);
+
             if (_phase == Phase.PuzzleOnly)
             {
                 player.EnsureClassicPhaseStyles();
@@ -1071,14 +1388,99 @@ public class LevelPlayer : MonoBehaviour
             }
 
             player.EnsureClassicPhaseStyles();
-            int newBoxes = Mathf.Max(0, player.CountBoxesOnTargets() - _phaseOneBoxCount);
+            int newBoxes = player.CountBoxesOnTargetsExcluding(_phaseOneSettledBoxIds);
             int preview = CalculateArithmeticSequence(newBoxes, 3, 1);
-            string combatText = $"经典阶段二  新箱子: {newBoxes}  预期金币: {preview}  敌人: {(player.HasAnyEnemyAlive() ? "未清空" : "已清空")}";
+            int enemyCount = player.CountEnemiesAlive();
+            string combatText = $"经典阶段二  新箱子: {newBoxes}  预期金币: {preview}  怪物: {enemyCount}  魔化目标: {_convertedTargetCount}";
             float combatWidth = Mathf.Min(640f, Screen.width - 32f);
             var combatRect = new Rect((Screen.width - combatWidth) * 0.5f, 18f, combatWidth, 42f);
             var combatShadowRect = new Rect(combatRect.x + 2f, combatRect.y + 2f, combatRect.width, combatRect.height);
             GUI.Label(combatShadowRect, combatText, player._classicPhaseShadowStyle);
             GUI.Label(combatRect, combatText, player._classicPhaseStyle);
+        }
+
+        private void DrawCasinoPanel(LevelPlayer player)
+        {
+            player.EnsureCasinoStyles();
+
+            float pulse = (Mathf.Sin(Time.time * 3.5f) + 1f) * 0.5f;
+            Color goldPulse = new Color(1f, 0.85f + pulse * 0.15f, 0.05f + pulse * 0.35f, 1f);
+            Color titlePulse = new Color(1f, 0.9f + pulse * 0.1f, 0.3f + pulse * 0.4f, 1f);
+
+            int boxCount = player.CountBoxesOnTargets();
+            int estimatedGold;
+            string detailLine1;
+            string detailLine2 = null;
+
+            if (_phase == Phase.PuzzleOnly)
+            {
+                estimatedGold = CalculateArithmeticSequence(boxCount, 3, 3);
+                detailLine1 = $"箱子 ×{boxCount}";
+                if (boxCount > 0)
+                    detailLine2 = BuildArithmeticString(boxCount, 3, 3) + $" = {estimatedGold} G";
+            }
+            else
+            {
+                int newBoxes = player.CountBoxesOnTargetsExcluding(_phaseOneSettledBoxIds);
+                int phaseTwoEstimate = CalculateArithmeticSequence(newBoxes, 3, 1);
+                estimatedGold = _phaseOneGold + phaseTwoEstimate;
+                detailLine1 = $"阶段一 +{_phaseOneGold}G  |  阶段二 +{phaseTwoEstimate}G";
+                if (newBoxes > 0)
+                    detailLine2 = "新箱 " + BuildArithmeticString(newBoxes, 3, 1) + $" = {phaseTwoEstimate} G";
+            }
+
+            player._casinoGoldStyle.normal.textColor = goldPulse;
+            player._casinoTitleStyle.normal.textColor = titlePulse;
+
+            float panelW = 296f;
+            float titleH = 28f;
+            float goldH = 44f;
+            float detailH = 20f;
+            float pad = 10f;
+            float panelH = detailLine2 != null
+                ? pad + titleH + 6f + goldH + 4f + detailH + 4f + detailH + pad
+                : pad + titleH + 6f + goldH + 4f + detailH + pad;
+            float x = 16f;
+            float y = 16f;
+
+            var panelRect = new Rect(x, y, panelW, panelH);
+            GUI.Box(panelRect, "", player._casinoPanelStyle);
+
+            float cy = y + pad;
+
+            var titleRect = new Rect(x + 12f, cy, panelW - 24f, titleH);
+            var titleShadow = new Rect(titleRect.x + 1f, titleRect.y + 1f, titleRect.width, titleRect.height);
+            GUI.Label(titleShadow, "♦  预计获得金币  ♦", player._casinoTitleShadowStyle);
+            GUI.Label(titleRect, "♦  预计获得金币  ♦", player._casinoTitleStyle);
+            cy += titleH + 6f;
+
+            var goldRect = new Rect(x + 8f, cy, panelW - 16f, goldH);
+            var goldShadow = new Rect(goldRect.x + 2f, goldRect.y + 2f, goldRect.width, goldRect.height);
+            GUI.Label(goldShadow, $"★  {estimatedGold} G  ★", player._casinoGoldShadowStyle);
+            GUI.Label(goldRect, $"★  {estimatedGold} G  ★", player._casinoGoldStyle);
+            cy += goldH + 4f;
+
+            var detail1Rect = new Rect(x + 16f, cy, panelW - 32f, detailH);
+            GUI.Label(detail1Rect, detailLine1, player._casinoDetailStyle);
+            cy += detailH + 4f;
+
+            if (detailLine2 != null)
+            {
+                var detail2Rect = new Rect(x + 16f, cy, panelW - 32f, detailH);
+                GUI.Label(detail2Rect, detailLine2, player._casinoDetailStyle);
+            }
+        }
+
+        private static string BuildArithmeticString(int count, int first, int step)
+        {
+            if (count <= 0) return "0";
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < count; i++)
+            {
+                if (i > 0) sb.Append(" + ");
+                sb.Append(first + i * step);
+            }
+            return sb.ToString();
         }
 
         private void SettlePhaseOne(LevelPlayer player)
@@ -1087,6 +1489,7 @@ public class LevelPlayer : MonoBehaviour
                 return;
 
             _phaseOneBoxCount = player.CountBoxesOnTargets();
+            player.CollectBoxIdsOnTargets(_phaseOneSettledBoxIds);
             _phaseOneGold = player.AwardGoldByArithmeticSequence(_phaseOneBoxCount, 3, 3, "classic phase one boxes");
             _convertedTargetCount = player.ConvertUnoccupiedClassicTargetsToEnemyTargets();
             _phase = Phase.CombatUnlocked;
@@ -1126,6 +1529,10 @@ public class LevelPlayer : MonoBehaviour
             player.SetRemainingSteps(Mathf.Max(0, player.RemainingSteps - 1));
         }
 
+        public void End(LevelPlayer player)
+        {
+        }
+
         public void Evaluate(LevelPlayer player)
         {
             if (player.AreAllBoxesOnTargets())
@@ -1141,28 +1548,58 @@ public class LevelPlayer : MonoBehaviour
 
     private sealed class EscortPlayRule : ILevelPlayRule
     {
+        private LevelPlayer _player;
+        private bool _completionRewardsGranted;
+
         public bool ShouldStartSpawningOnBegin => true;
 
         public void Begin(LevelPlayer player, LevelPlayRequest request)
         {
+            _player = player;
             player.SetRemainingSteps(-1);
+            _completionRewardsGranted = false;
             HandZone.SetCardsLocked(false);
+            EventBusSystem.Instance?.On(StageEventType.EntityMoved, OnEntityMoved);
         }
 
         public void OnTick(LevelPlayer player)
         {
         }
 
+        public void End(LevelPlayer player)
+        {
+            EventBusSystem.Instance?.Off(StageEventType.EntityMoved, OnEntityMoved);
+            _player = null;
+        }
+
         public void Evaluate(LevelPlayer player)
         {
             if (player.IsAnyCoreBoxOnTarget())
             {
+                if (!_completionRewardsGranted)
+                {
+                    _completionRewardsGranted = true;
+                    player.AwardEscortCompletionRewards();
+                }
+
                 player.SettleLevel(LevelPlayResult.Success, "core box reached a target");
                 return;
             }
 
             if (!player.IsAnyCoreBoxAlive())
                 player.SettleLevel(LevelPlayResult.Failure, "core box destroyed");
+        }
+
+        private void OnEntityMoved(StageEvent evt)
+        {
+            if (evt.EntityType != EntityType.Box)
+                return;
+
+            var player = _player;
+            if (player == null || player._playRule != this || player._isSettled)
+                return;
+
+            player.TryConsumeEscortRewardBox(evt.Entity, evt.To);
         }
     }
 }
