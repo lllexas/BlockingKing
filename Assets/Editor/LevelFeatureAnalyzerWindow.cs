@@ -320,6 +320,7 @@ public class LevelFeatureAnalyzerWindow : EditorWindow
                 boxOnTargetCount = row.BoxOnTargetCount,
                 effectiveBoxCount = row.EffectiveBoxCount,
                 effectiveBoxRate = row.EffectiveBoxRate,
+                weight = 1,
                 manualWeight = 1
             });
         }

@@ -8,6 +8,7 @@ public sealed class EscortLevelBuildRequest
     public int ManhattanDistance;
     public float LogSlope;
     public int DifficultyOffset;
+    public PoolEvalContext Context = PoolEvalContext.Default;
     public EscortLevelGenerationConstraints Constraints = EscortLevelGenerationConstraints.Default;
     public LevelCollageSourceDatabase SourceDatabase;
 }

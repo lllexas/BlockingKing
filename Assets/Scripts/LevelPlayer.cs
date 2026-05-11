@@ -31,8 +31,15 @@ public sealed class LevelPlayRequest
     public TileMappingConfig Config;
     public LevelPlayMode Mode = LevelPlayMode.Classic;
     public int StepLimit = 30;
+    public RunDifficultySnapshot Difficulty = RunDifficultySnapshot.Default;
+    public RunRewardConfigSO RewardSettings;
+
+    [System.Obsolete("Use Difficulty.EnemySpawnDifficultyProfile instead.")]
     public EnemySpawnDifficultyProfileSO EnemySpawnDifficultyProfile;
+
+    [System.Obsolete("Use Difficulty.OverallDifficulty instead.")]
     public float OverallDifficulty = 1f;
+
     public int RouteLayer;
     public int RouteLayerCount = 1;
 }
@@ -45,6 +52,7 @@ public sealed class LevelPlayRequest
 public class LevelPlayer : MonoBehaviour
 {
     private const string LevelMeshObjectName = "LevelMesh";
+    private const string OutsideDiamondObjectName = "OutsideDiamond";
     private const int DefaultPlayerTagID = 1;
     private const int DefaultBoxTagID = 2;
     private const int DefaultTargetTagID = 3;
@@ -86,7 +94,9 @@ public class LevelPlayer : MonoBehaviour
     private LevelData _level;
     private TileMappingConfig _config;
     private GameObject _meshGO;
+    private GameObject _outsideDiamondGO;
     private Material _materialInstance;
+    private Material _outsideDiamondMaterial;
     private LevelDataSource _levelSource;
     private ILevelPlayRule _playRule;
     private bool _isPlaying;
@@ -94,6 +104,8 @@ public class LevelPlayer : MonoBehaviour
     private LevelPlayMode _playMode;
     private LevelPlayResult _lastResult;
     private int _remainingSteps = -1;
+    private RunDifficultySnapshot _activeDifficulty = RunDifficultySnapshot.Default;
+    private RunRewardConfigSO _activeRewardSettings;
     private GUIStyle _stepLimitStyle;
     private GUIStyle _stepLimitShadowStyle;
     private GUIStyle _classicPhaseStyle;
@@ -266,13 +278,15 @@ public class LevelPlayer : MonoBehaviour
         }
 
         _playMode = request != null ? request.Mode : defaultPlayMode;
+        _activeDifficulty = ResolveDifficulty(request);
+        _activeRewardSettings = ResolveRewardSettings(request);
         _playRule = CreatePlayRule(_playMode);
         _isPlaying = true;
         _isSettled = false;
         _lastResult = LevelPlayResult.None;
 
         _playRule.Begin(this, request);
-        ConfigureSpawnDifficulty(request);
+        ConfigureSpawnDifficulty(request, _activeDifficulty);
 
         GameFlowController.Instance?.EnterLevel();
         TickSystem.OnTick -= HandleTick;
@@ -295,6 +309,8 @@ public class LevelPlayer : MonoBehaviour
         HandZone.SetCardsLocked(false);
         _playRule = null;
         _isPlaying = false;
+        _activeDifficulty = RunDifficultySnapshot.Default;
+        _activeRewardSettings = null;
     }
 
     [Button("Rebuild World", ButtonSizes.Medium), HorizontalGroup("Buttons")]
@@ -588,20 +604,22 @@ public class LevelPlayer : MonoBehaviour
         if (!TryFindEscortRewardTargetAtCell(entitySystem, cell, out var targetHandle))
             return false;
 
-        AwardGold(escortRewardBoxGold, "escort reward box");
+        int gold = GetEscortRewardBoxGold();
+        AwardGold(gold, "escort reward box");
         entitySystem.DestroyEntity(boxHandle);
         if (entitySystem.IsValid(targetHandle))
             entitySystem.DestroyEntity(targetHandle);
 
-        Debug.Log($"[LevelPlayer] Escort reward box consumed at {cell}, gold={escortRewardBoxGold}");
+        Debug.Log($"[LevelPlayer] Escort reward box consumed at {cell}, gold={gold}");
         return true;
     }
 
     internal void AwardEscortCompletionRewards()
     {
-        AwardGold(escortCompletionGold, "escort completion");
+        AwardGold(GetEscortCompletionGold(), "escort completion");
 
-        if (escortCompletionCardRewards == null || escortCompletionCardRewards.Count == 0)
+        var cardRewards = GetEscortCompletionCardRewards();
+        if (cardRewards == null || cardRewards.Count == 0)
             return;
 
         var deck = NekoGraph.GraphHub.Instance?.GetFacade<CardDeckFacade>();
@@ -618,9 +636,9 @@ public class LevelPlayer : MonoBehaviour
         }
 
         int granted = 0;
-        for (int i = 0; i < escortCompletionCardRewards.Count; i++)
+        for (int i = 0; i < cardRewards.Count; i++)
         {
-            var card = escortCompletionCardRewards[i];
+            var card = cardRewards[i];
             if (card == null)
                 continue;
 
@@ -726,6 +744,8 @@ public class LevelPlayer : MonoBehaviour
             camCtrl.ResetView();
         }
 
+        EnsureOutsideDiamond(_level.width * cellSize, _level.height * cellSize);
+
         Debug.Log($"[LevelPlayer] {_level.levelName} 已构建, 顶点={mesh.vertexCount}, wallHeight={wallHeight}");
     }
 
@@ -764,6 +784,8 @@ public class LevelPlayer : MonoBehaviour
             camCtrl.SetMapBounds(_level.width, _level.height);
             camCtrl.ResetView();
         }
+
+        EnsureOutsideDiamond(_level.width * cellSize, _level.height * cellSize);
 
         Debug.Log($"[LevelPlayer] Instanced terrain ready: {_level.levelName}, size={_level.width}x{_level.height}");
     }
@@ -867,27 +889,88 @@ public class LevelPlayer : MonoBehaviour
         Debug.Log($"[LevelPlayer] ECS 已初始化，实体数={entitySystem.entities.entityCount}, Target.Enemy={enemyTargetCount}, targetEnemyTagID={targetEnemyTagID}");
     }
 
-    private void ConfigureSpawnDifficulty(LevelPlayRequest request)
+    private void ConfigureSpawnDifficulty(LevelPlayRequest request, RunDifficultySnapshot difficulty)
     {
         var spawnSystem = SpawnSystem.Instance ?? GetComponent<SpawnSystem>();
         if (spawnSystem == null)
             return;
 
-        var flow = GameFlowController.Instance;
-        var profile = request?.EnemySpawnDifficultyProfile;
-        if (profile == null && flow != null)
-            profile = flow.EnemySpawnDifficultyProfile;
-
-        float difficulty = request != null ? request.OverallDifficulty : 1f;
-        if (flow != null && (request == null || request.EnemySpawnDifficultyProfile == null))
-            difficulty = flow.OverallDifficulty;
-
         int routeLayer = request != null ? request.RouteLayer : 0;
         int routeLayerCount = request != null ? request.RouteLayerCount : 1;
+        var flow = GameFlowController.Instance;
         if (routeLayerCount <= 1 && flow != null)
             routeLayerCount = flow.RouteLayerCount;
 
-        spawnSystem.ConfigureDifficultyProfile(profile, difficulty, routeLayer, routeLayerCount);
+        spawnSystem.ConfigureDifficultyProfile(
+            difficulty.EnemySpawnDifficultyProfile,
+            difficulty.OverallDifficulty,
+            routeLayer,
+            routeLayerCount);
+    }
+
+    private RunDifficultySnapshot ResolveDifficulty(LevelPlayRequest request)
+    {
+        int routeLayer = request != null ? request.RouteLayer : 0;
+        int routeLayerCount = request != null ? request.RouteLayerCount : 1;
+        var flow = GameFlowController.Instance;
+        if (routeLayerCount <= 1 && flow != null)
+            routeLayerCount = flow.RouteLayerCount;
+
+        if (request != null)
+        {
+            var snapshot = request.Difficulty;
+#pragma warning disable CS0618
+            if (snapshot.EnemySpawnDifficultyProfile == null)
+                snapshot.EnemySpawnDifficultyProfile = request.EnemySpawnDifficultyProfile;
+            if (snapshot.OverallDifficulty <= 0f && request.OverallDifficulty > 0f)
+                snapshot.OverallDifficulty = request.OverallDifficulty;
+#pragma warning restore CS0618
+            if (snapshot.EnemySpawnDifficultyProfile != null || snapshot.OverallDifficulty > 0f)
+            {
+                if (snapshot.EnemyHealthMultiplier <= 0f)
+                    snapshot.EnemyHealthMultiplier = 1f;
+                if (snapshot.EnemyAttackMultiplier <= 0f)
+                    snapshot.EnemyAttackMultiplier = 1f;
+                if (snapshot.RewardMultiplier <= 0f)
+                    snapshot.RewardMultiplier = 1f;
+                snapshot.Progress = routeLayerCount > 1
+                    ? Mathf.Clamp01(routeLayer / (float)(routeLayerCount - 1))
+                    : snapshot.Progress;
+                return snapshot;
+            }
+        }
+
+        return flow != null
+            ? flow.BuildDifficultySnapshot(routeLayer, routeLayerCount)
+            : RunDifficultySnapshot.Default;
+    }
+
+    private RunRewardConfigSO ResolveRewardSettings(LevelPlayRequest request)
+    {
+        return request != null && request.RewardSettings != null
+            ? request.RewardSettings
+            : GameFlowController.Instance != null ? GameFlowController.Instance.RewardSettings : null;
+    }
+
+    private int GetEscortRewardBoxGold()
+    {
+        return _activeRewardSettings != null
+            ? _activeRewardSettings.GetEscortRewardBoxGold(_activeDifficulty)
+            : escortRewardBoxGold;
+    }
+
+    private int GetEscortCompletionGold()
+    {
+        return _activeRewardSettings != null
+            ? _activeRewardSettings.GetEscortCompletionGold(_activeDifficulty)
+            : escortCompletionGold;
+    }
+
+    private IReadOnlyList<CardSO> GetEscortCompletionCardRewards()
+    {
+        return _activeRewardSettings != null
+            ? _activeRewardSettings.escortCompletionCardRewards
+            : escortCompletionCardRewards;
     }
 
     private void HandleTick()
@@ -1024,7 +1107,14 @@ public class LevelPlayer : MonoBehaviour
             removedCount++;
         }
 
+        if (_outsideDiamondGO != null)
+        {
+            DestroyUnityObjectImmediate(_outsideDiamondGO);
+            removedCount++;
+        }
+
         _meshGO = null;
+        _outsideDiamondGO = null;
         return removedCount;
     }
 
@@ -1057,6 +1147,52 @@ public class LevelPlayer : MonoBehaviour
         if (_materialInstance == null)
             _materialInstance = new Material(Shader.Find("BlockingKing/LevelGeometric")
                                           ?? Shader.Find("Universal Render Pipeline/Lit"));
+    }
+
+    private void EnsureOutsideDiamond(float mapWidth, float mapHeight)
+    {
+        if (_outsideDiamondMaterial == null)
+        {
+            var shader = Shader.Find("BlockingKing/OutsideDiamond")
+                         ?? Shader.Find("Universal Render Pipeline/Unlit");
+            _outsideDiamondMaterial = new Material(shader)
+            {
+                name = "OutsideDiamond_Runtime",
+                enableInstancing = true
+            };
+        }
+
+        if (_outsideDiamondGO != null)
+            return;
+
+        // 构建大 Quad，覆盖地图外可见区域
+        float maxExtent = Mathf.Max(mapWidth, mapHeight) * cellSize;
+        float halfSize = maxExtent * 2.5f; // 地图最大边长的 2.5 倍 = 充裕的 padding
+
+        var mesh = new Mesh { name = "OutsideDiamondQuad" };
+        float h = halfSize;
+        mesh.SetVertices(new[]
+        {
+            new Vector3(-h, 0f, -h),
+            new Vector3( h, 0f, -h),
+            new Vector3(-h, 0f,  h),
+            new Vector3( h, 0f,  h)
+        });
+        mesh.SetNormals(new[]
+        {
+            Vector3.up, Vector3.up, Vector3.up, Vector3.up
+        });
+        mesh.SetTriangles(new[] { 0, 1, 2, 1, 3, 2 }, 0);
+        mesh.RecalculateBounds();
+
+        _outsideDiamondGO = new GameObject(OutsideDiamondObjectName);
+        _outsideDiamondGO.transform.SetParent(transform);
+        _outsideDiamondGO.transform.position = new Vector3(
+            mapWidth * cellSize * 0.5f,
+            -0.01f,  // 略低于地板，地板存在处被深度遮挡
+            mapHeight * cellSize * 0.5f);
+        _outsideDiamondGO.AddComponent<MeshFilter>().mesh = mesh;
+        _outsideDiamondGO.AddComponent<MeshRenderer>().sharedMaterial = _outsideDiamondMaterial;
     }
 
     private EntityHandle CreateTaggedEntity(

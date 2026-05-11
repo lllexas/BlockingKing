@@ -20,6 +20,10 @@ public class UserInputReader : MonoBehaviour
     [SerializeField] private Color rightActivePathColor = new(1f, 0.72f, 0.25f, 0.38f);
     [SerializeField, Min(0f)] private float pathPreviewHeight = 0.014f;
     [SerializeField] private int pathPreviewPriority = 5;
+    [SerializeField, Range(2, 128)] private int pathMemoryMaxCells = 96;
+    [SerializeField, Range(1, 96)] private int pathMemoryMaxWaypoints = 48;
+    [SerializeField, Min(0)] private int pathMemoryConnectMaxExtraSteps = 8;
+    [SerializeField, Range(1f, 4f)] private float pathMemoryConnectMaxDetourRatio = 2.5f;
 
     private EntityHandle _playerHandle = EntityHandle.None;
     private Vector2Int _bufferedMoveDirection;
@@ -28,11 +32,16 @@ public class UserInputReader : MonoBehaviour
     private readonly Queue<Vector2Int> _pathMoveDirections = new();
     private readonly Queue<Vector2Int> _leftPathHoverDirections = new();
     private readonly Queue<Vector2Int> _rightPathHoverDirections = new();
+    private readonly Queue<Vector2Int> _pathMemoryConnectDirections = new();
     private readonly List<GridPathFlowOverlayCell> _pathPreviewCells = new();
     private readonly List<int> _pathOpenSet = new();
+    private readonly List<Vector2Int> _mousePathMemoryCells = new();
     private bool _hasPathHoverCache;
     private Vector2Int _cachedPathHoverStart;
     private Vector2Int _cachedPathHoverTarget;
+    private bool _hasMousePathMemoryStart;
+    private Vector2Int _mousePathMemoryStart;
+    private bool _isLeftPathDragging;
 
     private static readonly Vector2Int[] CrossDirections =
     {
@@ -61,7 +70,12 @@ public class UserInputReader : MonoBehaviour
             HandZone.ClearAssistSelectionActive();
 
         if (IsPointerBlockedForStageInputExceptAssist())
+        {
+            if (_isLeftPathDragging)
+                CancelLeftPathDrag();
+
             return;
+        }
 
         if (Input.GetMouseButtonDown(0))
         {
@@ -71,12 +85,18 @@ public class UserInputReader : MonoBehaviour
             if (HandZone.HasAssistSelection)
                 HandZone.ClearAssistSelectionActive();
 
-            TryStartPathMove(PathMoveMode.TerrainOnly);
+            TryBeginLeftPathDrag();
             return;
         }
 
         if (Input.GetMouseButtonDown(1))
         {
+            if (_isLeftPathDragging)
+            {
+                CancelLeftPathDrag();
+                return;
+            }
+
             if (HandZone.HasAssistSelection)
                 HandZone.ClearAssistSelectionActive();
 
@@ -84,10 +104,18 @@ public class UserInputReader : MonoBehaviour
             return;
         }
 
+        if (Input.GetMouseButtonUp(0) && _isLeftPathDragging)
+        {
+            TryCommitLeftPathDrag();
+            return;
+        }
+
         if (!hasMoveKey)
             return;
 
         ClearPathMove();
+        ClearMousePathMemory();
+        _isLeftPathDragging = false;
 
         if (TryBufferMoveDuringBeatMotion(direction))
             return;
@@ -198,6 +226,13 @@ public class UserInputReader : MonoBehaviour
         ClearPathPreview();
     }
 
+    private void ClearMousePathMemory()
+    {
+        _mousePathMemoryCells.Clear();
+        _hasMousePathMemoryStart = false;
+        _mousePathMemoryStart = default;
+    }
+
     private bool TrySubmitMove(Vector2Int direction)
     {
         if (!TryResolvePlayer(out var playerHandle))
@@ -220,6 +255,8 @@ public class UserInputReader : MonoBehaviour
     {
         ClearBufferedMove();
         ClearPathMove();
+        ClearMousePathMemory();
+        _isLeftPathDragging = false;
     }
 
     private static bool TryReadMoveDirection(out Vector2Int direction)
@@ -272,13 +309,98 @@ public class UserInputReader : MonoBehaviour
             return false;
 
         Vector2Int startPosition = entitySystem.entities.coreComponents[playerIndex].Position;
-        if (!TryBuildPath(entitySystem, startPosition, targetPosition, mode, _pathMoveDirections))
+        TrackMousePathMemory(startPosition, targetPosition);
+        if (!TryBuildPreferredPath(entitySystem, startPosition, targetPosition, mode, _pathMoveDirections))
             return false;
 
         _pathMoveMode = mode;
         SetActivePathPreview(startPosition);
         TryConsumePathMove();
         return true;
+    }
+
+    private bool TryBeginLeftPathDrag()
+    {
+        if (HandZone.IsAnyCardInteractionActive || IsPointerBlockedForStageInput())
+            return false;
+
+        ClearBufferedMove();
+        ClearPathMove();
+        ClearMousePathMemory();
+        _isLeftPathDragging = false;
+
+        if (!TryResolvePlayer(out var playerHandle))
+            return false;
+
+        var entitySystem = EntitySystem.Instance;
+        int playerIndex = entitySystem.GetIndex(playerHandle);
+        if (playerIndex < 0)
+            return false;
+
+        Vector2Int startPosition = entitySystem.entities.coreComponents[playerIndex].Position;
+        if (!TryGetMouseGridPosition(out var pressedCell) || pressedCell != startPosition)
+            return false;
+
+        _isLeftPathDragging = true;
+        TrackMousePathMemory(startPosition, startPosition);
+        return true;
+    }
+
+    private bool TryCommitLeftPathDrag()
+    {
+        if (!_isLeftPathDragging)
+            return false;
+
+        _isLeftPathDragging = false;
+
+        if (!TryResolvePlayer(out var playerHandle))
+        {
+            ClearMousePathMemory();
+            ClearPathPreview();
+            return false;
+        }
+
+        var entitySystem = EntitySystem.Instance;
+        int playerIndex = entitySystem.GetIndex(playerHandle);
+        if (playerIndex < 0)
+        {
+            ClearMousePathMemory();
+            ClearPathPreview();
+            return false;
+        }
+
+        if (!TryGetMouseGridPosition(out var targetPosition)
+            || !entitySystem.IsInsideMap(targetPosition)
+            || IsCardAssistTarget(targetPosition))
+        {
+            ClearMousePathMemory();
+            ClearPathPreview();
+            return false;
+        }
+
+        ClearBufferedMove();
+        ClearPathMove();
+
+        Vector2Int startPosition = entitySystem.entities.coreComponents[playerIndex].Position;
+        TrackMousePathMemory(startPosition, targetPosition);
+        if (!TryBuildPreferredPath(entitySystem, startPosition, targetPosition, PathMoveMode.TerrainOnly, _pathMoveDirections))
+        {
+            ClearMousePathMemory();
+            ClearPathPreview();
+            return false;
+        }
+
+        _pathMoveMode = PathMoveMode.TerrainOnly;
+        SetActivePathPreview(startPosition);
+        TryConsumePathMove();
+        return true;
+    }
+
+    private void CancelLeftPathDrag()
+    {
+        _isLeftPathDragging = false;
+        ClearMousePathMemory();
+        ClearPathPreview();
     }
 
     private bool TryHandleCardAssistClick()
@@ -339,12 +461,17 @@ public class UserInputReader : MonoBehaviour
 
         if (HandZone.IsAnyCardInteractionActive || IsPointerBlockedForStageInputExceptAssist())
         {
+            if (_isLeftPathDragging)
+                _isLeftPathDragging = false;
+
+            ClearMousePathMemory();
             ClearPathPreview();
             return;
         }
 
         if (!TryResolvePlayer(out var playerHandle))
         {
+            ClearMousePathMemory();
             ClearPathPreview();
             return;
         }
@@ -353,6 +480,7 @@ public class UserInputReader : MonoBehaviour
         int playerIndex = entitySystem.GetIndex(playerHandle);
         if (playerIndex < 0)
         {
+            ClearMousePathMemory();
             ClearPathPreview();
             return;
         }
@@ -368,14 +496,17 @@ public class UserInputReader : MonoBehaviour
             || IsCardAssistTarget(targetPosition)
             || !entitySystem.IsInsideMap(targetPosition))
         {
+            ClearMousePathMemory();
             _hasPathHoverCache = false;
             ClearPathPreview();
             return;
         }
 
+        bool memoryChanged = TrackMousePathMemory(startPosition, targetPosition);
         if (_hasPathHoverCache
             && _cachedPathHoverStart == startPosition
-            && _cachedPathHoverTarget == targetPosition)
+            && _cachedPathHoverTarget == targetPosition
+            && !memoryChanged)
         {
             return;
         }
@@ -384,17 +515,23 @@ public class UserInputReader : MonoBehaviour
         _cachedPathHoverStart = startPosition;
         _cachedPathHoverTarget = targetPosition;
 
-        bool hasLeftPath = TryBuildPath(entitySystem, startPosition, targetPosition, PathMoveMode.TerrainOnly, _leftPathHoverDirections);
-        bool hasRightPath = TryBuildPath(entitySystem, startPosition, targetPosition, PathMoveMode.TerrainAndEntities, _rightPathHoverDirections);
-        if (!hasLeftPath && !hasRightPath)
+        PathMoveMode previewMode = _isLeftPathDragging
+            ? PathMoveMode.TerrainOnly
+            : PathMoveMode.TerrainAndEntities;
+        Queue<Vector2Int> previewDirections = _isLeftPathDragging
+            ? _leftPathHoverDirections
+            : _rightPathHoverDirections;
+        bool hasPath = TryBuildPreferredPath(entitySystem, startPosition, targetPosition, previewMode, previewDirections);
+        if (!hasPath)
         {
             ClearPathPreview();
             return;
         }
 
         ClearPathPreviewOverlay(ActivePathPreviewOverlayId);
-        if (hasLeftPath)
+        if (_isLeftPathDragging)
         {
+            ClearPathPreviewOverlay(RightPathHoverOverlayId);
             SetPathPreviewFromDirections(
                 LeftPathHoverOverlayId,
                 startPosition,
@@ -405,20 +542,12 @@ public class UserInputReader : MonoBehaviour
         else
         {
             ClearPathPreviewOverlay(LeftPathHoverOverlayId);
-        }
-
-        if (hasRightPath && (!hasLeftPath || !AreDirectionQueuesEqual(_leftPathHoverDirections, _rightPathHoverDirections)))
-        {
             SetPathPreviewFromDirections(
                 RightPathHoverOverlayId,
                 startPosition,
                 _rightPathHoverDirections,
                 rightPathHoverColor,
-                pathPreviewPriority + 1);
-        }
-        else
-        {
-            ClearPathPreviewOverlay(RightPathHoverOverlayId);
+                pathPreviewPriority);
         }
     }
 
@@ -506,20 +635,282 @@ public class UserInputReader : MonoBehaviour
         overlay.RemoveOverlay(overlayId);
     }
 
-    private static bool AreDirectionQueuesEqual(Queue<Vector2Int> first, Queue<Vector2Int> second)
+    private bool TrackMousePathMemory(Vector2Int startPosition, Vector2Int targetPosition)
     {
-        if (first.Count != second.Count)
-            return false;
-
-        using var firstEnumerator = first.GetEnumerator();
-        using var secondEnumerator = second.GetEnumerator();
-        while (firstEnumerator.MoveNext() && secondEnumerator.MoveNext())
+        if (!_hasMousePathMemoryStart
+            || _mousePathMemoryStart != startPosition)
         {
-            if (firstEnumerator.Current != secondEnumerator.Current)
-                return false;
+            ClearMousePathMemory();
+            _hasMousePathMemoryStart = true;
+            _mousePathMemoryStart = startPosition;
         }
 
+        if (_mousePathMemoryCells.Count > 0
+            && !IsMooreNeighborOrSame(_mousePathMemoryCells[^1], targetPosition))
+        {
+            ClearMousePathMemory();
+            _hasMousePathMemoryStart = true;
+            _mousePathMemoryStart = startPosition;
+        }
+
+        if (_mousePathMemoryCells.Count > 0
+            && _mousePathMemoryCells[^1] == targetPosition)
+        {
+            return false;
+        }
+
+        if (TryTrimMousePathMemoryToSegmentPoint(targetPosition, out bool trimmedToExistingTail))
+            return !trimmedToExistingTail;
+
+        int existingIndex = _mousePathMemoryCells.IndexOf(targetPosition);
+        if (existingIndex >= 0)
+        {
+            int removeCount = _mousePathMemoryCells.Count - existingIndex - 1;
+            if (removeCount > 0)
+                _mousePathMemoryCells.RemoveRange(existingIndex + 1, removeCount);
+
+            return removeCount > 0;
+        }
+
+        AddMousePathCell(targetPosition);
+        while (_mousePathMemoryCells.Count > pathMemoryMaxCells)
+            _mousePathMemoryCells.RemoveAt(0);
+
         return true;
+    }
+
+    private bool TryTrimMousePathMemoryToSegmentPoint(Vector2Int cell, out bool trimmedToExistingTail)
+    {
+        trimmedToExistingTail = false;
+
+        for (int i = _mousePathMemoryCells.Count - 2; i >= 0; i--)
+        {
+            Vector2Int from = _mousePathMemoryCells[i];
+            Vector2Int to = _mousePathMemoryCells[i + 1];
+            if (!IsCellOnCardinalSegment(cell, from, to))
+                continue;
+
+            int removeStart = i + 2;
+            if (removeStart < _mousePathMemoryCells.Count)
+                _mousePathMemoryCells.RemoveRange(removeStart, _mousePathMemoryCells.Count - removeStart);
+
+            if (cell == from)
+            {
+                _mousePathMemoryCells.RemoveAt(i + 1);
+                trimmedToExistingTail = false;
+                return true;
+            }
+
+            trimmedToExistingTail = _mousePathMemoryCells[i + 1] == cell;
+            _mousePathMemoryCells[i + 1] = cell;
+            return true;
+        }
+
+        return false;
+    }
+
+    private void AddMousePathCell(Vector2Int cell)
+    {
+        if (_mousePathMemoryCells.Count == 0)
+        {
+            _mousePathMemoryCells.Add(cell);
+            return;
+        }
+
+        Vector2Int last = _mousePathMemoryCells[^1];
+        if (last == cell)
+            return;
+
+        if (TryAppendMooreNeighborCellsBetween(last, cell))
+            return;
+
+        _mousePathMemoryCells.Add(cell);
+    }
+
+    private bool TryAppendMooreNeighborCellsBetween(Vector2Int from, Vector2Int to)
+    {
+        Vector2Int delta = to - from;
+        if (Mathf.Abs(delta.x) > 1 || Mathf.Abs(delta.y) > 1)
+            return false;
+
+        if (delta == Vector2Int.zero)
+            return true;
+
+        if (delta.x != 0 && delta.y != 0)
+        {
+            Vector2Int horizontal = from + new Vector2Int(delta.x, 0);
+            Vector2Int vertical = from + new Vector2Int(0, delta.y);
+            _mousePathMemoryCells.Add(ChooseDiagonalBridgeCell(horizontal, vertical));
+        }
+
+        _mousePathMemoryCells.Add(to);
+        while (_mousePathMemoryCells.Count > pathMemoryMaxCells)
+            _mousePathMemoryCells.RemoveAt(0);
+
+        return true;
+    }
+
+    private bool TryBuildPreferredPath(
+        EntitySystem entitySystem,
+        Vector2Int start,
+        Vector2Int target,
+        PathMoveMode mode,
+        Queue<Vector2Int> result)
+    {
+        if (TryBuildRememberedPath(entitySystem, start, target, mode, result))
+            return true;
+
+        return TryBuildPath(entitySystem, start, target, mode, result);
+    }
+
+    private bool TryBuildRememberedPath(
+        EntitySystem entitySystem,
+        Vector2Int start,
+        Vector2Int target,
+        PathMoveMode mode,
+        Queue<Vector2Int> result)
+    {
+        result.Clear();
+
+        if (!_hasMousePathMemoryStart
+            || _mousePathMemoryStart != start
+            || _mousePathMemoryCells.Count == 0
+            || _mousePathMemoryCells[^1] != target)
+        {
+            return false;
+        }
+
+        if (_mousePathMemoryCells.Count < 2)
+            return false;
+
+        int firstKeptIndex = FindFirstConnectableMemoryIndex(entitySystem, start, mode, _pathMemoryConnectDirections);
+        if (firstKeptIndex < 0)
+            return false;
+
+        if (firstKeptIndex > 0)
+            _mousePathMemoryCells.RemoveRange(0, firstKeptIndex);
+
+        CopyDirections(_pathMemoryConnectDirections, result);
+        return AppendMemorySuffixDirections(entitySystem, mode, result);
+    }
+
+    private int FindFirstConnectableMemoryIndex(
+        EntitySystem entitySystem,
+        Vector2Int start,
+        PathMoveMode mode,
+        Queue<Vector2Int> connectDirections)
+    {
+        connectDirections.Clear();
+
+        int firstCandidateIndex = Mathf.Max(0, _mousePathMemoryCells.Count - pathMemoryMaxWaypoints);
+        for (int i = firstCandidateIndex; i < _mousePathMemoryCells.Count - 1; i++)
+        {
+            Vector2Int memoryCell = _mousePathMemoryCells[i];
+            if (!TryBuildPath(entitySystem, start, memoryCell, mode, connectDirections))
+                continue;
+
+            if (IsConnectPathReasonable(connectDirections.Count, start, memoryCell))
+                return i;
+        }
+
+        connectDirections.Clear();
+        return -1;
+    }
+
+    private bool AppendMemorySuffixDirections(
+        EntitySystem entitySystem,
+        PathMoveMode mode,
+        Queue<Vector2Int> result)
+    {
+        for (int i = 0; i < _mousePathMemoryCells.Count - 1; i++)
+        {
+            Vector2Int direction = _mousePathMemoryCells[i + 1] - _mousePathMemoryCells[i];
+            if (!CanExecutePathStep(entitySystem, _mousePathMemoryCells[i], direction, mode))
+            {
+                result.Clear();
+                return false;
+            }
+
+            result.Enqueue(direction);
+        }
+
+        return result.Count > 0;
+    }
+
+    private bool IsConnectPathReasonable(int connectLength, Vector2Int start, Vector2Int memoryCell)
+    {
+        if (connectLength <= 0)
+            return false;
+
+        int intendedDistance = ManhattanDistance(start, memoryCell);
+        int allowedLength = Mathf.Max(
+            intendedDistance + pathMemoryConnectMaxExtraSteps,
+            Mathf.CeilToInt(intendedDistance * pathMemoryConnectMaxDetourRatio));
+        return connectLength <= allowedLength;
+    }
+
+    private static void AppendDirections(Queue<Vector2Int> destination, Queue<Vector2Int> source)
+    {
+        foreach (var direction in source)
+            destination.Enqueue(direction);
+    }
+
+    private static void CopyDirections(Queue<Vector2Int> source, Queue<Vector2Int> destination)
+    {
+        destination.Clear();
+        AppendDirections(destination, source);
+    }
+
+    private static int ManhattanDistance(Vector2Int first, Vector2Int second)
+    {
+        return Mathf.Abs(first.x - second.x) + Mathf.Abs(first.y - second.y);
+    }
+
+    private static bool IsMooreNeighborOrSame(Vector2Int first, Vector2Int second)
+    {
+        return Mathf.Abs(first.x - second.x) <= 1
+               && Mathf.Abs(first.y - second.y) <= 1;
+    }
+
+    private Vector2Int ChooseDiagonalBridgeCell(Vector2Int horizontal, Vector2Int vertical)
+    {
+        int horizontalIndex = _mousePathMemoryCells.IndexOf(horizontal);
+        int verticalIndex = _mousePathMemoryCells.IndexOf(vertical);
+        if (horizontalIndex >= 0 && verticalIndex >= 0)
+            return horizontalIndex >= verticalIndex ? horizontal : vertical;
+
+        if (horizontalIndex >= 0)
+            return horizontal;
+
+        if (verticalIndex >= 0)
+            return vertical;
+
+        return horizontal;
+    }
+
+    private static bool IsCellOnCardinalSegment(Vector2Int cell, Vector2Int from, Vector2Int to)
+    {
+        if (from.x == to.x)
+        {
+            if (cell.x != from.x)
+                return false;
+
+            int minY = Mathf.Min(from.y, to.y);
+            int maxY = Mathf.Max(from.y, to.y);
+            return cell.y >= minY && cell.y <= maxY;
+        }
+
+        if (from.y == to.y)
+        {
+            if (cell.y != from.y)
+                return false;
+
+            int minX = Mathf.Min(from.x, to.x);
+            int maxX = Mathf.Max(from.x, to.x);
+            return cell.x >= minX && cell.x <= maxX;
+        }
+
+        return false;
     }
 
     private bool TryBuildPath(

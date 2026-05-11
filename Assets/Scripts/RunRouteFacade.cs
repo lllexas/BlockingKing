@@ -82,7 +82,10 @@ public class RunRouteFacade : PackFacadeBase
             for (int i = 0; i < lanes.Count; i++)
             {
                 int lane = lanes[i];
-                var source = stageSources[random.Next(stageSources.Count)];
+                var source = PickWeightedStageSource(stageSources, random);
+                if (source == null)
+                    continue;
+
                 var node = CreateStageNode(source, layer, lane, layer == 0);
                 pack.Nodes[node.NodeID] = node;
                 if (source.levelData != null)
@@ -94,6 +97,12 @@ public class RunRouteFacade : PackFacadeBase
                 layerNodes.Add(node);
             }
 
+            if (layerNodes.Count == 0)
+            {
+                Debug.LogError($"[RunRouteFacade] GenerateRoute failed: no valid stage source for layer {layer}.");
+                return null;
+            }
+
             byLayer.Add(layerNodes);
         }
 
@@ -103,6 +112,106 @@ public class RunRouteFacade : PackFacadeBase
 
         GenerateEscortLevelsForRoute(pack);
         return pack;
+    }
+
+    public BasePackData GenerateRoute(RunRouteConfigSO routeConfig)
+    {
+        if (routeConfig == null)
+        {
+            Debug.LogError("[RunRouteFacade] GenerateRoute failed: routeConfig is null.");
+            return null;
+        }
+
+        var pack = EnsureRoutePack();
+        if (pack == null)
+            return null;
+
+        ResetPack(pack);
+        _runtimeLevelObjects.Clear();
+        _runtimeCollageSettings.Clear();
+        _runtimeShopObjects.Clear();
+
+        var random = routeConfig.seed == 0 ? new System.Random() : new System.Random(routeConfig.seed);
+        var shape = routeConfig.BuildShape(random);
+        int layerCount = shape.LayerCount;
+        int laneCount = shape.LaneCount;
+        var byLayer = new List<List<VFSNodeData>>();
+
+        for (int layer = 0; layer < layerCount; layer++)
+        {
+            int nodesInLayer = shape.GetNodeCount(layer);
+            var lanes = PickDistinctLanes(random, laneCount, nodesInLayer);
+            var layerNodes = new List<VFSNodeData>();
+            for (int i = 0; i < lanes.Count; i++)
+            {
+                int lane = lanes[i];
+                StagePoolSO.StageEntryKind? forcedKind = shape.TryGetForcedStageKind(layer, out var kind) ? kind : null;
+                if (!routeConfig.TryPickRouteStageSource(layer, layerCount, routeConfig.overallDifficulty, forcedKind, random, out var source) ||
+                    source == null)
+                {
+                    continue;
+                }
+
+                var node = CreateStageNode(source, layer, lane, layer == 0);
+                pack.Nodes[node.NodeID] = node;
+                RegisterRuntimeSource(node.NodeID, source);
+                layerNodes.Add(node);
+            }
+
+            if (layerNodes.Count == 0)
+            {
+                Debug.LogError($"[RunRouteFacade] GenerateRoute failed: no valid stage source for layer {layer}.");
+                return null;
+            }
+
+            byLayer.Add(layerNodes);
+        }
+
+        ConnectRoot(pack, byLayer[0]);
+        for (int layer = 0; layer < byLayer.Count - 1; layer++)
+            ConnectLayers(byLayer[layer], byLayer[layer + 1]);
+
+        GenerateEscortLevelsForRoute(pack);
+        return pack;
+    }
+
+    private void RegisterRuntimeSource(string nodeId, RunRouteStageSource source)
+    {
+        if (source == null || string.IsNullOrWhiteSpace(nodeId))
+            return;
+
+        if (source.levelData != null)
+            _runtimeLevelObjects[nodeId] = source.levelData;
+        if (source.collageGenerationSettings != null)
+            _runtimeCollageSettings[nodeId] = source.collageGenerationSettings;
+        if (source.shop != null)
+            _runtimeShopObjects[nodeId] = source.shop;
+    }
+
+    private static RunRouteStageSource PickWeightedStageSource(IReadOnlyList<RunRouteStageSource> stageSources, System.Random random)
+    {
+        if (stageSources == null || stageSources.Count == 0)
+            return null;
+
+        int totalWeight = 0;
+        for (int i = 0; i < stageSources.Count; i++)
+            totalWeight += Mathf.Max(0, stageSources[i]?.weight ?? 0);
+
+        if (totalWeight <= 0)
+            return stageSources[random.Next(stageSources.Count)];
+
+        int pick = random.Next(totalWeight);
+        for (int i = 0; i < stageSources.Count; i++)
+        {
+            var source = stageSources[i];
+            int weight = Mathf.Max(0, source?.weight ?? 0);
+            if (pick < weight)
+                return source;
+
+            pick -= weight;
+        }
+
+        return stageSources[stageSources.Count - 1];
     }
 
     public RunRouteView GetRouteView()
@@ -220,15 +329,19 @@ public class RunRouteFacade : PackFacadeBase
                 return false;
             }
 
+            var flow = GameFlowController.Instance;
+            int routeLayerCount = flow != null ? flow.RouteLayerCount : 1;
             bool started = player.PlayLevel(new LevelPlayRequest
             {
                 Level = level,
                 Mode = ResolveLevelPlayMode(side.stageType),
                 StepLimit = ResolveStepLimit(side.stageType, 30),
-                EnemySpawnDifficultyProfile = GameFlowController.Instance?.EnemySpawnDifficultyProfile,
-                OverallDifficulty = GameFlowController.Instance != null ? GameFlowController.Instance.OverallDifficulty : 1f,
+                Difficulty = flow != null
+                    ? flow.BuildDifficultySnapshot(side.layer, routeLayerCount)
+                    : RunDifficultySnapshot.Default,
+                RewardSettings = flow != null ? flow.RewardSettings : null,
                 RouteLayer = side.layer,
-                RouteLayerCount = GameFlowController.Instance != null ? GameFlowController.Instance.RouteLayerCount : 1
+                RouteLayerCount = routeLayerCount
             });
 
             if (!started)
@@ -456,6 +569,7 @@ public class RunRouteFacade : PackFacadeBase
         LevelCollageGenerationSettings settings = ResolveEscortGenerationSettings(node?.NodeID);
         Vector2Int from = ResolveParentRoutePoint(node, side);
         Vector2Int to = new Vector2Int(side.layer, side.lane);
+        var context = BuildRouteContext(side);
         int layerUnit = settings != null ? Mathf.Max(1, settings.routeLayerDistanceUnit) : 24;
         int laneUnit = settings != null ? Mathf.Max(1, settings.routeLaneDistanceUnit) : 12;
         int dx = Mathf.Max(1, Mathf.Abs(to.x - from.x)) * layerUnit;
@@ -467,12 +581,38 @@ public class RunRouteFacade : PackFacadeBase
         {
             Seed = StableSeed(node?.NodeID),
             ManhattanDistance = settings != null
-                ? settings.ClampEscortManhattanDistance(rawManhattanDistance)
+                ? settings.ClampEscortManhattanDistance(rawManhattanDistance, context)
                 : rawManhattanDistance,
             LogSlope = Mathf.Log(slope),
             DifficultyOffset = ResolveEscortDifficultyOffset(side.stageType),
-            Constraints = ResolveEscortConstraints(node?.NodeID, side.stageType),
+            Context = context,
+            Constraints = ResolveEscortConstraints(node?.NodeID, side.stageType, context),
             SourceDatabase = ResolveEscortSourceDatabase(node?.NodeID)
+        };
+    }
+
+    private static PoolEvalContext BuildRouteContext(RunRouteNodeSideData side)
+    {
+        var flow = GameFlowController.Instance;
+        int routeLayer = Mathf.Max(0, side?.layer ?? 0);
+        int routeLayerCount = flow != null ? flow.RouteLayerCount : Mathf.Max(1, routeLayer + 1);
+        float progress = routeLayerCount > 1 ? Mathf.Clamp01(routeLayer / (float)(routeLayerCount - 1)) : 0f;
+        float difficulty = flow != null ? flow.OverallDifficulty : 1f;
+
+        if (flow != null)
+        {
+            var snapshot = flow.BuildDifficultySnapshot(routeLayer, routeLayerCount);
+            progress = snapshot.Progress;
+            difficulty = snapshot.OverallDifficulty;
+        }
+
+        return new PoolEvalContext
+        {
+            routeLayer = routeLayer,
+            routeLayerCount = routeLayerCount,
+            progress = progress,
+            difficulty = Mathf.Max(0f, difficulty),
+            seed = StableSeed($"{routeLayer}:{routeLayerCount}:{difficulty:0.###}")
         };
     }
 
@@ -529,12 +669,12 @@ public class RunRouteFacade : PackFacadeBase
         };
     }
 
-    private EscortLevelGenerationConstraints ResolveEscortConstraints(string nodeId, string stageType)
+    private EscortLevelGenerationConstraints ResolveEscortConstraints(string nodeId, string stageType, PoolEvalContext context)
     {
         var constraints = !string.IsNullOrWhiteSpace(nodeId) &&
                           _runtimeCollageSettings.TryGetValue(nodeId, out var settings) &&
                           settings != null
-            ? settings.ToConstraints()
+            ? settings.ToConstraints(context)
             : EscortLevelGenerationConstraints.Default;
         if (string.IsNullOrWhiteSpace(stageType))
             return constraints;

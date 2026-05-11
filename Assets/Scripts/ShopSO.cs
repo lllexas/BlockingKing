@@ -47,6 +47,9 @@ public class ShopSO : ScriptableObject
         }
     }
 
+    [Header("Pool")]
+    public ShopItemPoolSO itemPool;
+
     public string shopId;
     public string title = "商店";
 
@@ -54,4 +57,24 @@ public class ShopSO : ScriptableObject
     public string description;
 
     public List<ShopItem> items = new List<ShopItem>();
+
+    public IReadOnlyList<ShopItem> GetItems()
+    {
+        if (itemPool != null && itemPool.Entries != null && itemPool.Entries.Count > 0)
+        {
+            var result = new List<ShopItem>();
+            foreach (var entry in itemPool.Entries)
+            {
+                if (entry == null || !entry.enabled)
+                    continue;
+
+                result.Add(entry.ToShopItem());
+            }
+
+            if (result.Count > 0)
+                return result;
+        }
+
+        return items;
+    }
 }

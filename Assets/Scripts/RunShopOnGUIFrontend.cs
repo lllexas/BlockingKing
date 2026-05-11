@@ -117,7 +117,8 @@ public class RunShopOnGUIFrontend : MonoBehaviour
 
     private void DrawItems(ShopSO shop)
     {
-        int count = shop.items?.Count ?? 0;
+        var items = shop.GetItems();
+        int count = items?.Count ?? 0;
         if (count == 0)
         {
             GUILayout.Label("暂时没有商品。", _bodyStyle);
@@ -126,7 +127,7 @@ public class RunShopOnGUIFrontend : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
-            var item = shop.items[i];
+            var item = items[i];
             if (item == null)
                 continue;
 

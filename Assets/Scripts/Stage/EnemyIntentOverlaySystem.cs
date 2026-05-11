@@ -3,17 +3,16 @@ using UnityEngine;
 
 public class EnemyIntentOverlaySystem : MonoBehaviour
 {
-    private const string EnemyMoveOverlayId = "enemy_intent_move";
-    private const string EnemyMoveDirectionOverlayId = "enemy_intent_move_direction";
+    private const string EnemyMovePathOverlayId = "enemy_intent_move_path";
     private const string EnemyAttackOverlayId = "enemy_intent_attack";
 
     [SerializeField] private Color moveColor = new(1f, 0.72f, 0.08f, 0.36f);
-    [SerializeField] private Color moveDirectionColor = new(1f, 0.9f, 0.2f, 0.68f);
     [SerializeField] private Color attackColor = new(1f, 0.05f, 0.02f, 0.48f);
     [SerializeField] private float overlayHeight = 0.014f;
+    [SerializeField] private int movePathPriority = 20;
+    [SerializeField] private int attackPriority = 22;
 
-    private readonly List<Vector2Int> _moveCells = new();
-    private readonly List<GridDirectionalOverlayCell> _moveDirections = new();
+    private readonly List<GridPathFlowOverlayCell> _movePathCells = new();
     private readonly List<Vector2Int> _attackCells = new();
 
     private void LateUpdate()
@@ -36,8 +35,7 @@ public class EnemyIntentOverlaySystem : MonoBehaviour
             return;
         }
 
-        _moveCells.Clear();
-        _moveDirections.Clear();
+        _movePathCells.Clear();
         _attackCells.Clear();
 
         var entities = entitySystem.entities;
@@ -54,7 +52,7 @@ public class EnemyIntentOverlaySystem : MonoBehaviour
             switch (intentComponent.Type)
             {
                 case IntentType.Move:
-                    AddMoveIntentCell(core.Position, intentComponent.Intent as MoveIntent);
+                    AddMoveIntentPath(core.Position, intentComponent.Intent as MoveIntent);
                     break;
                 case IntentType.Attack:
                     AddAttackIntentCells(intentComponent.Intent as AttackIntent);
@@ -62,20 +60,12 @@ public class EnemyIntentOverlaySystem : MonoBehaviour
             }
         }
 
-        overlay.SetOverlay(
-            EnemyMoveOverlayId,
-            _moveCells,
-            GridOverlayStyle.SolidTint,
+        overlay.SetPathFlowOverlay(
+            EnemyMovePathOverlayId,
+            _movePathCells,
             moveColor,
             overlayHeight,
-            20);
-
-        overlay.SetDirectionalOverlay(
-            EnemyMoveDirectionOverlayId,
-            _moveDirections,
-            moveDirectionColor,
-            overlayHeight + 0.002f,
-            21);
+            movePathPriority);
 
         overlay.SetOverlay(
             EnemyAttackOverlayId,
@@ -83,18 +73,27 @@ public class EnemyIntentOverlaySystem : MonoBehaviour
             GridOverlayStyle.Danger,
             attackColor,
             overlayHeight,
-            22);
+            attackPriority);
     }
 
-    private void AddMoveIntentCell(Vector2Int origin, MoveIntent intent)
+    private void AddMoveIntentPath(Vector2Int origin, MoveIntent intent)
     {
         if (intent == null || !intent.Active || intent.Direction == Vector2Int.zero)
             return;
 
         int distance = Mathf.Max(1, intent.Distance);
-        Vector2Int target = origin + intent.Direction * distance;
-        AddUnique(_moveCells, target);
-        AddUniqueDirection(_moveDirections, target, intent.Direction);
+        Vector2Int current = origin;
+        for (int i = 0; i < distance; i++)
+        {
+            current += intent.Direction;
+            Vector2Int nextDirection = i + 1 < distance ? intent.Direction : Vector2Int.zero;
+            AddMovePathCell(new GridPathFlowOverlayCell(
+                current,
+                intent.Direction,
+                nextDirection,
+                _movePathCells.Count,
+                distance));
+        }
     }
 
     private void AddAttackIntentCells(AttackIntent intent)
@@ -112,18 +111,20 @@ public class EnemyIntentOverlaySystem : MonoBehaviour
             cells.Add(cell);
     }
 
-    private static void AddUniqueDirection(
-        List<GridDirectionalOverlayCell> cells,
-        Vector2Int cell,
-        Vector2Int direction)
+    private void AddMovePathCell(GridPathFlowOverlayCell cell)
     {
-        for (int i = 0; i < cells.Count; i++)
+        for (int i = 0; i < _movePathCells.Count; i++)
         {
-            if (cells[i].Cell == cell && cells[i].Direction == direction)
+            var existing = _movePathCells[i];
+            if (existing.Cell == cell.Cell
+                && existing.IncomingDirection == cell.IncomingDirection
+                && existing.OutgoingDirection == cell.OutgoingDirection)
+            {
                 return;
+            }
         }
 
-        cells.Add(new GridDirectionalOverlayCell(cell, direction));
+        _movePathCells.Add(cell);
     }
 
     private static void Clear()
@@ -132,8 +133,7 @@ public class EnemyIntentOverlaySystem : MonoBehaviour
         if (overlay == null)
             return;
 
-        overlay.RemoveOverlay(EnemyMoveOverlayId);
-        overlay.RemoveOverlay(EnemyMoveDirectionOverlayId);
+        overlay.RemoveOverlay(EnemyMovePathOverlayId);
         overlay.RemoveOverlay(EnemyAttackOverlayId);
     }
 }

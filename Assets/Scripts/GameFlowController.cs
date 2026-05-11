@@ -12,16 +12,25 @@ public class GameFlowController : MonoBehaviour
     public static GameFlowController Instance { get; private set; }
 
     [SerializeField] private GameFlowMode mode = GameFlowMode.DirectLevel;
-    [SerializeField] private GameFlowSettings settings;
+    [SerializeField] private RunConfigSO runConfig;
+    [SerializeField] private RunRouteConfigSO settings;
     [SerializeField] private RunStartSettings runStartSettings;
     [SerializeField] private bool ensureRouteOnGUI = true;
 
     public GameFlowMode Mode => mode;
     public bool ShouldLevelPlayerAutoBuild => mode == GameFlowMode.DirectLevel;
     public bool IsInLevel { get; private set; }
-    public float OverallDifficulty => settings != null ? Mathf.Max(0f, settings.overallDifficulty) : 1f;
-    public EnemySpawnDifficultyProfileSO EnemySpawnDifficultyProfile => settings != null ? settings.enemySpawnDifficultyProfile : null;
-    public int RouteLayerCount => settings != null ? Mathf.Max(1, settings.layerCount) : 1;
+    public RunRouteConfigSO RouteSettings => runConfig != null && runConfig.routeSettings != null ? runConfig.routeSettings : settings;
+    public RunDifficultyConfigSO DifficultySettings => runConfig != null ? runConfig.difficultySettings : null;
+    public RunRewardConfigSO RewardSettings => runConfig != null ? runConfig.rewardSettings : null;
+    public RunStartSettings RunStartSettings => runConfig != null && runConfig.startSettings != null ? runConfig.startSettings : runStartSettings;
+    public float OverallDifficulty => DifficultySettings != null
+        ? Mathf.Max(0f, DifficultySettings.overallDifficulty)
+        : RouteSettings != null ? Mathf.Max(0f, RouteSettings.overallDifficulty) : 1f;
+    public EnemySpawnDifficultyProfileSO EnemySpawnDifficultyProfile => DifficultySettings != null
+        ? DifficultySettings.enemySpawnDifficultyProfile
+        : RouteSettings != null ? RouteSettings.enemySpawnDifficultyProfile : null;
+    public int RouteLayerCount => RouteSettings != null ? RouteSettings.GetResolvedLayerCount() : 1;
 
     private RunRouteOnGUIFrontend _routeFrontend;
     private int _observedStageRunVersion;
@@ -99,10 +108,10 @@ public class GameFlowController : MonoBehaviour
 
         ApplyRunStartSettings();
 
-        if (settings != null)
+        var routeSettings = RouteSettings;
+        if (routeSettings != null)
         {
-            var sources = settings.BuildRouteStageSources();
-            routeFacade.GenerateRoute(sources, settings.layerCount, settings.laneCount, settings.seed);
+            routeFacade.GenerateRoute(routeSettings);
         }
         else
         {
@@ -174,11 +183,10 @@ public class GameFlowController : MonoBehaviour
         IsInLevel = false;
     }
 
-    public RunStartSettings RunStartSettings => runStartSettings;
-
     private void ApplyRunStartSettings()
     {
-        if (_runStartApplied || runStartSettings == null)
+        var startSettings = RunStartSettings;
+        if (_runStartApplied || startSettings == null)
             return;
 
         var deck = GraphHub.Instance?.GetFacade<CardDeckFacade>();
@@ -201,11 +209,25 @@ public class GameFlowController : MonoBehaviour
         if (inventory == null)
             return;
 
-        if (deck.ReplaceWithStartingDeck(runStartSettings.startingDeck) &&
-            inventory.Reset(runStartSettings.startingGold))
+        if (deck.ReplaceWithStartingDeck(startSettings.startingDeck) &&
+            inventory.Reset(startSettings.startingGold))
         {
             _runStartApplied = true;
         }
+    }
+
+    public RunDifficultySnapshot BuildDifficultySnapshot(int routeLayer, int routeLayerCount)
+    {
+        if (DifficultySettings != null)
+            return DifficultySettings.BuildSnapshot(routeLayer, routeLayerCount);
+
+        var snapshot = RunDifficultySnapshot.Default;
+        snapshot.Progress = routeLayerCount > 1
+            ? Mathf.Clamp01(routeLayer / (float)(routeLayerCount - 1))
+            : 0f;
+        snapshot.OverallDifficulty = OverallDifficulty;
+        snapshot.EnemySpawnDifficultyProfile = EnemySpawnDifficultyProfile;
+        return snapshot;
     }
 
     private void TryCompleteEncounterRouteNode()

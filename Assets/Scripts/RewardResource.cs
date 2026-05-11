@@ -21,6 +21,27 @@ public static class RewardResource
             return HandleResult.Error;
         }
 
+        var expandedRewards = reward.GetRewards();
+        if (expandedRewards != null && expandedRewards.Count > 0 && !(expandedRewards.Count == 1 && ReferenceEquals(expandedRewards[0], reward)))
+        {
+            foreach (var expandedReward in expandedRewards)
+            {
+                if (expandedReward == null)
+                    continue;
+
+                HandleResult expandedResult = ExecuteReward(expandedReward);
+                if (expandedResult == HandleResult.Error)
+                    return expandedResult;
+            }
+
+            return HandleResult.Push;
+        }
+
+        return ExecuteReward(reward);
+    }
+
+    private static HandleResult ExecuteReward(RewardSO reward)
+    {
         switch (reward.rewardKind)
         {
             case RewardSO.RewardKind.AddCardsToDeck:

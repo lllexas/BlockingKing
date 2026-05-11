@@ -87,6 +87,25 @@ public class LevelCollageGenerationSettings : ScriptableObject
     [MinValue(-1), LabelText("Max Final Reward Boxes (-1 = unlimited)")]
     public int maxFinalRewardBoxes = -1;
 
+    [Title("Context Tables")]
+    [AssetsOnly, LabelText("Manhattan Distance Table")]
+    public FloatRangeTableSO escortDistanceTable;
+
+    [AssetsOnly, LabelText("Width Table")]
+    public FloatRangeTableSO templateWidthTable;
+
+    [AssetsOnly, LabelText("Height Table")]
+    public FloatRangeTableSO templateHeightTable;
+
+    [AssetsOnly, LabelText("Area Table")]
+    public FloatRangeTableSO templateAreaTable;
+
+    [AssetsOnly, LabelText("Wall Rate Table")]
+    public FloatRangeTableSO templateWallRateTable;
+
+    [AssetsOnly, LabelText("Effective Box Table")]
+    public FloatRangeTableSO templateEffectiveBoxTable;
+
     [Title("Dashboard")]
     [ShowInInspector, ReadOnly, LabelText("Summary")]
     private string Summary => BuildSummary();
@@ -112,11 +131,26 @@ public class LevelCollageGenerationSettings : ScriptableObject
 
     public EscortLevelGenerationConstraints ToConstraints()
     {
-        var widthRange = Normalize(templateWidthRange, 1f);
-        var heightRange = Normalize(templateHeightRange, 1f);
-        var areaRange = Normalize(templateAreaRange, 1f);
-        var effectiveBoxRange = Normalize(templateEffectiveBoxRange, 0f);
-        var wallRateRange = Normalize01(templateWallRateRange);
+        return ToConstraints(PoolEvalContext.Default);
+    }
+
+    public EscortLevelGenerationConstraints ToConstraints(PoolEvalContext context)
+    {
+        var widthRange = templateWidthTable != null
+            ? Normalize(templateWidthTable.Evaluate(context, templateWidthRange), 1f)
+            : Normalize(templateWidthRange, 1f);
+        var heightRange = templateHeightTable != null
+            ? Normalize(templateHeightTable.Evaluate(context, templateHeightRange), 1f)
+            : Normalize(templateHeightRange, 1f);
+        var areaRange = templateAreaTable != null
+            ? Normalize(templateAreaTable.Evaluate(context, templateAreaRange), 1f)
+            : Normalize(templateAreaRange, 1f);
+        var effectiveBoxRange = templateEffectiveBoxTable != null
+            ? Normalize(templateEffectiveBoxTable.Evaluate(context, templateEffectiveBoxRange), 0f)
+            : Normalize(templateEffectiveBoxRange, 0f);
+        var wallRateRange = templateWallRateTable != null
+            ? Normalize01(templateWallRateTable.Evaluate(context, templateWallRateRange))
+            : Normalize01(templateWallRateRange);
         var cityCount = Normalize(cityCountRange, 0f);
         var enemyCount = Normalize(enemyCountRange, 0f);
         var logSlopeRange = NormalizeUnbounded(logSlopeClamp);
@@ -185,7 +219,14 @@ public class LevelCollageGenerationSettings : ScriptableObject
 
     public int ClampEscortManhattanDistance(int rawDistance)
     {
-        var range = Normalize(escortManhattanDistanceRange, 1f);
+        return ClampEscortManhattanDistance(rawDistance, PoolEvalContext.Default);
+    }
+
+    public int ClampEscortManhattanDistance(int rawDistance, PoolEvalContext context)
+    {
+        var range = escortDistanceTable != null
+            ? Normalize(escortDistanceTable.Evaluate(context, escortManhattanDistanceRange), 1f)
+            : Normalize(escortManhattanDistanceRange, 1f);
         return Mathf.Clamp(rawDistance, Mathf.RoundToInt(range.x), Mathf.RoundToInt(range.y));
     }
 
