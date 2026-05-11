@@ -316,9 +316,7 @@ public class GameFlowController : MonoBehaviour
             return DifficultySettings.BuildSnapshot(routeLayer, routeLayerCount);
 
         var snapshot = RunDifficultySnapshot.Default;
-        snapshot.Progress = routeLayerCount > 1
-            ? Mathf.Clamp01(routeLayer / (float)(routeLayerCount - 1))
-            : 0f;
+        snapshot.Progress = RunDifficultyConfigSO.CalculateProgress(routeLayer, routeLayerCount);
         snapshot.OverallDifficulty = OverallDifficulty;
         snapshot.EnemySpawnDifficultyProfile = EnemySpawnDifficultyProfile;
         return snapshot;

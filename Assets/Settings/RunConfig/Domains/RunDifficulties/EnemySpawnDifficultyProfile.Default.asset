@@ -12,53 +12,77 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f3e86a2b1c9478d9f0a123456789abc, type: 3}
   m_Name: EnemySpawnDifficultyProfile.Default
   m_EditorClassIdentifier: 
-  entries:
-  - enemyBP: {fileID: 11400000, guid: 9fefed5420345a64584ac08dcaf5070e, type: 2}
-    minProgress: 0
-    maxProgress: 1
-    minDifficulty: 0
-    baseWeight: 8
-    difficultyWeightScale: -0.5
-    progressWeightScale: -2
-  - enemyBP: {fileID: 11400000, guid: b8c2d4e6f8a04123b5c7d9e1f3a56789, type: 2}
-    minProgress: 0.15
-    maxProgress: 1
-    minDifficulty: 0
-    baseWeight: 3
-    difficultyWeightScale: 0.25
-    progressWeightScale: 2
-  - enemyBP: {fileID: 11400000, guid: d8a5f2c17b6e4f8e9a2c3d4b5e6f7081, type: 2}
-    minProgress: 0.25
-    maxProgress: 1
-    minDifficulty: 0.5
-    baseWeight: 2
-    difficultyWeightScale: 0.5
-    progressWeightScale: 1
-  - enemyBP: {fileID: 11400000, guid: e1b4c7d9a2f34b56c8d9012e3f4a5b6c, type: 2}
-    minProgress: 0.35
-    maxProgress: 1
-    minDifficulty: 0.75
-    baseWeight: 2
-    difficultyWeightScale: 0.75
-    progressWeightScale: 1
-  - enemyBP: {fileID: 11400000, guid: f2c5a8d1e4b74c69a0b123d456e789ab, type: 2}
-    minProgress: 0.55
-    maxProgress: 1
-    minDifficulty: 1
-    baseWeight: 1
-    difficultyWeightScale: 0.75
-    progressWeightScale: 1
-  - enemyBP: {fileID: 11400000, guid: a7b9c1d2e3f4456789abcdef01234567, type: 2}
-    minProgress: 0.6
-    maxProgress: 1
-    minDifficulty: 1
-    baseWeight: 0.8
-    difficultyWeightScale: 0.5
-    progressWeightScale: 0.8
-  - enemyBP: {fileID: 11400000, guid: c9d3e5f7a9b1426384c6d8e0f2a45678, type: 2}
-    minProgress: 0.7
-    maxProgress: 1
-    minDifficulty: 1.25
-    baseWeight: 0.6
-    difficultyWeightScale: 0.75
-    progressWeightScale: 0.8
+  tableId: 
+  displayName: 
+  description: 
+  enabled: 1
+  rows:
+  - roundIndex: 1
+    label: 
+    enemies:
+    - weight: 5
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: 9fefed5420345a64584ac08dcaf5070e, type: 2}
+    - weight: 2
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: b8c2d4e6f8a04123b5c7d9e1f3a56789, type: 2}
+    - weight: 2
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: d8a5f2c17b6e4f8e9a2c3d4b5e6f7081, type: 2}
+  - roundIndex: 2
+    label: 
+    enemies:
+    - weight: 5
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: 9fefed5420345a64584ac08dcaf5070e, type: 2}
+    - weight: 2
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: c9d3e5f7a9b1426384c6d8e0f2a45678, type: 2}
+    - weight: 2
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: b8c2d4e6f8a04123b5c7d9e1f3a56789, type: 2}
+    - weight: 2
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: f2c5a8d1e4b74c69a0b123d456e789ab, type: 2}
+    - weight: 2
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: d8a5f2c17b6e4f8e9a2c3d4b5e6f7081, type: 2}
+    - weight: 2
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: e1b4c7d9a2f34b56c8d9012e3f4a5b6c, type: 2}
+  - roundIndex: 3
+    label: 
+    enemies:
+    - weight: 4
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: c9d3e5f7a9b1426384c6d8e0f2a45678, type: 2}
+    - weight: 2
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: e1b4c7d9a2f34b56c8d9012e3f4a5b6c, type: 2}
+    - weight: 2
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: f2c5a8d1e4b74c69a0b123d456e789ab, type: 2}
+    - weight: 2
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: a7b9c1d2e3f4456789abcdef01234567, type: 2}
+    - weight: 2
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: d8a5f2c17b6e4f8e9a2c3d4b5e6f7081, type: 2}
+  - roundIndex: 4
+    label: 
+    enemies:
+    - weight: 2
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: c9d3e5f7a9b1426384c6d8e0f2a45678, type: 2}
+    - weight: 2
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: d8a5f2c17b6e4f8e9a2c3d4b5e6f7081, type: 2}
+    - weight: 2
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: a7b9c1d2e3f4456789abcdef01234567, type: 2}
+    - weight: 1
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: e1b4c7d9a2f34b56c8d9012e3f4a5b6c, type: 2}
+    - weight: 2
+      enabled: 1
+      enemyBP: {fileID: 11400000, guid: f2c5a8d1e4b74c69a0b123d456e789ab, type: 2}

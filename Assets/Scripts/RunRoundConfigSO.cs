@@ -8,6 +8,10 @@ public sealed class RunRoundConfigSO : ScriptableObject
     [Min(1)]
     public int totalRounds = 12;
 
+    [Tooltip("How many State A -> State B cycles must be completed before RoundIndex advances.")]
+    [Min(1)]
+    public int encounterCyclesPerRound = 3;
+
     [Min(1)]
     public int seed = 1;
 
@@ -18,6 +22,8 @@ public sealed class RunRoundConfigSO : ScriptableObject
     public LevelFeatureSelectionTableSO classicFeatureSelectionTable;
 
     public LevelFeatureSelectionTableSO escortFeatureSelectionTable;
+
+    public EscortGenerationConfigSO escortGenerationConfig;
 
     public RewardPoolSO skipRewardPool;
 

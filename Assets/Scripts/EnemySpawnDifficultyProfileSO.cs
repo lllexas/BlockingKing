@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "EnemySpawnDifficultyProfile", menuName = "BlockingKing/Enemy Spawn Difficulty Profile")]
@@ -8,38 +9,37 @@ public class EnemySpawnDifficultyProfileSO : TableBaseSO, IPoolAnalyzable
     [Serializable]
     public sealed class Entry : PoolEntryBase
     {
+        [TableColumnWidth(160)]
         public EntityBP enemyBP;
-
-        [Range(0f, 1f)]
-        public float minProgress;
-
-        [Range(0f, 1f)]
-        public float maxProgress = 1f;
-
-        [Min(0f)]
-        public float minDifficulty;
-
-        [Min(0f)]
-        public float baseWeight = 1f;
-
-        public float difficultyWeightScale;
-        public float progressWeightScale;
     }
 
-    public List<Entry> entries = new List<Entry>();
+    [Serializable]
+    public sealed class Row
+    {
+        [Min(0)]
+        public int roundIndex;
+
+        public string label;
+
+        [TableList(AlwaysExpanded = true, DrawScrollView = false)]
+        public List<Entry> enemies = new List<Entry>();
+    }
+
+    [TableList(AlwaysExpanded = true, DrawScrollView = true, MinScrollViewHeight = 180)]
+    public List<Row> rows = new List<Row>();
 
     public EntityBP Roll(float overallDifficulty, int routeLayer, int routeLayerCount, int globalTick, Vector2Int spawnPosition, EntityBP fallback)
     {
-        if (!enabled || entries == null || entries.Count == 0)
+        if (!enabled)
             return fallback;
 
-        float progress = routeLayerCount > 1
-            ? Mathf.Clamp01(routeLayer / (float)(routeLayerCount - 1))
-            : 0f;
+        var entries = ResolveEntries(routeLayer);
+        if (entries == null || entries.Count == 0)
+            return fallback;
 
         float totalWeight = 0f;
         for (int i = 0; i < entries.Count; i++)
-            totalWeight += GetWeight(entries[i], overallDifficulty, progress);
+            totalWeight += GetWeight(entries[i]);
 
         if (totalWeight <= 0f)
             return fallback;
@@ -49,7 +49,7 @@ public class EnemySpawnDifficultyProfileSO : TableBaseSO, IPoolAnalyzable
         for (int i = 0; i < entries.Count; i++)
         {
             var entry = entries[i];
-            float weight = GetWeight(entry, overallDifficulty, progress);
+            float weight = GetWeight(entry);
             if (weight <= 0f)
                 continue;
 
@@ -70,6 +70,7 @@ public class EnemySpawnDifficultyProfileSO : TableBaseSO, IPoolAnalyzable
             displayName = GetResolvedDisplayName()
         };
 
+        var entries = ResolveEntries(context.routeLayer);
         if (entries == null)
         {
             PoolAnalysisMath.Finalize(result);
@@ -79,14 +80,14 @@ public class EnemySpawnDifficultyProfileSO : TableBaseSO, IPoolAnalyzable
         for (int i = 0; i < entries.Count; i++)
         {
             var entry = entries[i];
-            bool selectable = enabled && entry != null && entry.enabled && GetWeight(entry, context.difficulty, context.progress) > 0f;
+            bool selectable = enabled && entry != null && entry.enabled && GetWeight(entry) > 0f;
             result.entries.Add(new PoolEntryAnalysis
             {
                 id = i.ToString(),
                 displayName = GetEntryDisplayName(entry, i),
                 enabled = entry != null && entry.enabled,
                 selectable = selectable,
-                weight = entry != null ? GetWeight(entry, context.difficulty, context.progress) : 0f,
+                weight = entry != null ? GetWeight(entry) : 0f,
                 reason = BuildAnalysisReason(entry, selectable)
             });
         }
@@ -95,23 +96,38 @@ public class EnemySpawnDifficultyProfileSO : TableBaseSO, IPoolAnalyzable
         return result;
     }
 
-    private static float GetWeight(Entry entry, float overallDifficulty, float progress)
+    private IReadOnlyList<Entry> ResolveEntries(int roundIndex)
+    {
+        if (rows == null || rows.Count == 0)
+            return null;
+
+        Row best = null;
+        int bestRound = int.MinValue;
+        roundIndex = Mathf.Max(0, roundIndex);
+
+        for (int i = 0; i < rows.Count; i++)
+        {
+            var row = rows[i];
+            if (row == null)
+                continue;
+
+            int rowRound = Mathf.Max(0, row.roundIndex);
+            if (rowRound > roundIndex || rowRound < bestRound)
+                continue;
+
+            best = row;
+            bestRound = rowRound;
+        }
+
+        return best?.enemies;
+    }
+
+    private static float GetWeight(Entry entry)
     {
         if (entry == null || !entry.enabled || entry.enemyBP == null)
             return 0f;
 
-        float minProgress = Mathf.Clamp01(Mathf.Min(entry.minProgress, entry.maxProgress));
-        float maxProgress = Mathf.Clamp01(Mathf.Max(entry.minProgress, entry.maxProgress));
-        if (progress < minProgress || progress > maxProgress)
-            return 0f;
-
-        if (overallDifficulty < entry.minDifficulty)
-            return 0f;
-
-        float difficultyDelta = Mathf.Max(0f, overallDifficulty - entry.minDifficulty);
-        return Mathf.Max(0f, entry.baseWeight +
-                              entry.difficultyWeightScale * difficultyDelta +
-                              entry.progressWeightScale * progress);
+        return Mathf.Max(0, entry.weight);
     }
 
     private static string GetEntryDisplayName(Entry entry, int index)
@@ -133,7 +149,7 @@ public class EnemySpawnDifficultyProfileSO : TableBaseSO, IPoolAnalyzable
         if (entry.enemyBP == null)
             return "Enemy BP missing";
         if (!selectable)
-            return "Out of progress/difficulty range or zero weight";
+            return "Zero weight";
 
         return "OK";
     }

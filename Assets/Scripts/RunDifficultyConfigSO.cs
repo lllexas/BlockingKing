@@ -15,9 +15,7 @@ public class RunDifficultyConfigSO : ScriptableObject
 
     public RunDifficultySnapshot BuildSnapshot(int routeLayer, int routeLayerCount)
     {
-        float progress = routeLayerCount > 1
-            ? Mathf.Clamp01(routeLayer / (float)(routeLayerCount - 1))
-            : 0f;
+        float progress = CalculateProgress(routeLayer, routeLayerCount);
 
         return new RunDifficultySnapshot
         {
@@ -33,6 +31,19 @@ public class RunDifficultyConfigSO : ScriptableObject
     private static float EvaluateMultiplier(AnimationCurve curve, float progress)
     {
         return curve != null ? Mathf.Max(0f, curve.Evaluate(progress)) : 1f;
+    }
+
+    public static float CalculateProgress(int routeLayer, int routeLayerCount)
+    {
+        routeLayerCount = Mathf.Max(1, routeLayerCount);
+        if (routeLayerCount <= 1)
+            return 0f;
+
+        int zeroBasedLayer = routeLayer >= 1 && routeLayer <= routeLayerCount
+            ? routeLayer - 1
+            : routeLayer;
+
+        return Mathf.Clamp01(zeroBasedLayer / (float)(routeLayerCount - 1));
     }
 }
 

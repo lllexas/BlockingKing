@@ -54,6 +54,8 @@ public class LevelCollageGenerationSettings : ScriptableObject
     public Vector2Int cityPerpendicularJitter = new(-3, 3);
     public Vector2Int cityAlongJitter = new(-2, 2);
     [MinValue(0)] public int routeBoundsPadding = 0;
+    [Tooltip("After cities are placed, carve one-tile-wide Manhattan corridors between adjacent city anchors.")]
+    public bool connectCityCorridors = true;
 
     [Title("Enemy Layout")]
     [MinValue(0)] public int enemyCoreExclusionDistance = 5;
@@ -205,6 +207,7 @@ public class LevelCollageGenerationSettings : ScriptableObject
             CityAlongJitterMin = Mathf.Min(cityAlongJitter.x, cityAlongJitter.y),
             CityAlongJitterMax = Mathf.Max(cityAlongJitter.x, cityAlongJitter.y),
             RouteBoundsPadding = Mathf.Max(0, routeBoundsPadding),
+            ConnectCityCorridors = connectCityCorridors,
 
             EnemyCoreExclusionDistance = Mathf.Max(0, enemyCoreExclusionDistance),
             EnemyMapEdgeMargin = Mathf.Max(0, enemyMapEdgeMargin),

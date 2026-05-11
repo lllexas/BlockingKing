@@ -27,6 +27,8 @@ public sealed class RunRoundOffer
 {
     public int RoundIndex;
     public int RoundCount;
+    public int EncounterCycleIndex;
+    public int EncounterCyclesPerRound;
     public RunDifficultySnapshot Difficulty;
     public LevelData ClassicLevel;
     public LevelData EscortLevel;
@@ -61,6 +63,8 @@ public sealed class RunRoundController : MonoBehaviour
     public RunMainStageMode ActiveMode { get; private set; } = RunMainStageMode.None;
     public int RoundIndex { get; private set; }
     public int RoundCount => _config != null ? Mathf.Max(1, _config.totalRounds) : 1;
+    public int EncounterCycleIndex { get; private set; }
+    public int EncounterCyclesPerRound => _config != null ? Mathf.Max(1, _config.encounterCyclesPerRound) : 1;
     public string StatusMessage { get; private set; }
     public string EventMessage { get; private set; }
 
@@ -77,7 +81,8 @@ public sealed class RunRoundController : MonoBehaviour
         _config = config;
         int seed = config != null ? config.seed : Environment.TickCount;
         _random = seed == 0 ? new System.Random() : new System.Random(seed);
-        RoundIndex = 0;
+        RoundIndex = 1;
+        EncounterCycleIndex = 1;
         LastCompletedMode = RunMainStageMode.None;
         ActiveMode = RunMainStageMode.None;
         StatusMessage = null;
@@ -116,7 +121,7 @@ public sealed class RunRoundController : MonoBehaviour
             ? $"放弃本轮，获得 {CurrentOffer.SkipRewardLabel}。"
             : "放弃本轮。";
         ClearCurrentRoundOffer();
-        AdvanceRound();
+        AdvanceEncounterCycle();
         BroadcastCurrentState();
     }
 
@@ -172,7 +177,7 @@ public sealed class RunRoundController : MonoBehaviour
         if (CurrentPostCombatOffer?.Shop == null)
         {
             StatusMessage = "没有配置商店，跳过。";
-            AdvanceRound();
+            AdvanceEncounterCycle();
             BroadcastCurrentState();
             return;
         }
@@ -194,7 +199,7 @@ public sealed class RunRoundController : MonoBehaviour
 
         StatusMessage = "离开商店。";
         ClearCurrentPostCombatOffer();
-        AdvanceRound();
+        AdvanceEncounterCycle();
         BroadcastCurrentState();
     }
 
@@ -241,7 +246,7 @@ public sealed class RunRoundController : MonoBehaviour
             return;
 
         EventMessage = null;
-        AdvanceRound();
+        AdvanceEncounterCycle();
         BroadcastCurrentState();
     }
 
@@ -252,7 +257,7 @@ public sealed class RunRoundController : MonoBehaviour
 
         StatusMessage = "不期而遇完成。";
         ClearCurrentPostCombatOffer();
-        AdvanceRound();
+        AdvanceEncounterCycle();
         BroadcastCurrentState();
     }
 
@@ -284,10 +289,16 @@ public sealed class RunRoundController : MonoBehaviour
         });
     }
 
-    private void AdvanceRound()
+    private void AdvanceEncounterCycle()
     {
-        RoundIndex++;
-        if (RoundIndex >= RoundCount)
+        EncounterCycleIndex++;
+        if (EncounterCycleIndex > EncounterCyclesPerRound)
+        {
+            EncounterCycleIndex = 1;
+            RoundIndex++;
+        }
+
+        if (RoundIndex > RoundCount)
         {
             State = RunRoundState.RunComplete;
             ClearCurrentRoundOffer();
@@ -320,7 +331,7 @@ public sealed class RunRoundController : MonoBehaviour
         {
             routeLayer = RoundIndex,
             routeLayerCount = RoundCount,
-            progress = RoundCount > 1 ? Mathf.Clamp01(RoundIndex / (float)(RoundCount - 1)) : 0f,
+            progress = RoundCount > 1 ? Mathf.Clamp01((RoundIndex - 1) / (float)(RoundCount - 1)) : 0f,
             difficulty = Mathf.Max(0f, difficulty.OverallDifficulty),
             seed = _random != null ? _random.Next() : UnityEngine.Random.Range(int.MinValue, int.MaxValue)
         };
@@ -338,6 +349,8 @@ public sealed class RunRoundController : MonoBehaviour
         {
             RoundIndex = RoundIndex,
             RoundCount = RoundCount,
+            EncounterCycleIndex = EncounterCycleIndex,
+            EncounterCyclesPerRound = EncounterCyclesPerRound,
             Difficulty = difficulty,
             ClassicLevel = classic,
             EscortLevel = escort,
@@ -354,11 +367,33 @@ public sealed class RunRoundController : MonoBehaviour
 
     private LevelData BuildEscortOffer(PoolEvalContext context)
     {
-        var legacySettings = _config.legacyEscortGenerationSettings;
         var sourceDatabase = ResolveEscortSourceDatabase();
         if (sourceDatabase == null)
             return null;
 
+        var resolved = ResolveEscortGeneration(context);
+        var sourceEntries = _config.escortFeatureSelectionTable != null
+            ? _config.escortFeatureSelectionTable.BuildCandidates(context, _config.levelSourceDatabase)
+            : null;
+
+        return EscortLevelGenerator.CreateFromRandomClassicMap(new EscortLevelBuildRequest
+        {
+            Seed = context.seed,
+            ManhattanDistance = resolved.ManhattanDistance,
+            LogSlope = resolved.LogSlope,
+            Context = context,
+            Constraints = resolved.Constraints,
+            SourceDatabase = sourceDatabase,
+            SourceEntries = sourceEntries
+        });
+    }
+
+    private EscortGenerationResolvedConfig ResolveEscortGeneration(PoolEvalContext context)
+    {
+        if (_config.escortGenerationConfig != null)
+            return _config.escortGenerationConfig.Resolve(context, _random);
+
+        var legacySettings = _config.legacyEscortGenerationSettings;
         var constraints = legacySettings != null
             ? legacySettings.ToConstraints(context)
             : EscortLevelGenerationConstraints.Default;
@@ -367,15 +402,7 @@ public sealed class RunRoundController : MonoBehaviour
             ? legacySettings.ClampEscortManhattanDistance(legacySettings.defaultManhattanDistance, context)
             : constraints.DefaultManhattanDistance;
 
-        return EscortLevelGenerator.CreateFromRandomClassicMap(new EscortLevelBuildRequest
-        {
-            Seed = context.seed,
-            ManhattanDistance = distance,
-            LogSlope = 0f,
-            Context = context,
-            Constraints = constraints,
-            SourceDatabase = sourceDatabase
-        });
+        return new EscortGenerationResolvedConfig(constraints, distance, 0f);
     }
 
     private LevelCollageSourceDatabase ResolveEscortSourceDatabase()

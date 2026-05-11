@@ -65,7 +65,7 @@ public sealed class RunRoundOnGUIFrontend : MonoBehaviour
     private void DrawHeader(RunRoundController controller)
     {
         GUILayout.BeginHorizontal();
-        GUILayout.Label($"Round {controller.RoundIndex + 1}/{controller.RoundCount}", _titleStyle);
+        GUILayout.Label($"Round {controller.RoundIndex}/{controller.RoundCount} · {controller.EncounterCycleIndex}/{controller.EncounterCyclesPerRound}", _titleStyle);
         GUILayout.FlexibleSpace();
         GUILayout.Label($"HP {GetHpText()}", _goldStyle, GUILayout.Width(180f));
         GUILayout.Label($"金币 {GetGold()}", _goldStyle, GUILayout.Width(180f));

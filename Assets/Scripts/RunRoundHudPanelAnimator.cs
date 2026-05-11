@@ -33,7 +33,7 @@ public sealed class RunRoundHudPanelAnimator : SpaceUIAnimator
     {
         var controller = request.Controller;
         if (controller != null)
-            SetText(roundText, $"Round {controller.RoundIndex + 1}/{controller.RoundCount}");
+            SetText(roundText, $"Round {controller.RoundIndex}/{controller.RoundCount} · {controller.EncounterCycleIndex}/{controller.EncounterCyclesPerRound}");
 
         var status = GraphHub.Instance?.GetFacade<RunPlayerStatusFacade>();
         SetText(hpText, status != null ? $"HP {status.CurrentHp}/{status.MaxHp}" : "HP -");

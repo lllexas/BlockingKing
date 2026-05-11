@@ -1023,7 +1023,7 @@ public class LevelPlayer : MonoBehaviour
                 if (snapshot.RewardMultiplier <= 0f)
                     snapshot.RewardMultiplier = 1f;
                 snapshot.Progress = routeLayerCount > 1
-                    ? Mathf.Clamp01(routeLayer / (float)(routeLayerCount - 1))
+                    ? RunDifficultyConfigSO.CalculateProgress(routeLayer, routeLayerCount)
                     : snapshot.Progress;
                 return snapshot;
             }

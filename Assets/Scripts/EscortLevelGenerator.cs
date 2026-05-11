@@ -11,6 +11,7 @@ public sealed class EscortLevelBuildRequest
     public PoolEvalContext Context = PoolEvalContext.Default;
     public EscortLevelGenerationConstraints Constraints = EscortLevelGenerationConstraints.Default;
     public LevelCollageSourceDatabase SourceDatabase;
+    public IReadOnlyList<LevelCollageSourceEntry> SourceEntries;
 }
 
 public readonly struct EscortLevelTemplateFeatures
@@ -89,6 +90,7 @@ public sealed class EscortLevelGenerationConstraints
     public int CityAlongJitterMin = -2;
     public int CityAlongJitterMax = 2;
     public int RouteBoundsPadding = 0;
+    public bool ConnectCityCorridors = true;
 
     public int EnemyCoreExclusionDistance = 5;
     public int EnemyMapEdgeMargin = 1;
@@ -143,7 +145,7 @@ public static class EscortLevelGenerator
     public static LevelData CreateFromRandomClassicMap(EscortLevelBuildRequest request)
     {
         var constraints = request?.Constraints ?? EscortLevelGenerationConstraints.Default;
-        var usableTemplates = FilterUsableTemplates(request?.SourceDatabase, constraints);
+        var usableTemplates = FilterUsableTemplates(request?.SourceDatabase, request?.SourceEntries, constraints);
         if (usableTemplates.Count == 0)
         {
             Debug.LogWarning("[EscortLevelGenerator] No collage source level found for current constraints. Assign and bake a LevelCollageSourceDatabase.");
@@ -174,13 +176,15 @@ public static class EscortLevelGenerator
 
     private static List<LevelData> FilterUsableTemplates(
         LevelCollageSourceDatabase database,
+        IReadOnlyList<LevelCollageSourceEntry> sourceEntries,
         EscortLevelGenerationConstraints constraints)
     {
         var result = new List<LevelData>();
-        if (database == null)
+        var entries = sourceEntries ?? database?.entries;
+        if (entries == null)
             return result;
 
-        foreach (var entry in database.entries)
+        foreach (var entry in entries)
         {
             if (entry == null || !entry.enabled)
                 continue;
@@ -483,6 +487,7 @@ public static class EscortLevelGenerator
         foreach (var stamp in layout.Cities)
             StampTemplate(level, stamp, constraints);
 
+        CarveCityCorridors(level, layout, random, constraints);
         CancelBoxOnTargetTags(level, constraints);
         ReplaceRoomTargetsWithEnemyTargets(level, layout.Cities, random, constraints);
         WriteFixedEscortZone(level, layout.StartZone, constraints.CoreBoxTagID, constraints);
@@ -529,6 +534,89 @@ public static class EscortLevelGenerator
                 y = stamp.Bounds.y + tag.y
             });
         }
+    }
+
+    private static void CarveCityCorridors(
+        LevelData level,
+        EscortLayout layout,
+        System.Random random,
+        EscortLevelGenerationConstraints constraints)
+    {
+        if (!constraints.ConnectCityCorridors)
+            return;
+
+        var anchors = new List<Vector2Int> { layout.StartZone.Center };
+        var cities = new List<CityStamp>(layout.Cities);
+        cities.Sort((a, b) =>
+        {
+            int da = Manhattan(a.Center, layout.StartZone.Center);
+            int db = Manhattan(b.Center, layout.StartZone.Center);
+            if (da != db)
+                return da.CompareTo(db);
+
+            return a.Center.x != b.Center.x
+                ? a.Center.x.CompareTo(b.Center.x)
+                : a.Center.y.CompareTo(b.Center.y);
+        });
+
+        for (int i = 0; i < cities.Count; i++)
+            anchors.Add(cities[i].Center);
+        anchors.Add(layout.TargetZone.Center);
+
+        for (int i = 0; i < anchors.Count - 1; i++)
+            CarveSingleCorridor(level, anchors[i], anchors[i + 1], random, constraints);
+    }
+
+    private static void CarveSingleCorridor(
+        LevelData level,
+        Vector2Int from,
+        Vector2Int to,
+        System.Random random,
+        EscortLevelGenerationConstraints constraints)
+    {
+        if (from.x == to.x || from.y == to.y)
+        {
+            CarveStraightCorridor(level, from, to, constraints);
+            return;
+        }
+
+        bool horizontalFirst = random == null || random.Next(0, 2) == 0;
+        var corner = horizontalFirst
+            ? new Vector2Int(to.x, from.y)
+            : new Vector2Int(from.x, to.y);
+
+        CarveStraightCorridor(level, from, corner, constraints);
+        CarveStraightCorridor(level, corner, to, constraints);
+    }
+
+    private static void CarveStraightCorridor(
+        LevelData level,
+        Vector2Int from,
+        Vector2Int to,
+        EscortLevelGenerationConstraints constraints)
+    {
+        int dx = Math.Sign(to.x - from.x);
+        int dy = Math.Sign(to.y - from.y);
+        var pos = from;
+
+        CarveCorridorCell(level, pos, constraints);
+        while (pos != to)
+        {
+            pos += new Vector2Int(dx, dy);
+            CarveCorridorCell(level, pos, constraints);
+        }
+    }
+
+    private static void CarveCorridorCell(
+        LevelData level,
+        Vector2Int pos,
+        EscortLevelGenerationConstraints constraints)
+    {
+        if (pos.x < 0 || pos.y < 0 || pos.x >= level.width || pos.y >= level.height)
+            return;
+
+        if (level.GetTile(pos.x, pos.y) == constraints.WallTileID)
+            level.SetTile(pos.x, pos.y, constraints.FloorTileID);
     }
 
     private static void WriteFixedEscortZone(

@@ -43,11 +43,22 @@ public sealed class LevelFeatureSelectionTableSO : TableBaseSO, IPoolAnalyzable
     public bool TryRollLevel(PoolEvalContext context, System.Random random, LevelCollageSourceDatabase fallbackSourceDatabase, out LevelData level)
     {
         level = null;
-        var database = ResolveSourceDatabase(fallbackSourceDatabase);
-        if (!enabled || database?.entries == null || database.entries.Count == 0)
+        var candidates = BuildCandidates(context, fallbackSourceDatabase);
+        if (candidates.Count == 0)
             return false;
 
+        int index = random != null ? random.Next(candidates.Count) : UnityEngine.Random.Range(0, candidates.Count);
+        level = candidates[index]?.level;
+        return level != null;
+    }
+
+    public List<LevelCollageSourceEntry> BuildCandidates(PoolEvalContext context, LevelCollageSourceDatabase fallbackSourceDatabase = null)
+    {
         var candidates = new List<LevelCollageSourceEntry>();
+        var database = ResolveSourceDatabase(fallbackSourceDatabase);
+        if (!enabled || database?.entries == null || database.entries.Count == 0)
+            return candidates;
+
         var filters = BuildFilters(context);
         foreach (var entry in database.entries)
         {
@@ -65,12 +76,7 @@ public sealed class LevelFeatureSelectionTableSO : TableBaseSO, IPoolAnalyzable
                 candidates.Add(entry);
         }
 
-        if (candidates.Count == 0)
-            return false;
-
-        int index = random != null ? random.Next(candidates.Count) : UnityEngine.Random.Range(0, candidates.Count);
-        level = candidates[index]?.level;
-        return level != null;
+        return candidates;
     }
 
     public PoolAnalysisResult Analyze(PoolEvalContext context)
