@@ -162,6 +162,33 @@ public class DrawSystem : MonoBehaviour
     public bool IsBeatMotionBusy => enableBeatMotion && Time.time < _nextBeatStartTime;
 
     public float BeatMotionBusyUntil => enableBeatMotion ? _nextBeatStartTime : 0f;
+    public bool BeatMotionEnabled => enableBeatMotion;
+    public float BeatDuration => beatDuration;
+    public float BeatBpm => beatDuration > 0f ? 60f / beatDuration : 0f;
+    public float RoundTripBeatDuration => beatDuration * 2f;
+    public float RoundTripBeatBpm => beatDuration > 0f ? 60f / (beatDuration * 2f) : 0f;
+
+    public void ConfigureBeatMotion(bool enabled)
+    {
+        enableBeatMotion = enabled;
+        if (!enableBeatMotion)
+            _nextBeatStartTime = 0f;
+    }
+
+    public void ConfigureBeatDuration(float duration)
+    {
+        beatDuration = Mathf.Max(0.03f, duration);
+    }
+
+    public void ConfigureBeatBpm(float bpm, bool roundTripBeat = true)
+    {
+        if (bpm <= 0f)
+            return;
+
+        beatDuration = roundTripBeat
+            ? Mathf.Max(0.03f, 60f / bpm * 0.5f)
+            : Mathf.Max(0.03f, 60f / bpm);
+    }
 
     public void SetWallMaterial(Material material)
     {

@@ -40,11 +40,11 @@ public class AttackSystem : MonoBehaviour
             Vector2Int targetPosition = intent.TargetPositions[i];
             float multiplier = intent.DamageMultipliers[i];
             int damage = Mathf.Max(1, Mathf.RoundToInt(attack * multiplier));
-            ApplyDamageToCell(entitySystem, targetPosition, damage);
+            ApplyDamageToCell(entitySystem, actor, targetPosition, damage);
         }
     }
 
-    private static void ApplyDamageToCell(EntitySystem entitySystem, Vector2Int targetPosition, int damage)
+    private static void ApplyDamageToCell(EntitySystem entitySystem, EntityHandle actor, Vector2Int targetPosition, int damage)
     {
         if (damage <= 0 || !entitySystem.IsInsideMap(targetPosition))
             return;
@@ -67,6 +67,15 @@ public class AttackSystem : MonoBehaviour
             SyncCoreBoxHealthToPlayer(entitySystem, targetIndex);
         else if (core.EntityType == EntityType.Player)
             SyncPlayerHealthToCoreBoxes(entitySystem, targetIndex);
+
+        EventBusSystem.Instance?.Publish(new StageEvent(
+            StageEventType.EntityDamaged,
+            actor: actor,
+            entity: target,
+            entityType: core.EntityType,
+            from: targetPosition,
+            to: targetPosition,
+            sourceTagId: entitySystem.entities.propertyComponents[targetIndex].SourceTagId));
 
         Debug.Log($"[AttackSystem] Hit {core.EntityType} at {targetPosition}, damage={damage}, health={CombatStats.GetCurrentHealth(status)}");
     }

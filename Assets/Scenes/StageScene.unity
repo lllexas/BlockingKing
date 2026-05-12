@@ -7561,7 +7561,7 @@ MonoBehaviour:
   wallScale: {x: 0.95, y: 0.95, z: 0.95}
   wallY: -0.2
   enableBeatMotion: 1
-  beatDuration: 0.16
+  beatDuration: 0.24
   movementPortion: 0.86
   attackPortion: 0.72
   attackLungeDistance: 0.28
@@ -7674,13 +7674,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerMoveBeat: {fileID: 8300000, guid: 0982b13e9f2444fec9de01a51371759e, type: 3}
-  playerPushBoxBeat: {fileID: 8300000, guid: 96a10e797141d4ab8ac14986cd111f18, type: 3}
+  playerPushBoxBeat: {fileID: 8300000, guid: 0982b13e9f2444fec9de01a51371759e, type: 3}
   playerCardBeat: {fileID: 8300000, guid: 03a32a7e1480245fa882ef8cf7627b9a, type: 3}
   playerNoopBeat: {fileID: 8300000, guid: 0685ee6fec7a8462db06fd3a5c665033, type: 3}
-  enemyAttackBeat: {fileID: 8300000, guid: df22c0d88104b4882936289f3d040134, type: 3}
-  enemySpawnBeat: {fileID: 8300000, guid: b2d40ee2c4cb64654b6ff51290e42981, type: 3}
+  enemyHitBeat: {fileID: 8300000, guid: 96a10e797141d4ab8ac14986cd111f18, type: 3}
+  enemySpawnBeat: {fileID: 8300000, guid: 6821a2fc6b7ee41608f8b76ae7c8818f, type: 3}
   enemyMoveBeat: {fileID: 8300000, guid: c3663c462a9654b5b9aca5857d7c5f13, type: 3}
-  enemyEmptyBeat: {fileID: 8300000, guid: 96a10e797141d4ab8ac14986cd111f18, type: 3}
+  enemyEmptyBeat: {fileID: 0}
   volumeScale: 1
   logBeatAudio: 1
   testPlayerMoveBeatOnStart: 0

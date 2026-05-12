@@ -9,7 +9,7 @@ public class StageBeatAudioSystem : MonoBehaviour
     [SerializeField] private AudioClip playerNoopBeat;
 
     [Header("Enemy Beat")]
-    [SerializeField] private AudioClip enemyAttackBeat;
+    [SerializeField] private AudioClip enemyHitBeat;
     [SerializeField] private AudioClip enemySpawnBeat;
     [SerializeField] private AudioClip enemyMoveBeat;
     [SerializeField] private AudioClip enemyEmptyBeat;
@@ -54,6 +54,7 @@ public class StageBeatAudioSystem : MonoBehaviour
         Unregister();
         _registeredBus = bus;
         _registeredBus.On(StageEventType.BeforeIntentExecute, OnStageEvent, -20);
+        _registeredBus.On(StageEventType.EntityDamaged, OnStageEvent, -20);
         _registeredBus.On(StageEventType.PresentationBatchBegin, OnStageEvent, -20);
         _registeredBus.On(StageEventType.PresentationBeat, OnStageEvent, -20);
 
@@ -67,6 +68,7 @@ public class StageBeatAudioSystem : MonoBehaviour
             return;
 
         _registeredBus.Off(StageEventType.BeforeIntentExecute, OnStageEvent);
+        _registeredBus.Off(StageEventType.EntityDamaged, OnStageEvent);
         _registeredBus.Off(StageEventType.PresentationBatchBegin, OnStageEvent);
         _registeredBus.Off(StageEventType.PresentationBeat, OnStageEvent);
         _registeredBus = null;
@@ -78,6 +80,9 @@ public class StageBeatAudioSystem : MonoBehaviour
         {
             case StageEventType.BeforeIntentExecute:
                 TryPlayPlayerBeat(evt);
+                break;
+            case StageEventType.EntityDamaged:
+                Play(enemyHitBeat, $"hit {evt.EntityType}");
                 break;
             case StageEventType.PresentationBatchBegin:
             case StageEventType.PresentationBeat:
@@ -124,7 +129,6 @@ public class StageBeatAudioSystem : MonoBehaviour
     {
         AudioClip clip = kind switch
         {
-            EnemyBeatKind.Attack => enemyAttackBeat,
             EnemyBeatKind.Spawn => enemySpawnBeat,
             EnemyBeatKind.Move => enemyMoveBeat,
             EnemyBeatKind.Empty => enemyEmptyBeat,

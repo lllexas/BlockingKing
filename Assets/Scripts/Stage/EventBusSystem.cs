@@ -14,6 +14,7 @@ public enum StageEventType : byte
     EntityCreated,
     EntityDestroyed,
     EntityMoved,
+    EntityDamaged,
     PresentationBatchBegin,
     PresentationBatchEnd,
     PresentationBeat

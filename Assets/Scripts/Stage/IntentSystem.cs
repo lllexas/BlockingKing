@@ -283,7 +283,6 @@ public class IntentSystem : MonoBehaviour
         ref var intent = ref entitySystem.entities.intentComponents[index];
         return intent.Type switch
         {
-            IntentType.Attack => EnemyBeatKind.Attack,
             IntentType.Spawn => EnemyBeatKind.Spawn,
             IntentType.Move => EnemyBeatKind.Move,
             _ => EnemyBeatKind.None

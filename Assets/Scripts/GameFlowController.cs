@@ -60,6 +60,7 @@ public class GameFlowController : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
         EnsureFacades();
+        EnsureBgmSystems();
     }
 
     private void Start()
@@ -119,6 +120,24 @@ public class GameFlowController : MonoBehaviour
 
         if (hub.GetFacade<RunPlayerStatusFacade>() == null)
             hub.RegisterFacade(new RunPlayerStatusFacade());
+    }
+
+    private void EnsureBgmSystems()
+    {
+        AudioBus.Ensure();
+
+        var player = FindObjectOfType<BgmRecordPlayer>();
+        if (player == null)
+            player = gameObject.AddComponent<BgmRecordPlayer>();
+
+        if (runConfig != null && runConfig.bgmPlaylist != null)
+            player.Configure(runConfig.bgmPlaylist, true);
+
+        if (FindObjectOfType<BgmRecordOnGUIFrontend>() == null)
+            gameObject.AddComponent<BgmRecordOnGUIFrontend>();
+
+        if (FindObjectOfType<RunSettingsOnGUIFrontend>() == null)
+            gameObject.AddComponent<RunSettingsOnGUIFrontend>();
     }
 
     public void InitializeRouteMap()
