@@ -6,6 +6,7 @@ Shader "BlockingKing/MahjongTwoTone"
         _IvoryColor ("Ivory Color", Color) = (0.93, 0.86, 0.70, 1)
         _SeamColor ("Seam Color", Color) = (0.03, 0.16, 0.12, 1)
         _SeamWidth ("Seam Width", Range(0, 0.2)) = 0.04
+        _SeamY ("Seam Y", Float) = 0.22
         _Smoothness ("Smoothness", Range(0, 1)) = 0.35
         _SpecularColor ("Specular Color", Color) = (0.32, 0.32, 0.28, 1)
         _AmbientScale ("Ambient Scale", Range(0, 2)) = 1.0
@@ -56,7 +57,7 @@ Shader "BlockingKing/MahjongTwoTone"
                 float4 positionCS : SV_POSITION;
                 float3 positionWS : TEXCOORD0;
                 float3 normalWS : TEXCOORD1;
-                float region : TEXCOORD2;
+                float positionYOS : TEXCOORD2;
                 float seam : TEXCOORD3;
                 float fogCoord : TEXCOORD4;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
@@ -69,6 +70,7 @@ Shader "BlockingKing/MahjongTwoTone"
                 float4 _SeamColor;
                 float4 _SpecularColor;
                 float _SeamWidth;
+                float _SeamY;
                 float _Smoothness;
                 float _AmbientScale;
             CBUFFER_END
@@ -86,15 +88,15 @@ Shader "BlockingKing/MahjongTwoTone"
                 output.positionCS = positionInputs.positionCS;
                 output.positionWS = positionInputs.positionWS;
                 output.normalWS = normalInputs.normalWS;
-                output.region = input.regionUv.x;
+                output.positionYOS = input.positionOS.y;
                 output.seam = input.regionUv.y;
                 output.fogCoord = ComputeFogFactor(positionInputs.positionCS.z);
                 return output;
             }
 
-            float3 ResolveAlbedo(float region, float seamValue)
+            float3 ResolveAlbedo(float positionYOS, float seamValue)
             {
-                float face = step(0.5, region);
+                float face = step(_SeamY, positionYOS);
                 float seam = smoothstep(1.0 - _SeamWidth, 1.0, seamValue);
                 float3 baseColor = lerp(_JadeColor.rgb, _IvoryColor.rgb, face);
                 return lerp(baseColor, _SeamColor.rgb, seam);
@@ -121,7 +123,7 @@ Shader "BlockingKing/MahjongTwoTone"
 
                 float3 normalWS = normalize(input.normalWS);
                 float3 viewDirWS = GetWorldSpaceNormalizeViewDir(input.positionWS);
-                float3 albedo = ResolveAlbedo(input.region, input.seam);
+                float3 albedo = ResolveAlbedo(input.positionYOS, input.seam);
 
                 float3 color = albedo * SampleSH(normalWS) * _AmbientScale;
                 float4 shadowCoord = TransformWorldToShadowCoord(input.positionWS);

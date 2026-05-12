@@ -81,6 +81,8 @@ public static class RewardResource
                 Debug.LogError($"[RewardResource] Failed to add card reward: {entry.card.name}");
                 return HandleResult.Error;
             }
+
+            CardRewardPresentationHelper.TryPlayAddToDeck(entry.card, count);
         }
 
         return HandleResult.Push;

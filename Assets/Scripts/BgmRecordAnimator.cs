@@ -1,4 +1,5 @@
 using SpaceTUI;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -26,7 +27,7 @@ public sealed class BgmRecordAnimator : SpaceUIAnimator
         base.Awake();
         Instance = this;
         期望显示面板 += _ => ShowRecord();
-        期望隐藏面板 += _ => HideRecord();
+        期望隐藏面板 += HideRecordIfExplicitlyRequested;
         鼠标滑入 += OnHoverEnter;
         鼠标滑出 += OnHoverExit;
         鼠标点击 += OnClick;
@@ -81,7 +82,7 @@ public sealed class BgmRecordAnimator : SpaceUIAnimator
         }
 
         _breathScaleAmplitude = idleBreathScale;
-        this.FadeInIfHiddenPreserveRotation();
+        FadeInRecord();
         StartBreathing();
         RefreshTrackText();
     }
@@ -91,6 +92,14 @@ public sealed class BgmRecordAnimator : SpaceUIAnimator
         StopBreathing();
         ResetScale();
         this.FadeOutIfVisible();
+    }
+
+    private void HideRecordIfExplicitlyRequested(object data)
+    {
+        if (data == null)
+            return;
+
+        HideRecord();
     }
 
     protected override void CloseAction()
@@ -135,6 +144,23 @@ public sealed class BgmRecordAnimator : SpaceUIAnimator
 
         if (bpmText != null)
             bpmText.text = track != null ? $"{track.ResolvedBpm:0.#} BPM" : "-- BPM";
+    }
+
+    private void FadeInRecord()
+    {
+        if (_canvasGroup == null)
+        {
+            this.FadeInIfHiddenPreserveRotation();
+            return;
+        }
+
+        if (_canvasGroup.blocksRaycasts && _canvasGroup.alpha >= 0.999f)
+            return;
+
+        _stateTween?.Kill();
+        _moveTween?.Kill();
+        _canvasGroup.blocksRaycasts = false;
+        FadeIn(null, true);
     }
 
     private static bool ShouldHideForFlow()

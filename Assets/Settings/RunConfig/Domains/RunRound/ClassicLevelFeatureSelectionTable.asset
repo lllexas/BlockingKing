@@ -18,6 +18,7 @@ MonoBehaviour:
   enabled: 1
   sourceDatabase: {fileID: 0}
   fallbackFilter: {fileID: 11400000, guid: b6b6cb72a57318e4abf57ab9cd5cc0e4, type: 2}
+  boxCountMode: 0
   rows:
   - enabled: 1
     roundIndex: 1

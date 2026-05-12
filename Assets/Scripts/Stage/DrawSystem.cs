@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// 读取实体数据并绘制单位。不参与逻辑 Tick。
@@ -11,6 +12,8 @@ public class DrawSystem : MonoBehaviour
 
     private const int BatchSize = 1023;
     private const int EnemyVisualKindCount = 7;
+    private const float UnitLabelAutoSizeMinFontSize = 0.1f;
+    private const float UnitLabelAutoSizeMaxFontSize = 128f;
 
     private enum EnemyVisualKind
     {
@@ -66,14 +69,16 @@ public class DrawSystem : MonoBehaviour
     [SerializeField, Range(0f, 0.5f)] private float attackLungeDistance = 0.28f;
     [SerializeField, Range(0f, 1.5f)] private float spawnRiseDistance = 0.75f;
 
+    [Header("World Text")]
+    [SerializeField, FormerlySerializedAs("statsFont")] private TMP_FontAsset worldTextFont;
+    [SerializeField, FormerlySerializedAs("statsTextMaterial")] private Material worldTextMaterial;
+
     [Header("Stats Text")]
     [SerializeField] public bool showStatsText = true;
     [SerializeField] private float statsTextHeight = 0.01f;
     [SerializeField] private float statsTextScale = 1f;
     [SerializeField] private float statsTextFontSize = 3f;
     [SerializeField] private Vector2 statsTextRectSize = new(0.35f, 0.25f);
-    [SerializeField] private TMP_FontAsset statsFont;
-    [SerializeField] private Material statsTextMaterial;
     [SerializeField, Range(0f, 1f)] private float statsOccludedGrayMix = 0.72f;
     [SerializeField, Range(0f, 1f)] private float statsOccludedAlpha = 0.78f;
     [SerializeField, Range(0f, 0.5f)] private float statsOccludedOutlineWidth = 0.18f;
@@ -88,9 +93,7 @@ public class DrawSystem : MonoBehaviour
     [SerializeField] private bool showUnitLabelText = true;
     [SerializeField] private float unitLabelTextHeightPadding = 0.025f;
     [SerializeField] private float unitLabelTextScale = 1f;
-    [SerializeField] private float unitLabelTextFontSize = 3f;
-    [SerializeField] private float unitLabelTextMinFontSize = 0.5f;
-    [SerializeField] private Vector2 unitLabelTextRectSize = new(0.45f, 0.32f);
+    [SerializeField] private Vector2 unitLabelTextRectSize = new(0.315f, 0.224f);
 
     private readonly Matrix4x4[] _playerMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _boxMatrices = new Matrix4x4[BatchSize];
@@ -620,7 +623,7 @@ public class DrawSystem : MonoBehaviour
         go.transform.localScale = Vector3.one;
 
         var text = go.AddComponent<TextMeshPro>();
-        text.font = ResolveStatsFont();
+        text.font = ResolveWorldTextFont();
         text.fontSharedMaterial = material;
         text.alignment = parent.name switch
         {
@@ -646,10 +649,10 @@ public class DrawSystem : MonoBehaviour
         return text;
     }
 
-    private TMP_FontAsset ResolveStatsFont()
+    private TMP_FontAsset ResolveWorldTextFont()
     {
-        if (statsFont != null)
-            return statsFont;
+        if (worldTextFont != null)
+            return worldTextFont;
 
         return TMP_Settings.defaultFontAsset;
     }
@@ -668,7 +671,7 @@ public class DrawSystem : MonoBehaviour
 
     private void EnsureStatsMaterials()
     {
-        var font = ResolveStatsFont();
+        var font = ResolveWorldTextFont();
         if (font == null || font.atlasTexture == null)
         {
             if (!_loggedStatsFontUnavailable)
@@ -684,11 +687,11 @@ public class DrawSystem : MonoBehaviour
 
         if (_runtimeStatsVisibleMaterial != null
             && _runtimeStatsOccludedMaterial != null
-            && _runtimeStatsMaterialSource == statsTextMaterial
+            && _runtimeStatsMaterialSource == worldTextMaterial
             && _runtimeStatsTextFont == font)
             return;
 
-        Material source = statsTextMaterial;
+        Material source = worldTextMaterial;
         if (source == null)
         {
             var shader = Shader.Find("BlockingKing/TMP Ground Stats");
@@ -726,7 +729,7 @@ public class DrawSystem : MonoBehaviour
         _runtimeStatsVisibleMaterial.SetFloat("_OutlineWidth", 0f);
         _runtimeStatsVisibleMaterial.SetFloat("_OutlineAlpha", 0f);
         UpdateStatsMaterialProperties();
-        _runtimeStatsMaterialSource = statsTextMaterial;
+        _runtimeStatsMaterialSource = worldTextMaterial;
         _runtimeStatsTextFont = font;
     }
 
@@ -745,6 +748,8 @@ public class DrawSystem : MonoBehaviour
     private static void ConfigureStatsMaterial(Material material, TMP_FontAsset font, float zTest, float grayMix, float alphaScale)
     {
         material.SetTexture("_MainTex", font.atlasTexture);
+        material.SetColor("_FaceColor", Color.white);
+        material.SetFloat("_CullMode", 0f);
         material.SetFloat("_ZTest", zTest);
         material.SetFloat("_GrayMix", grayMix);
         material.SetFloat("_AlphaScale", alphaScale);
@@ -814,13 +819,13 @@ public class DrawSystem : MonoBehaviour
         go.transform.localScale = Vector3.one;
 
         var text = go.AddComponent<TextMeshPro>();
-        text.font = ResolveStatsFont();
+        text.font = ResolveWorldTextFont();
         text.fontSharedMaterial = material;
         text.alignment = TextAlignmentOptions.Center;
-        text.fontSize = unitLabelTextFontSize;
+        text.fontSize = UnitLabelAutoSizeMaxFontSize;
         text.enableAutoSizing = true;
-        text.fontSizeMin = unitLabelTextMinFontSize;
-        text.fontSizeMax = unitLabelTextFontSize;
+        text.fontSizeMin = UnitLabelAutoSizeMinFontSize;
+        text.fontSizeMax = UnitLabelAutoSizeMaxFontSize;
         text.color = Color.white;
         text.enableWordWrapping = false;
         text.overflowMode = TextOverflowModes.Truncate;

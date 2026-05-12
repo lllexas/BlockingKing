@@ -68,6 +68,7 @@ public sealed class BgmRecordPlayer : MonoBehaviour
     public void Configure(BgmPlaylistSO newPlaylist, bool startIfIdle = true)
     {
         playlist = newPlaylist;
+        PreloadPlaylistAudio(playlist);
         if (startIfIdle && _currentTrackIndex < 0)
             PlayDefault();
     }
@@ -77,6 +78,7 @@ public sealed class BgmRecordPlayer : MonoBehaviour
         if (prompt == null || prompt.generatedClip == null)
             return;
 
+        PreloadAudio(prompt.generatedClip);
         _currentTrackIndex = -1;
         _currentPrompt = prompt;
         _hasPlaybackStarted = true;
@@ -120,6 +122,7 @@ public sealed class BgmRecordPlayer : MonoBehaviour
         if (track == null || track.ResolvedClip == null)
             return;
 
+        PreloadAudio(track.ResolvedClip);
         _currentPrompt = null;
         _hasPlaybackStarted = true;
         _currentTrackIndex = wrapped;
@@ -197,5 +200,22 @@ public sealed class BgmRecordPlayer : MonoBehaviour
         {
             ApplyBeatConfiguration(track.PromptAsset);
         }
+    }
+
+    private static void PreloadPlaylistAudio(BgmPlaylistSO targetPlaylist)
+    {
+        if (targetPlaylist == null || targetPlaylist.tracks == null)
+            return;
+
+        for (int i = 0; i < targetPlaylist.tracks.Length; i++)
+            PreloadAudio(targetPlaylist.tracks[i]?.ResolvedClip);
+    }
+
+    private static void PreloadAudio(AudioClip clip)
+    {
+        if (clip == null || clip.loadState == AudioDataLoadState.Loaded || clip.loadState == AudioDataLoadState.Loading)
+            return;
+
+        clip.LoadAudioData();
     }
 }

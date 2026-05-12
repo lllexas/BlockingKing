@@ -28,6 +28,8 @@ public class IntentSystem : MonoBehaviour
     public static IntentSystem Instance { get; private set; }
     public event Action IntentQueueCompleted;
 
+    // 是否补全单拍小节：非单拍的小节一概补全；只有整轮能塌成单拍时，才允许压成 1 拍。
+    [SerializeField] private bool completeSingleBeatMeasure = false;
     [SerializeField] private EnemyIntentPresentationMode enemyIntentPresentationMode = EnemyIntentPresentationMode.AllInOneBatch;
 
     private readonly Dictionary<Type, Stack<Intent>> _pools = new();
@@ -205,6 +207,9 @@ public class IntentSystem : MonoBehaviour
         if (_playerIntentActor != EntityHandle.None)
             _executionSteps.Add(IntentExecutionStep.Single(_playerIntentActor));
 
+        int playerStepIndex = _playerIntentActor != EntityHandle.None ? 1 : 0;
+        bool hasAnyEnemyContent = false;
+
         var entities = entitySystem.entities;
         for (int i = 0; i < entities.entityCount; i++)
         {
@@ -220,6 +225,7 @@ public class IntentSystem : MonoBehaviour
                 CanBatchAllInOneIntent(entitySystem, i))
             {
                 _allInOneBatch.Add(actor);
+                hasAnyEnemyContent = true;
                 if (CanBatchEnemyIntent(entitySystem, i))
                     _enemyIntentBatch.Add(actor);
                 else if (CanBatchSpawn(entitySystem, i))
@@ -233,6 +239,7 @@ public class IntentSystem : MonoBehaviour
                 TryGetAllInTwoBatch(entitySystem, i, out var allInTwoBatch, out var allInTwoBeatKind))
             {
                 allInTwoBatch.Add(actor);
+                hasAnyEnemyContent = true;
                 if (allInTwoBatch == _enemyOtherBatch)
                     _enemyOtherBeatKind = MergeEnemyBeatKind(_enemyOtherBeatKind, allInTwoBeatKind);
                 continue;
@@ -249,6 +256,7 @@ public class IntentSystem : MonoBehaviour
             {
                 _spawnBatch.Add(actor);
                 _spawnBeatKind = MergeEnemyBeatKind(_spawnBeatKind, EnemyBeatKind.Spawn);
+                hasAnyEnemyContent = true;
                 continue;
             }
 
@@ -256,25 +264,51 @@ public class IntentSystem : MonoBehaviour
         }
 
         if (enemyIntentPresentationMode == EnemyIntentPresentationMode.AllInOneBatch)
-            _executionSteps.Insert(_playerIntentActor != EntityHandle.None ? 1 : 0, IntentExecutionStep.Batch(_allInOneBatch, ResolveAllInOneBeatKind()));
+        {
+            if (_allInOneBatch.Count > 0)
+            {
+                _executionSteps.Insert(playerStepIndex, IntentExecutionStep.Batch(_allInOneBatch, ResolveAllInOneBeatKind()));
+            }
+            else if (completeSingleBeatMeasure || hasAnyEnemyContent)
+            {
+                _executionSteps.Insert(playerStepIndex, IntentExecutionStep.Batch(new List<EntityHandle>(), EnemyBeatKind.Empty));
+            }
+
+            return;
+        }
 
         if (enemyIntentPresentationMode != EnemyIntentPresentationMode.AllInOneBatch && _allInOneBatch.Count > 0)
-            _executionSteps.Insert(_playerIntentActor != EntityHandle.None ? 1 : 0, IntentExecutionStep.Batch(_allInOneBatch, ResolveAllInOneBeatKind()));
+            _executionSteps.Insert(playerStepIndex, IntentExecutionStep.Batch(_allInOneBatch, ResolveAllInOneBeatKind()));
 
         if (enemyIntentPresentationMode != EnemyIntentPresentationMode.AllInOneBatch && _spawnBatch.Count > 0)
-            _executionSteps.Insert(_playerIntentActor != EntityHandle.None ? 1 : 0, IntentExecutionStep.Batch(_spawnBatch, _spawnBeatKind));
-
-        if (enemyIntentPresentationMode == EnemyIntentPresentationMode.AllInOneBatch)
-            return;
+            _executionSteps.Insert(playerStepIndex, IntentExecutionStep.Batch(_spawnBatch, _spawnBeatKind));
 
         if (enemyIntentPresentationMode == EnemyIntentPresentationMode.AllInTwoBatch)
         {
-            int insertIndex = _playerIntentActor != EntityHandle.None ? 1 : 0;
+            // AllInTwo 的规则：
+            // - P M A / P M _ / P _ A 都要保留 3 拍
+            // - 只有 P _ _ 在不补全单拍小节时，才允许塌缩成 1 拍
+            // - 一旦开启补全单拍小节，AllInTwo 也必须补到 3 拍
+            bool needFullMeasure = completeSingleBeatMeasure || hasAnyEnemyContent;
+            int insertIndex = playerStepIndex;
+
             if (_enemyMoveBatch.Count > 0)
+            {
                 _executionSteps.Insert(insertIndex++, IntentExecutionStep.Batch(_enemyMoveBatch, EnemyBeatKind.Move));
+            }
+            else if (needFullMeasure)
+            {
+                _executionSteps.Insert(insertIndex++, IntentExecutionStep.Batch(new List<EntityHandle>(), EnemyBeatKind.Empty));
+            }
 
             if (_enemyOtherBatch.Count > 0)
+            {
                 _executionSteps.Insert(insertIndex, IntentExecutionStep.Batch(_enemyOtherBatch, ResolveEnemyOtherBeatKind()));
+            }
+            else if (needFullMeasure)
+            {
+                _executionSteps.Insert(insertIndex, IntentExecutionStep.Batch(new List<EntityHandle>(), EnemyBeatKind.Empty));
+            }
 
             return;
         }

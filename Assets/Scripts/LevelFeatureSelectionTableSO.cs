@@ -5,6 +5,12 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "LevelFeatureSelectionTable", menuName = "BlockingKing/Tables/Level Feature Selection Table")]
 public sealed class LevelFeatureSelectionTableSO : TableBaseSO, IPoolAnalyzable
 {
+    public enum BoxCountMode
+    {
+        TotalBoxes,
+        EffectiveBoxes
+    }
+
     [System.Serializable]
     public sealed class Row
     {
@@ -26,6 +32,9 @@ public sealed class LevelFeatureSelectionTableSO : TableBaseSO, IPoolAnalyzable
     [Title("Fallback Filter")]
     [AssetsOnly]
     public LevelFeatureFilterSO fallbackFilter;
+
+    [Title("Box Count")]
+    public BoxCountMode boxCountMode = BoxCountMode.EffectiveBoxes;
 
     [Title("Round Rows")]
     [TableList(AlwaysExpanded = true, DrawScrollView = true, MinScrollViewHeight = 160)]
@@ -129,11 +138,11 @@ public sealed class LevelFeatureSelectionTableSO : TableBaseSO, IPoolAnalyzable
         var row = ResolveRow(context.routeLayer);
         if (row?.filter != null)
         {
-            return BuildFilters(row.filter, GetRowDisplayName(row));
+            return BuildFilters(row.filter, GetRowDisplayName(row), boxCountMode);
         }
 
         if (fallbackFilter != null)
-            return BuildFilters(fallbackFilter, "Fallback");
+            return BuildFilters(fallbackFilter, "Fallback", boxCountMode);
 
         return new FeatureFilters
         {
@@ -141,12 +150,13 @@ public sealed class LevelFeatureSelectionTableSO : TableBaseSO, IPoolAnalyzable
             height = new Vector2(1, 50),
             area = new Vector2(1, 2500),
             wallRate = new Vector2(0f, 1f),
-            effectiveBoxes = new Vector2(0, 50),
+            boxes = new Vector2(0, 50),
+            boxCountMode = boxCountMode,
             sourceLabel = "Built-in fallback"
         };
     }
 
-    private static FeatureFilters BuildFilters(LevelFeatureFilterSO filter, string sourceLabel)
+    private static FeatureFilters BuildFilters(LevelFeatureFilterSO filter, string sourceLabel, BoxCountMode mode)
     {
         return new FeatureFilters
         {
@@ -154,7 +164,8 @@ public sealed class LevelFeatureSelectionTableSO : TableBaseSO, IPoolAnalyzable
             height = Normalize(filter.heightRange, 1f),
             area = Normalize(filter.areaRange, 1f),
             wallRate = Normalize01(filter.wallRateRange),
-            effectiveBoxes = Normalize(filter.effectiveBoxRange, 0f),
+            boxes = Normalize(filter.effectiveBoxRange, 0f),
+            boxCountMode = mode,
             sourceLabel = sourceLabel
         };
     }
@@ -190,7 +201,8 @@ public sealed class LevelFeatureSelectionTableSO : TableBaseSO, IPoolAnalyzable
         if (entry == null || !entry.enabled || entry.level == null)
             return false;
 
-        if (!PassesFilters(entry.width, entry.height, entry.area, entry.wallRate, entry.effectiveBoxCount, filters))
+        int sourceBoxCount = GetBoxCount(entry, filters.boxCountMode);
+        if (!PassesFilters(entry.width, entry.height, entry.area, entry.wallRate, sourceBoxCount, filters))
             return false;
 
         var runtimeMetrics = LevelFeatureMetricsUtility.Analyze(entry.level);
@@ -199,17 +211,33 @@ public sealed class LevelFeatureSelectionTableSO : TableBaseSO, IPoolAnalyzable
             runtimeMetrics.Height,
             runtimeMetrics.Area,
             runtimeMetrics.WallRate,
-            runtimeMetrics.EffectiveBoxCount,
+            GetBoxCount(runtimeMetrics, filters.boxCountMode),
             filters);
     }
 
-    private static bool PassesFilters(int width, int height, int area, float wallRate, int effectiveBoxCount, FeatureFilters filters)
+    private static bool PassesFilters(int width, int height, int area, float wallRate, int boxCount, FeatureFilters filters)
     {
         return InRange(width, filters.width) &&
                InRange(height, filters.height) &&
                InRange(area, filters.area) &&
                InRange(wallRate, filters.wallRate) &&
-               InRange(effectiveBoxCount, filters.effectiveBoxes);
+               InRange(boxCount, filters.boxes);
+    }
+
+    private static int GetBoxCount(LevelCollageSourceEntry entry, BoxCountMode mode)
+    {
+        if (entry == null)
+            return 0;
+
+        return mode == BoxCountMode.TotalBoxes ? entry.boxCount : entry.effectiveBoxCount;
+    }
+
+    private static int GetBoxCount(LevelFeatureMetrics metrics, BoxCountMode mode)
+    {
+        if (mode == BoxCountMode.TotalBoxes)
+            return metrics.BoxCount;
+
+        return metrics.EffectiveBoxCount;
     }
 
     private float GetSelectionWeight(LevelCollageSourceEntry entry)
@@ -279,12 +307,14 @@ public sealed class LevelFeatureSelectionTableSO : TableBaseSO, IPoolAnalyzable
         public Vector2 height;
         public Vector2 area;
         public Vector2 wallRate;
-        public Vector2 effectiveBoxes;
+        public Vector2 boxes;
+        public BoxCountMode boxCountMode;
         public string sourceLabel;
 
         public override string ToString()
         {
-            return $"{sourceLabel}: W {width.x:0.#}-{width.y:0.#}, H {height.x:0.#}-{height.y:0.#}, Area {area.x:0.#}-{area.y:0.#}, Wall {wallRate.x:0.##}-{wallRate.y:0.##}, Eff {effectiveBoxes.x:0.#}-{effectiveBoxes.y:0.#}";
+            string boxLabel = boxCountMode == BoxCountMode.TotalBoxes ? "Box" : "Eff";
+            return $"{sourceLabel}: W {width.x:0.#}-{width.y:0.#}, H {height.x:0.#}-{height.y:0.#}, Area {area.x:0.#}-{area.y:0.#}, Wall {wallRate.x:0.##}-{wallRate.y:0.##}, {boxLabel} {boxes.x:0.#}-{boxes.y:0.#}";
         }
     }
 }

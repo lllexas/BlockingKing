@@ -99,7 +99,7 @@ public static class BlockingKingUnitMeshFactory
 
     private static Mesh CreateMahjongTile()
     {
-        return CreateMahjongTileBodyMesh("Mahjong.Enemy.Mesh", 0.5167f, 0.7f, 0.35f, 0.04f, 0.5f);
+        return CreateMahjongTileBodyMesh("Mahjong.Enemy.Mesh", 0.5167f, 0.7f, 0.35f, 0.04f, 2f / 3f);
     }
 
     private static Mesh CreateCannonStone()

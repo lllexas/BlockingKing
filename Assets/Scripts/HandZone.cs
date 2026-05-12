@@ -389,6 +389,48 @@ public class HandZone : MonoBehaviour
     public int DrawPileCount => _drawPile.Count;
     public int DiscardPileCount => _discardPile.Count;
 
+    public bool PlayRewardCardIntoDeck(CardSO card, int count = 1)
+    {
+        if (card == null || count <= 0)
+            return false;
+
+        if (cardPrefab == null || cardLayer == null)
+            return false;
+
+        var deck = EnsureDeckFacade();
+        if (deck == null)
+            return false;
+
+        bool anyPlayed = false;
+        for (int i = 0; i < count; i++)
+        {
+            var view = Instantiate(cardPrefab, cardLayer);
+            view.transform.SetAsLastSibling();
+            view.SetLayoutSizes(cardSize, hoverCardSize);
+            view.Bind(card, null);
+            view.SetInteractable(false);
+            view.SetHoverState(false, hoverTweenDuration, hoverEase);
+            view.Snap(GetRewardPresentationStartPosition(), 1.0f, 0f);
+
+            var target = GetAnchorLocalPosition(drawPileAnchor, DefaultDrawFallback());
+            view.TweenTo(GetRewardPresentationHoldPosition(), 1.0f, 0f, 1.0f, cardEase, () =>
+            {
+                if (view == null)
+                    return;
+
+                view.TweenTo(target, 0.82f, 0f, 1.0f, cardEase, () =>
+                {
+                    if (view != null)
+                        Destroy(view.gameObject);
+                });
+            });
+
+            anyPlayed = true;
+        }
+
+        return anyPlayed;
+    }
+
     private bool CanAutoBuildNow()
     {
         if (!requireLevelForAutoBuild)
@@ -1151,6 +1193,18 @@ public class HandZone : MonoBehaviour
     {
         Rect rect = cardLayer != null ? cardLayer.rect : new Rect(0f, 0f, Screen.width, Screen.height);
         return new Vector2(rect.xMin + cardSize.x * 0.5f + 60f, rect.yMin + cardSize.y * 0.5f + 60f);
+    }
+
+    private Vector2 GetRewardPresentationStartPosition()
+    {
+        Rect rect = cardLayer != null ? cardLayer.rect : new Rect(0f, 0f, Screen.width, Screen.height);
+        return new Vector2((rect.xMin + rect.xMax) * 0.5f, (rect.yMin + rect.yMax) * 0.5f);
+    }
+
+    private Vector2 GetRewardPresentationHoldPosition()
+    {
+        Rect rect = cardLayer != null ? cardLayer.rect : new Rect(0f, 0f, Screen.width, Screen.height);
+        return new Vector2((rect.xMin + rect.xMax) * 0.5f, (rect.yMin + rect.yMax) * 0.5f + 24f);
     }
 
     private Vector2 DefaultDiscardFallback()

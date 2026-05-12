@@ -708,6 +708,7 @@ public sealed class RunRoundController : MonoBehaviour
                 continue;
 
             grantedAny |= deck.AddCard(entry.card, Mathf.Max(1, entry.count));
+            CardRewardPresentationHelper.TryPlayAddToDeck(entry.card, Mathf.Max(1, entry.count));
         }
 
         return grantedAny;

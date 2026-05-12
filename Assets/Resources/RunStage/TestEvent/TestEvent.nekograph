@@ -5,7 +5,7 @@
   "ReadableFrom": 100,
   "WritableFrom": 1000,
   "CreatedAt": 1778300792,
-  "ModifiedAt": 1778301131,
+  "ModifiedAt": 1778593676,
   "Nodes": {
     "$type": "System.Collections.Generic.Dictionary`2[[System.String, mscorlib],[BaseNodeData, NekoGraph.Runtime]], mscorlib",
     "5cdef797-31ee-4e81-bc43-acfe949b87fd": {
@@ -31,6 +31,7 @@
     },
     "3452259d-e899-4ed0-9145-215dcc2962de": {
       "$type": "VFSNodeData, NekoGraph.Runtime",
+      "ParentNodeID": "5cdef797-31ee-4e81-bc43-acfe949b87fd",
       "ChildNodeIDs": [
         "cb6b8495-ea17-437b-899c-fb6ae3757556",
         "0718d616-8b27-43e0-a767-c9088562097d"
@@ -70,14 +71,15 @@
     },
     "cb6b8495-ea17-437b-899c-fb6ae3757556": {
       "$type": "VFSNodeData, NekoGraph.Runtime",
+      "ParentNodeID": "3452259d-e899-4ed0-9145-215dcc2962de",
       "ChildNodeIDs": [
         "acaad187-39dd-46a2-907a-0dcc5467beba"
       ],
       "ContentKind": 2,
       "ContentSource": 1,
-      "ReferencePath": "RunStage/TestEvent/TestRewardA",
+      "ReferencePath": "RunStage/TestEvent/West.TestRewardA",
       "AssetGuid": "ad3e145859f5a204f8ab57ef79b092ce",
-      "AssetPath": "Assets/Resources/RunStage/TestEvent/TestRewardA.asset",
+      "AssetPath": "Assets/Resources/RunStage/TestEvent/West.TestRewardA.asset",
       "UnityObjectTypeName": "RewardSO, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
       "IsEnabled": true,
       "NodeID": "cb6b8495-ea17-437b-899c-fb6ae3757556",
@@ -101,14 +103,15 @@
     },
     "0718d616-8b27-43e0-a767-c9088562097d": {
       "$type": "VFSNodeData, NekoGraph.Runtime",
+      "ParentNodeID": "3452259d-e899-4ed0-9145-215dcc2962de",
       "ChildNodeIDs": [
         "acaad187-39dd-46a2-907a-0dcc5467beba"
       ],
       "ContentKind": 2,
       "ContentSource": 1,
-      "ReferencePath": "RunStage/TestEvent/TestRewardB",
+      "ReferencePath": "RunStage/TestEvent/East.TestRewardB",
       "AssetGuid": "d498f1dee7d013e49bb67449a73874bc",
-      "AssetPath": "Assets/Resources/RunStage/TestEvent/TestRewardB.asset",
+      "AssetPath": "Assets/Resources/RunStage/TestEvent/East.TestRewardB.asset",
       "UnityObjectTypeName": "RewardSO, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
       "IsEnabled": true,
       "NodeID": "0718d616-8b27-43e0-a767-c9088562097d",
@@ -132,6 +135,7 @@
     },
     "acaad187-39dd-46a2-907a-0dcc5467beba": {
       "$type": "NekoGraph.DestroyNodeData, NekoGraph.Runtime",
+      "In": "0718d616-8b27-43e0-a767-c9088562097d",
       "NodeID": "acaad187-39dd-46a2-907a-0dcc5467beba",
       "EditorPosition": {
         "$type": "SerializableVector2, NekoGraph.Runtime",

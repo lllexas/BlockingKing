@@ -10,6 +10,7 @@ Shader "BlockingKing/TMP Ground Stats"
         _OutlineAlpha ("Outline Alpha", Range(0, 1)) = 0
         _OutlineColor ("Outline Color", Color) = (0,0,0,1)
         _SdfSoftness ("SDF Softness", Range(0.001, 0.25)) = 0.06
+        [Enum(UnityEngine.Rendering.CullMode)] _CullMode ("Cull Mode", Float) = 0
         [Enum(UnityEngine.Rendering.CompareFunction)] _ZTest ("ZTest", Float) = 4
     }
 
@@ -22,7 +23,7 @@ Shader "BlockingKing/TMP Ground Stats"
             "IgnoreProjector" = "True"
         }
 
-        Cull Off
+        Cull [_CullMode]
         Lighting Off
         ZWrite Off
         Blend SrcAlpha OneMinusSrcAlpha

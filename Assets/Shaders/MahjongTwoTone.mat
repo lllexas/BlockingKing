@@ -28,6 +28,7 @@ Material:
     m_Floats:
     - _AmbientScale: 1
     - _SeamWidth: 0.04
+    - _SeamY: 0.22
     - _Smoothness: 0.35
     m_Colors:
     - _IvoryColor: {r: 0.93, g: 0.86, b: 0.7, a: 1}
