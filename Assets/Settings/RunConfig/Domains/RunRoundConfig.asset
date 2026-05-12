@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   totalRounds: 4
   encounterCyclesPerRound: 3
-  seed: 1
+  seed: 0
   levelSourceDatabase: {fileID: 11400000, guid: e325a568aeaa77f48b99e73805a9d309,
     type: 2}
   classicFeatureSelectionTable: {fileID: 11400000, guid: a0350858e1ecb1c4e9f2062dbed7a95e,

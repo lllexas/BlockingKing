@@ -62,6 +62,7 @@ public class AttackSystem : MonoBehaviour
             return;
 
         ref var status = ref entitySystem.entities.statusComponents[targetIndex];
+        int previousBlock = status.Block;
         CombatStats.DealDamage(ref status, damage);
         if (core.EntityType == EntityType.Box && entitySystem.entities.propertyComponents[targetIndex].IsCore)
             SyncCoreBoxHealthToPlayer(entitySystem, targetIndex);
@@ -77,7 +78,8 @@ public class AttackSystem : MonoBehaviour
             to: targetPosition,
             sourceTagId: entitySystem.entities.propertyComponents[targetIndex].SourceTagId));
 
-        Debug.Log($"[AttackSystem] Hit {core.EntityType} at {targetPosition}, damage={damage}, health={CombatStats.GetCurrentHealth(status)}");
+        int absorbed = Mathf.Max(0, previousBlock - status.Block);
+        Debug.Log($"[AttackSystem] Hit {core.EntityType} at {targetPosition}, damage={damage}, blockAbsorbed={absorbed}, health={CombatStats.GetCurrentHealth(status)}, block={status.Block}");
     }
 
     private static void SyncCoreBoxHealthToPlayer(EntitySystem entitySystem, int coreBoxIndex)

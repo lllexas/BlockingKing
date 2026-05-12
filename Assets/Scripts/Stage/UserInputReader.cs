@@ -60,6 +60,23 @@ public class UserInputReader : MonoBehaviour
 
     private void Update()
     {
+        if (HandZone.DidConsumeStageBlockingPointerInputThisFrame)
+        {
+            if (_isLeftPathDragging)
+                CancelLeftPathDrag();
+
+            return;
+        }
+
+        if (LevelPlayer.IsActiveStageInputLocked)
+        {
+            ClearBufferedMove();
+            ClearPathMove();
+            ClearMousePathMemory();
+            _isLeftPathDragging = false;
+            return;
+        }
+
         TryConsumeBufferedMove();
         TryConsumePathMove();
 
@@ -125,6 +142,12 @@ public class UserInputReader : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (LevelPlayer.IsActiveStageInputLocked)
+        {
+            ClearPathPreview();
+            return;
+        }
+
         UpdatePathPreview();
     }
 
@@ -235,6 +258,9 @@ public class UserInputReader : MonoBehaviour
 
     private bool TrySubmitMove(Vector2Int direction)
     {
+        if (LevelPlayer.IsActiveStageInputLocked)
+            return false;
+
         if (!TryResolvePlayer(out var playerHandle))
             return false;
 
@@ -253,6 +279,9 @@ public class UserInputReader : MonoBehaviour
 
     private bool TrySubmitNoop()
     {
+        if (LevelPlayer.IsActiveStageInputLocked)
+            return false;
+
         if (!TryResolvePlayer(out var playerHandle))
             return false;
 

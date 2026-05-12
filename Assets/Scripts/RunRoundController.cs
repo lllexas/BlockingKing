@@ -185,6 +185,7 @@ public sealed class RunRoundController : MonoBehaviour
         State = RunRoundState.Shop;
         StatusMessage = "进入商店。";
         HideRoundPanels();
+        ShowBgmRecord();
         var shopFrontend = FindObjectOfType<RunShopOnGUIFrontend>();
         if (shopFrontend == null)
             shopFrontend = gameObject.AddComponent<RunShopOnGUIFrontend>();
@@ -224,6 +225,7 @@ public sealed class RunRoundController : MonoBehaviour
                     ? "不期而遇。"
                     : CurrentPostCombatOffer.EventTitle;
                 HideRoundPanels();
+                ShowBgmRecord();
                 GameFlowController.Instance?.OnRoundEventStageStarted();
                 return;
             }
@@ -273,10 +275,12 @@ public sealed class RunRoundController : MonoBehaviour
         ActiveMode = mode;
         _activeCombatLevel = level;
         _activeCombatLevelIsRuntime = mode == RunMainStageMode.Escort && CurrentOffer != null && CurrentOffer.EscortLevelIsRuntime;
+        SetCameraFlowPaused(false);
         ClearUnselectedRoundOffer(mode);
         State = RunRoundState.InCombat;
         HideRoundPanels();
         GameFlowController.Instance?.EnterLevel();
+        ShowBgmRecord();
 
         player.PlayLevel(new LevelPlayRequest
         {
@@ -511,10 +515,13 @@ public sealed class RunRoundController : MonoBehaviour
     private void BroadcastCurrentState()
     {
         HideRoundPanels();
+        ShowBgmRecord();
 
         switch (State)
         {
             case RunRoundState.RoundOffer:
+                SetCameraFlowPaused(true);
+                ShowBackdrop();
                 ShowHud();
                 PostSystem.Instance?.Send("期望显示面板", new RunRoundClassicChoiceUIRequest
                 {
@@ -549,6 +556,7 @@ public sealed class RunRoundController : MonoBehaviour
                 break;
 
             case RunRoundState.PostCombatOffer:
+                SetCameraFlowPaused(true);
                 ShowHud();
                 PostSystem.Instance?.Send("期望显示面板", new RunRoundShopChoiceUIRequest
                 {
@@ -571,10 +579,12 @@ public sealed class RunRoundController : MonoBehaviour
                 break;
 
             case RunRoundState.Event:
+                SetCameraFlowPaused(true);
                 ShowHud();
                 break;
 
             case RunRoundState.Defeat:
+                SetCameraFlowPaused(true);
                 PostSystem.Instance?.Send("期望显示面板", new RunResultUIRequest
                 {
                     Controller = this,
@@ -584,6 +594,7 @@ public sealed class RunRoundController : MonoBehaviour
                 break;
 
             case RunRoundState.RunComplete:
+                SetCameraFlowPaused(true);
                 PostSystem.Instance?.Send("期望显示面板", new RunResultUIRequest
                 {
                     Controller = this,
@@ -603,9 +614,24 @@ public sealed class RunRoundController : MonoBehaviour
         });
     }
 
+    private static void ShowBackdrop()
+    {
+        PostSystem.Instance?.Send("期望显示面板", new RunRoundBackdropUIRequest());
+    }
+
+    private static void ShowBgmRecord()
+    {
+        PostSystem.Instance?.Send("期望显示面板", new BgmRecordUIRequest(BgmRecordUIIds.RecordButton));
+    }
+
     private static void HideRoundPanels()
     {
         PostSystem.Instance?.Send("期望隐藏所有面板", null);
+    }
+
+    private static void SetCameraFlowPaused(bool paused)
+    {
+        Camera.main?.GetComponent<CameraController>()?.SetFlowPaused(paused);
     }
 
     private static void AddGold(int amount, string reason)

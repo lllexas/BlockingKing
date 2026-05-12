@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53cb8577ca2574a4b93d5063baba2923, type: 3}
+  m_Name: BgmPrompt.NeonTacticalLoop
+  m_EditorClassIdentifier: 
+  title: Neon Groove Tactics
+  promptZh: "\u53EF\u65E0\u7F1D\u5FAA\u73AF\u7684\u7EAF\u97F3\u4E50\u6218\u672F\u7535\u5B50\u821E\u66F2\uFF0C126 BPM\uFF0C\u65E0\u4EBA\u58F0\u3002\u4EE5 electro house / progressive house \u4E3A\u6838\u5FC3\uFF0C\u56DB\u62CD\u5E95\u9F13\u7A33\u5B9A\u63A8\u8FDB\uFF0C\u5F39\u6027\u5207\u5206\u4F4E\u97F3\uFF0C\u660E\u4EAE\u77ED\u4FC3\u7684\u5408\u6210\u5668 hook\uFF0C\u5E72\u51C0\u6709\u529B\u7684\u7535\u5B50\u9F13\uFF0C\u9713\u8679\u68CB\u76D8\u4E0A\u7684\u56DE\u5408\u5236\u63A8\u7BB1\u6218\u6597\u3002\u8282\u594F\u611F\u5F3A\uFF0C\u8F7B\u5FEB\u4E0A\u5934\uFF0C\u4F46\u65CB\u5F8B\u514B\u5236\uFF0C\u4E0D\u8981\u63A9\u76D6\u6E38\u620F\u4FE1\u606F\u3002"
+  promptEn: Loopable instrumental tactical electro house, 126 BPM, no vocals. Four-on-the-floor kick, bouncy syncopated bassline, bright short synth hooks, clean punchy electronic drums, turn-based sokoban combat on a neon board. Strong groove, catchy and upbeat, but restrained enough to keep game information clear, seamless game loop.
+  prompt: Loopable instrumental tactical electro house, 126 BPM, no vocals. Four-on-the-floor kick, bouncy syncopated bassline, bright short synth hooks, clean punchy electronic drums, turn-based sokoban combat on a neon board. Strong groove, catchy and upbeat, but restrained enough to keep game information clear, seamless game loop.
+  negativePrompt: vocals, lyrics, orchestral epic trailer, cinematic choir, pop song structure, guitar solo, overly emotional melody, dramatic drop, dubstep wobble drop, ambient drone, slow cinematic intro, noisy mix
+  bpm: 126
+  beatGrouping: 4
+  roundTripBeat: 1
+  generatedClip: {fileID: 0}
+  generator: Suno
+  generatedAt: Pending
+  notes: First priority groove-forward battle loop. Try this before the other prompts.

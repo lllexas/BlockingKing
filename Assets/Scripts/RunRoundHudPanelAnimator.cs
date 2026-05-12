@@ -17,7 +17,7 @@ public sealed class RunRoundHudPanelAnimator : SpaceUIAnimator
     {
         base.Awake();
         期望显示面板 += OnShowPanel;
-        期望隐藏面板 += _ => FadeOut();
+        期望隐藏面板 += _ => this.FadeOutIfVisible();
     }
 
     private void OnShowPanel(object data)
@@ -26,7 +26,7 @@ public sealed class RunRoundHudPanelAnimator : SpaceUIAnimator
             return;
 
         Refresh(request);
-        FadeIn();
+        this.FadeInIfHidden();
     }
 
     private void Refresh(RunRoundHudUIRequest request)
@@ -45,7 +45,7 @@ public sealed class RunRoundHudPanelAnimator : SpaceUIAnimator
 
     protected override void CloseAction()
     {
-        FadeOut();
+        this.FadeOutIfVisible();
     }
 
     private static void SetText(TextMeshProUGUI text, string value)

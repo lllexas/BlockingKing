@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -51,8 +52,8 @@ public sealed class LevelPlayRequest
 /// </summary>
 public class LevelPlayer : MonoBehaviour
 {
+    private const int SuccessSettleBeatCount = 4;
     private const string LevelMeshObjectName = "LevelMesh";
-    private const string OutsideDiamondObjectName = "OutsideDiamond";
     private const int DefaultPlayerTagID = 1;
     private const int DefaultBoxTagID = 2;
     private const int DefaultTargetTagID = 3;
@@ -108,15 +109,18 @@ public class LevelPlayer : MonoBehaviour
     private LevelData _level;
     private TileMappingConfig _config;
     private GameObject _meshGO;
-    private GameObject _outsideDiamondGO;
     private Material _materialInstance;
-    private Material _outsideDiamondMaterial;
     private LevelDataSource _levelSource;
     private ILevelPlayRule _playRule;
     private bool _isPlaying;
     private bool _isSettled;
+    private bool _isStageInputLocked;
+    private bool _isCompletingSettlement;
     private LevelPlayMode _playMode;
     private LevelPlayResult _lastResult;
+    private Coroutine _settlementRoutine;
+    private string _settlementTitle;
+    private string _settlementBody;
     private int _remainingSteps = -1;
     private RunDifficultySnapshot _activeDifficulty = RunDifficultySnapshot.Default;
     private RunRewardConfigSO _activeRewardSettings;
@@ -130,6 +134,9 @@ public class LevelPlayer : MonoBehaviour
     private GUIStyle _casinoGoldShadowStyle;
     private GUIStyle _casinoDetailStyle;
     private GUIStyle _casinoPanelStyle;
+    private GUIStyle _settlementTitleStyle;
+    private GUIStyle _settlementBodyStyle;
+    private GUIStyle _settlementPanelStyle;
     private readonly HashSet<Vector2Int> _targetCells = new();
     private readonly HashSet<Vector2Int> _coreTargetCells = new();
 
@@ -140,6 +147,14 @@ public class LevelPlayer : MonoBehaviour
     public LevelPlayResult LastResult => _lastResult;
     public int RemainingSteps => _remainingSteps;
     public bool IsPlaying => _isPlaying;
+    public bool IsStageInputLocked => _isStageInputLocked;
+    public static LevelPlayer ActiveInstance { get; private set; }
+    public static bool IsActiveStageInputLocked => ActiveInstance != null && ActiveInstance.IsStageInputLocked;
+
+    private void Awake()
+    {
+        ActiveInstance = this;
+    }
 
     private void Start()
     {
@@ -157,10 +172,14 @@ public class LevelPlayer : MonoBehaviour
     private void OnDestroy()
     {
         StopPlayback();
+        if (ActiveInstance == this)
+            ActiveInstance = null;
     }
 
     private void OnGUI()
     {
+        DrawSettlementOverlay();
+
         if (!_isPlaying)
             return;
 
@@ -297,12 +316,16 @@ public class LevelPlayer : MonoBehaviour
         _playRule = CreatePlayRule(_playMode);
         _isPlaying = true;
         _isSettled = false;
+        _isStageInputLocked = false;
         _lastResult = LevelPlayResult.None;
+        _settlementTitle = null;
+        _settlementBody = null;
 
         GameFlowController.Instance?.EnterLevel();
         _playRule.Begin(this, request);
         ApplyRunPlayerStatusToPlayerEntity();
         ConfigureSpawnDifficulty(request, _activeDifficulty);
+        PlayCameraLevelIntro();
 
         TickSystem.OnTick -= HandleTick;
         TickSystem.OnTick += HandleTick;
@@ -323,6 +346,12 @@ public class LevelPlayer : MonoBehaviour
 
     public void StopPlayback()
     {
+        if (_settlementRoutine != null && !_isCompletingSettlement)
+        {
+            StopCoroutine(_settlementRoutine);
+            _settlementRoutine = null;
+        }
+
         TickSystem.OnTick -= HandleTick;
         _playRule?.End(this);
         SpawnSystem.Instance?.StopSpawning();
@@ -330,6 +359,10 @@ public class LevelPlayer : MonoBehaviour
         HandZone.SetCardsLocked(flow == null || !flow.IsInLevel);
         _playRule = null;
         _isPlaying = false;
+        _isStageInputLocked = false;
+        _isCompletingSettlement = false;
+        _settlementTitle = null;
+        _settlementBody = null;
         _activeDifficulty = RunDifficultySnapshot.Default;
         _activeRewardSettings = null;
     }
@@ -563,7 +596,40 @@ public class LevelPlayer : MonoBehaviour
         SyncRunPlayerStatusFromPlayerEntity();
         _isSettled = true;
         _lastResult = result;
+        _isStageInputLocked = true;
+        HandZone.SetCardsLocked(true);
+        HandZone.TryCancelActivePendingCard();
+        SpawnSystem.Instance?.StopSpawning();
+
+        if (result == LevelPlayResult.Success)
+        {
+            _settlementTitle = "Victory";
+            _settlementBody = "战斗完成";
+            _settlementRoutine = StartCoroutine(CompleteLevelSettlementAfterBeats(result, reason, SuccessSettleBeatCount));
+            Debug.Log($"[LevelPlayer] Level victory locked for {SuccessSettleBeatCount} beats: reason={reason}");
+            return;
+        }
+
+        CompleteLevelSettlement(result, reason);
+    }
+
+    private IEnumerator CompleteLevelSettlementAfterBeats(LevelPlayResult result, string reason, int beatCount)
+    {
+        float beatDuration = BeatTiming.GetBeatDuration();
+        float waitSeconds = Mathf.Max(0.05f, beatDuration) * Mathf.Max(0, beatCount);
+        float endTime = Time.time + waitSeconds;
+        while (Time.time < endTime)
+            yield return null;
+
+        _settlementRoutine = null;
+        CompleteLevelSettlement(result, reason);
+    }
+
+    private void CompleteLevelSettlement(LevelPlayResult result, string reason)
+    {
+        _isCompletingSettlement = true;
         StopPlayback();
+        _isCompletingSettlement = false;
 
         Debug.Log($"[LevelPlayer] Level settled: result={result}, reason={reason}");
 
@@ -572,6 +638,49 @@ public class LevelPlayer : MonoBehaviour
             stageFacade.ResumeWaitingStage(result == LevelPlayResult.Success ? 0 : 1);
 
         GameFlowController.Instance?.OnRouteClassicLevelSettled(result);
+    }
+
+    private void DrawSettlementOverlay()
+    {
+        if (!_isStageInputLocked || string.IsNullOrWhiteSpace(_settlementTitle))
+            return;
+
+        EnsureSettlementStyles();
+
+        float width = Mathf.Min(420f, Screen.width - 48f);
+        float height = 132f;
+        var rect = new Rect((Screen.width - width) * 0.5f, Screen.height * 0.22f, width, height);
+        GUI.Box(rect, GUIContent.none, _settlementPanelStyle);
+
+        var titleRect = new Rect(rect.x + 18f, rect.y + 18f, rect.width - 36f, 54f);
+        GUI.Label(titleRect, _settlementTitle, _settlementTitleStyle);
+
+        var bodyRect = new Rect(rect.x + 18f, titleRect.yMax + 4f, rect.width - 36f, 36f);
+        GUI.Label(bodyRect, _settlementBody ?? string.Empty, _settlementBodyStyle);
+    }
+
+    private void EnsureSettlementStyles()
+    {
+        _settlementPanelStyle ??= new GUIStyle(GUI.skin.box)
+        {
+            padding = new RectOffset(18, 18, 18, 18)
+        };
+
+        _settlementTitleStyle ??= new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = 42,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = new Color(0.7f, 1f, 0.86f, 1f) }
+        };
+
+        _settlementBodyStyle ??= new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = 24,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = Color.white }
+        };
     }
 
     private void ApplyRunPlayerStatusToPlayerEntity()
@@ -868,10 +977,7 @@ public class LevelPlayer : MonoBehaviour
         if (camCtrl != null)
         {
             camCtrl.SetMapBounds(_level.width, _level.height);
-            camCtrl.ResetView();
         }
-
-        EnsureOutsideDiamond(_level.width * cellSize, _level.height * cellSize);
 
         Debug.Log($"[LevelPlayer] {_level.levelName} 已构建, 顶点={mesh.vertexCount}, wallHeight={wallHeight}");
     }
@@ -909,10 +1015,7 @@ public class LevelPlayer : MonoBehaviour
         if (camCtrl != null)
         {
             camCtrl.SetMapBounds(_level.width, _level.height);
-            camCtrl.ResetView();
         }
-
-        EnsureOutsideDiamond(_level.width * cellSize, _level.height * cellSize);
 
         Debug.Log($"[LevelPlayer] Instanced terrain ready: {_level.levelName}, size={_level.width}x{_level.height}");
     }
@@ -940,6 +1043,7 @@ public class LevelPlayer : MonoBehaviour
         intentSystem.ConfigureEnemyIntentPresentation(enemyIntentPresentationMode);
         EnsureRuntimeSystem<MoveSystem>();
         EnsureRuntimeSystem<AttackSystem>();
+        EnsureRuntimeSystem<BoxBlockSystem>();
         var cardEffectSystem = EnsureRuntimeSystem<CardEffectSystem>();
         EnsureRuntimeSystem<CombatResolutionSystem>();
         var enemyAutoAISystem = EnsureRuntimeSystem<EnemyAutoAISystem>();
@@ -1016,6 +1120,35 @@ public class LevelPlayer : MonoBehaviour
         spawnSystem.Initialize(_config?.GetTagEntityBP(enemyGoTagID), enemyGoTagID);
 
         Debug.Log($"[LevelPlayer] ECS 已初始化，实体数={entitySystem.entities.entityCount}, Target.Enemy={enemyTargetCount}, targetEnemyTagID={targetEnemyTagID}");
+    }
+
+    private bool TryGetPlayerWorldXZ(out Vector2 worldXZ)
+    {
+        worldXZ = default;
+
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+            return false;
+
+        if (!TryFindPlayerIndex(entitySystem, out int playerIndex))
+            return false;
+
+        Vector2Int position = entitySystem.entities.coreComponents[playerIndex].Position;
+        worldXZ = new Vector2((position.x + 0.5f) * cellSize, (position.y + 0.5f) * cellSize);
+        return true;
+    }
+
+    private void PlayCameraLevelIntro()
+    {
+        var camCtrl = Camera.main?.GetComponent<CameraController>();
+        if (camCtrl == null)
+            return;
+
+        camCtrl.SetMapBounds(_level.width, _level.height, cellSize);
+        if (TryGetPlayerWorldXZ(out var playerWorldXZ))
+            camCtrl.PlayLevelIntro(playerWorldXZ);
+        else
+            camCtrl.ResetView();
     }
 
     private void ConfigureSpawnDifficulty(LevelPlayRequest request, RunDifficultySnapshot difficulty)
@@ -1261,14 +1394,7 @@ public class LevelPlayer : MonoBehaviour
             removedCount++;
         }
 
-        if (_outsideDiamondGO != null)
-        {
-            DestroyUnityObjectImmediate(_outsideDiamondGO);
-            removedCount++;
-        }
-
         _meshGO = null;
-        _outsideDiamondGO = null;
         return removedCount;
     }
 
@@ -1309,57 +1435,6 @@ public class LevelPlayer : MonoBehaviour
 
             _materialInstance = new Material(shader);
         }
-    }
-
-    private void EnsureOutsideDiamond(float mapWidth, float mapHeight)
-    {
-        if (_outsideDiamondMaterial == null)
-        {
-            var shader = Shader.Find("BlockingKing/OutsideDiamond");
-            if (shader == null)
-            {
-                Debug.LogError("[LevelPlayer] Shader.Find failed: BlockingKing/OutsideDiamond. Add it to Always Included Shaders or reference a material in scene/assets.");
-                shader = Shader.Find("Universal Render Pipeline/Unlit");
-            }
-
-            _outsideDiamondMaterial = new Material(shader)
-            {
-                name = "OutsideDiamond_Runtime",
-                enableInstancing = true
-            };
-        }
-
-        if (_outsideDiamondGO != null)
-            return;
-
-        // 构建大 Quad，覆盖地图外可见区域
-        float maxExtent = Mathf.Max(mapWidth, mapHeight) * cellSize;
-        float halfSize = maxExtent * 2.5f; // 地图最大边长的 2.5 倍 = 充裕的 padding
-
-        var mesh = new Mesh { name = "OutsideDiamondQuad" };
-        float h = halfSize;
-        mesh.SetVertices(new[]
-        {
-            new Vector3(-h, 0f, -h),
-            new Vector3( h, 0f, -h),
-            new Vector3(-h, 0f,  h),
-            new Vector3( h, 0f,  h)
-        });
-        mesh.SetNormals(new[]
-        {
-            Vector3.up, Vector3.up, Vector3.up, Vector3.up
-        });
-        mesh.SetTriangles(new[] { 0, 2, 1, 1, 2, 3 }, 0);
-        mesh.RecalculateBounds();
-
-        _outsideDiamondGO = new GameObject(OutsideDiamondObjectName);
-        _outsideDiamondGO.transform.SetParent(transform);
-        _outsideDiamondGO.transform.position = new Vector3(
-            mapWidth * cellSize * 0.5f,
-            -0.001f, // 略低于地板，地板存在处被深度遮挡
-            mapHeight * cellSize * 0.5f);
-        _outsideDiamondGO.AddComponent<MeshFilter>().mesh = mesh;
-        _outsideDiamondGO.AddComponent<MeshRenderer>().sharedMaterial = _outsideDiamondMaterial;
     }
 
     private EntityHandle CreateTaggedEntity(

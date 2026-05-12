@@ -2,6 +2,7 @@ using SpaceTUI;
 
 public static class RunRoundUIIds
 {
+    public const string Backdrop = "RunRoundBackdrop";
     public const string Hud = "RunRoundHud";
     public const string ClassicChoice = "RunRoundClassicChoice";
     public const string EscortChoice = "RunRoundEscortChoice";
@@ -9,6 +10,11 @@ public static class RunRoundUIIds
     public const string ShopChoice = "RunRoundShopChoice";
     public const string EventChoice = "RunRoundEventChoice";
     public const string Result = "RunResult";
+}
+
+public sealed class RunRoundBackdropUIRequest : IRoutedRequest
+{
+    public string uiid => RunRoundUIIds.Backdrop;
 }
 
 public sealed class RunRoundHudUIRequest : IRoutedRequest

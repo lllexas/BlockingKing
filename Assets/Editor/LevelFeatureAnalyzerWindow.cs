@@ -7,10 +7,6 @@ using UnityEngine;
 
 public class LevelFeatureAnalyzerWindow : EditorWindow
 {
-    private const int WallTileID = 1;
-    private const int BoxTagID = 2;
-    private const int TargetTagID = 3;
-
     private string _rootFolder = "Assets/Resources/Levels";
     private Vector2 _scroll;
     private readonly List<LevelFeatureRow> _rows = new();
@@ -89,57 +85,22 @@ public class LevelFeatureAnalyzerWindow : EditorWindow
 
     private static LevelFeatureRow Analyze(LevelData level, string path)
     {
-        int area = Mathf.Max(1, level.width * level.height);
-        int wallCount = 0;
-        for (int y = 0; y < level.height; y++)
-        {
-            for (int x = 0; x < level.width; x++)
-            {
-                if (level.GetTile(x, y) == WallTileID)
-                    wallCount++;
-            }
-        }
-
-        var boxCells = new HashSet<Vector2Int>();
-        var targetCells = new HashSet<Vector2Int>();
-        if (level.tags != null)
-        {
-            foreach (var tag in level.tags)
-            {
-                if (tag == null)
-                    continue;
-
-                var pos = new Vector2Int(tag.x, tag.y);
-                if (tag.tagID == BoxTagID)
-                    boxCells.Add(pos);
-                else if (tag.tagID == TargetTagID)
-                    targetCells.Add(pos);
-            }
-        }
-
-        int overlapped = 0;
-        foreach (var boxCell in boxCells)
-        {
-            if (targetCells.Contains(boxCell))
-                overlapped++;
-        }
-
-        int effectiveBoxes = Mathf.Max(0, boxCells.Count - overlapped);
+        var metrics = LevelFeatureMetricsUtility.Analyze(level);
         return new LevelFeatureRow
         {
             LevelName = string.IsNullOrWhiteSpace(level.levelName) ? level.name : level.levelName,
             Path = path,
-            Width = level.width,
-            Height = level.height,
-            Area = area,
-            WallCount = wallCount,
-            BoxCount = boxCells.Count,
-            TargetCount = targetCells.Count,
-            BoxOnTargetCount = overlapped,
-            EffectiveBoxCount = effectiveBoxes,
-            WallRate = wallCount / (float)area,
-            BoxRate = boxCells.Count / (float)area,
-            EffectiveBoxRate = effectiveBoxes / (float)area
+            Width = metrics.Width,
+            Height = metrics.Height,
+            Area = metrics.Area,
+            WallCount = metrics.WallCount,
+            BoxCount = metrics.BoxCount,
+            TargetCount = metrics.TargetCount,
+            BoxOnTargetCount = metrics.BoxOnTargetCount,
+            EffectiveBoxCount = metrics.EffectiveBoxCount,
+            WallRate = metrics.WallRate,
+            BoxRate = metrics.BoxRate,
+            EffectiveBoxRate = metrics.EffectiveBoxRate
         };
     }
 

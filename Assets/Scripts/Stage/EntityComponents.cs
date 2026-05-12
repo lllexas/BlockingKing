@@ -44,6 +44,7 @@ public struct StatusComponent
     public int MaxHealthModifier;
     public int DamageTaken;
     public int Block;
+    public int BlockIdleTurns;
 }
 
 public static class CombatStats

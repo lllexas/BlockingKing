@@ -14,4 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   health: 80
   attack: 4
+  auras: []
+  spawnInterval: 0
+  spawnEntityBP: {fileID: 0}
   prefab: {fileID: 0}
+  instancedMesh: {fileID: 4300000, guid: 6ef32dc3ad9e0574dbefda4bc06455bf, type: 2}
+  instancedMaterial: {fileID: 0}
+  visualScale: {x: 1, y: 1, z: 1}
+  references:
+    version: 2
+    RefIds: []

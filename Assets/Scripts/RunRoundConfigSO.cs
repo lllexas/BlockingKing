@@ -12,8 +12,9 @@ public sealed class RunRoundConfigSO : ScriptableObject
     [Min(1)]
     public int encounterCyclesPerRound = 3;
 
-    [Min(1)]
-    public int seed = 1;
+    [Tooltip("0 = random each run. Positive values make the round offer sequence deterministic for debugging.")]
+    [Min(0)]
+    public int seed;
 
     [Header("State A - Main Combat Choices")]
     public LevelCollageSourceDatabase levelSourceDatabase;

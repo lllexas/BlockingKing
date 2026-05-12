@@ -14,7 +14,7 @@ public sealed class RunResultPanelAnimator : SpaceUIAnimator
     {
         base.Awake();
         期望显示面板 += OnShowPanel;
-        期望隐藏面板 += _ => FadeOut();
+        期望隐藏面板 += _ => this.FadeOutIfVisible();
     }
 
     private void OnShowPanel(object data)
@@ -24,12 +24,12 @@ public sealed class RunResultPanelAnimator : SpaceUIAnimator
 
         SetText(titleText, request.Victory ? "Run Complete" : "Run Failed");
         SetText(bodyText, request.Message);
-        FadeIn();
+        this.FadeInIfHidden();
     }
 
     protected override void CloseAction()
     {
-        FadeOut();
+        this.FadeOutIfVisible();
     }
 
     private static void SetText(TextMeshProUGUI text, string value)

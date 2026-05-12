@@ -45,6 +45,9 @@ public sealed class RunSettingsOnGUIFrontend : MonoBehaviour
 
     private void OnGUI()
     {
+        if (RunSettingsPanelAnimator.Instance != null)
+            return;
+
         if (!visible)
             return;
 

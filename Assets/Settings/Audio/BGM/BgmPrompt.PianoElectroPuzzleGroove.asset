@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53cb8577ca2574a4b93d5063baba2923, type: 3}
+  m_Name: BgmPrompt.PianoElectroPuzzleGroove
+  m_EditorClassIdentifier: 
+  title: Piano Electro Puzzle Groove
+  promptZh: "\u53EF\u65E0\u7F1D\u5FAA\u73AF\u7684\u7EAF\u97F3\u4E50\u94A2\u7434\u7535\u5B50\u89E3\u8C1C\u5F8B\u52A8\uFF0C112 BPM\uFF0C\u65E0\u4EBA\u58F0\u3002\u77ED\u4FC3\u65AD\u594F\u94A2\u7434\u97F3\u578B\uFF0C\u660E\u4EAE pluck synth \u5BF9\u4F4D\u8282\u594F\uFF0C\u5F39\u6027\u4F4E\u97F3\u8109\u51B2\uFF0C\u6E05\u6670\u7535\u5B50\u6253\u51FB\u4E50\uFF0C\u56DE\u5408\u5236\u6218\u672F\u89E3\u8C1C\u6218\u6597\uFF0C\u4FCF\u76AE\u4F46\u4E13\u6CE8\uFF0C\u77ED\u5C0F\u6293\u8033 hook\uFF0C\u65E0\u7F1D\u6E38\u620F\u5FAA\u73AF\u3002"
+  promptEn: Loopable instrumental piano electro puzzle groove, 112 BPM, no vocals. Staccato piano pattern, bright pluck synth counter-rhythm, bouncy bass pulse, crisp electronic percussion, turn-based tactical puzzle combat, playful but focused, catchy short hook, seamless game loop.
+  prompt: Loopable instrumental piano electro puzzle groove, 112 BPM, no vocals. Staccato piano pattern, bright pluck synth counter-rhythm, bouncy bass pulse, crisp electronic percussion, turn-based tactical puzzle combat, playful but focused, catchy short hook, seamless game loop.
+  negativePrompt: vocals, lyrics, orchestral epic trailer, cinematic choir, pop song structure, guitar solo, overly emotional melody, dramatic drop, dubstep wobble drop, ambient drone, slow cinematic intro, romantic piano ballad, solo piano, orchestral brass, noisy mix
+  bpm: 112
+  beatGrouping: 4
+  roundTripBeat: 1
+  generatedClip: {fileID: 0}
+  generator: Suno
+  generatedAt: Pending
+  notes: Piano plus pluck synth groove. Best for regular puzzle combat with more character and bounce.

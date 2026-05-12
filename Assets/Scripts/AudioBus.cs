@@ -15,10 +15,15 @@ public class AudioBus : MonoBehaviour
 
     [Header("Runtime")]
     [SerializeField, Range(1, 32)] private int sfxSourcePoolSize = 8;
+    [SerializeField, Min(0f)] private float musicFadeDuration = 0.75f;
     [SerializeField] private bool dontDestroyOnLoad = true;
     [SerializeField] private bool logPlayback;
 
     private AudioSource _musicSource;
+    private AudioSource _musicSourceB;
+    private AudioSource _activeMusicSource;
+    private Coroutine _musicFadeRoutine;
+    private float _activeMusicVolumeScale = 1f;
     private readonly List<AudioSource> _sfxSources = new();
     private int _nextSfxSourceIndex;
 
@@ -82,32 +87,49 @@ public class AudioBus : MonoBehaviour
 
     public void PlayMusic(AudioClip clip, bool loop = true)
     {
+        PlayMusic(clip, loop, musicFadeDuration);
+    }
+
+    public void PlayMusic(AudioClip clip, bool loop, float fadeDuration)
+    {
         EnsureSources();
-        if (_musicSource == null)
+        if (_activeMusicSource == null)
             return;
 
         if (clip == null)
         {
-            StopMusic();
+            StopMusic(fadeDuration);
             return;
         }
 
-        if (_musicSource.clip == clip && _musicSource.isPlaying)
+        if (_activeMusicSource.clip == clip && _activeMusicSource.isPlaying)
             return;
 
-        _musicSource.clip = clip;
-        _musicSource.loop = loop;
-        _musicSource.volume = GetMusicOutputVolume();
-        _musicSource.Play();
+        ReplaceMusic(clip, loop, fadeDuration);
     }
 
     public void StopMusic()
     {
-        if (_musicSource == null)
+        StopMusic(musicFadeDuration);
+    }
+
+    public void StopMusic(float fadeDuration)
+    {
+        if (_activeMusicSource == null)
             return;
 
-        _musicSource.Stop();
-        _musicSource.clip = null;
+        if (_musicFadeRoutine != null)
+            StopCoroutine(_musicFadeRoutine);
+
+        if (fadeDuration <= 0f || !_activeMusicSource.isPlaying)
+        {
+            StopSource(_activeMusicSource);
+            _activeMusicVolumeScale = 0f;
+            ApplyVolumes();
+            return;
+        }
+
+        _musicFadeRoutine = StartCoroutine(FadeOutMusic(fadeDuration));
     }
 
     public void PlaySfx(AudioClip clip, float volumeScale = 1f, float pitch = 1f)
@@ -153,6 +175,18 @@ public class AudioBus : MonoBehaviour
             _musicSource.spatialBlend = 0f;
         }
 
+        if (_musicSourceB == null)
+        {
+            var musicGo = new GameObject("Music_B");
+            musicGo.transform.SetParent(transform, false);
+            _musicSourceB = musicGo.AddComponent<AudioSource>();
+            _musicSourceB.playOnAwake = false;
+            _musicSourceB.loop = true;
+            _musicSourceB.spatialBlend = 0f;
+        }
+
+        _activeMusicSource ??= _musicSource;
+
         while (_sfxSources.Count < sfxSourcePoolSize)
         {
             var sfxGo = new GameObject($"Sfx_{_sfxSources.Count:00}");
@@ -167,7 +201,10 @@ public class AudioBus : MonoBehaviour
     private void ApplyVolumes()
     {
         if (_musicSource != null)
-            _musicSource.volume = GetMusicOutputVolume();
+            _musicSource.volume = GetMusicOutputVolume() * GetMusicVolumeScale(_musicSource);
+
+        if (_musicSourceB != null)
+            _musicSourceB.volume = GetMusicOutputVolume() * GetMusicVolumeScale(_musicSourceB);
 
         for (int i = 0; i < _sfxSources.Count; i++)
         {
@@ -184,5 +221,112 @@ public class AudioBus : MonoBehaviour
     private float GetSfxOutputVolume()
     {
         return masterVolume * sfxVolume;
+    }
+
+    private void ReplaceMusic(AudioClip clip, bool loop, float fadeDuration)
+    {
+        if (_musicFadeRoutine != null)
+            StopCoroutine(_musicFadeRoutine);
+
+        var source = _activeMusicSource ?? _musicSource;
+        if (source == null)
+            return;
+
+        if (fadeDuration <= 0f || !source.isPlaying)
+        {
+            StopSource(source);
+            source.clip = clip;
+            source.loop = loop;
+            source.volume = GetMusicOutputVolume();
+            source.Play();
+            _activeMusicSource = source;
+            _activeMusicVolumeScale = 1f;
+            ApplyVolumes();
+            return;
+        }
+
+        _musicFadeRoutine = StartCoroutine(ReplaceMusicRoutine(source, clip, loop, fadeDuration));
+    }
+
+    private System.Collections.IEnumerator ReplaceMusicRoutine(AudioSource source, AudioClip clip, bool loop, float duration)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            SetMusicVolumeScale(source, 1f - t);
+            ApplyVolumes();
+            yield return null;
+        }
+
+        StopSource(source);
+        SetMusicVolumeScale(source, 0f);
+        ApplyVolumes();
+
+        source.clip = clip;
+        source.loop = loop;
+        source.volume = 0f;
+        source.Play();
+        _activeMusicSource = source;
+
+        elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            SetMusicVolumeScale(source, t);
+            ApplyVolumes();
+            yield return null;
+        }
+
+        SetMusicVolumeScale(source, 1f);
+        ApplyVolumes();
+        _musicFadeRoutine = null;
+    }
+
+    private System.Collections.IEnumerator FadeOutMusic(float duration)
+    {
+        var source = _activeMusicSource;
+        float startScale = GetMusicVolumeScale(source);
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            SetMusicVolumeScale(source, Mathf.Lerp(startScale, 0f, t));
+            ApplyVolumes();
+            yield return null;
+        }
+
+        StopSource(source);
+        SetMusicVolumeScale(source, 0f);
+        ApplyVolumes();
+        _musicFadeRoutine = null;
+    }
+
+    private float GetMusicVolumeScale(AudioSource source)
+    {
+        if (source == _activeMusicSource)
+            return _activeMusicVolumeScale;
+
+        return 0f;
+    }
+
+    private void SetMusicVolumeScale(AudioSource source, float value)
+    {
+        value = Mathf.Clamp01(value);
+        if (source == _activeMusicSource)
+            _activeMusicVolumeScale = value;
+    }
+
+    private static void StopSource(AudioSource source)
+    {
+        if (source == null)
+            return;
+
+        source.Stop();
+        source.clip = null;
     }
 }

@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e75988315cc4fb048be9657222ee44cd, type: 3}
+  m_Name: BgmPlaylist.SunoCandidates
+  m_EditorClassIdentifier: 
+  tracks:
+  - promptAsset: {fileID: 11400000, guid: 5773019fdfdb48689d7792fdd5a04691, type: 2}
+    title: 
+  - promptAsset: {fileID: 11400000, guid: 84f58972bc1d4d76b2a8081fca8edce9, type: 2}
+    title: 
+  - promptAsset: {fileID: 11400000, guid: 5ae458a6c2794208b2eeb0546cfb623f, type: 2}
+    title: 
+  defaultTrackIndex: 0
+

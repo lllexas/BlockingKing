@@ -19,6 +19,9 @@ MonoBehaviour:
   spawnInterval: 0
   spawnEntityBP: {fileID: 0}
   prefab: {fileID: 0}
+  instancedMesh: {fileID: 4300000, guid: eecb41926474e344c8798dd976998667, type: 2}
+  instancedMaterial: {fileID: 0}
+  visualScale: {x: 1, y: 1, z: 1}
   references:
     version: 2
     RefIds:

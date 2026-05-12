@@ -12,7 +12,8 @@ public enum GameFlowMode
 public enum RouteMapStartupMode
 {
     AutoStart,
-    RunSetup
+    RunSetup,
+    MainMenuRound
 }
 
 public class GameFlowController : MonoBehaviour
@@ -29,6 +30,7 @@ public class GameFlowController : MonoBehaviour
     public GameFlowMode Mode => mode;
     public bool ShouldLevelPlayerAutoBuild => mode == GameFlowMode.DirectLevel;
     public bool IsInLevel { get; private set; }
+    public bool IsMainMenuVisible { get; private set; }
     public RunConfigSO CurrentRunConfig => runConfig;
     public RunRouteConfigSO RouteSettings => runConfig != null && runConfig.routeSettings != null ? runConfig.routeSettings : routeSettings;
     public RunRoundConfigSO RoundSettings => runConfig != null ? runConfig.roundSettings : null;
@@ -48,6 +50,7 @@ public class GameFlowController : MonoBehaviour
     private int _observedStageRunVersion;
     private float _routeNodeStartedAt;
     private bool _runStartApplied;
+    private bool _isStartingRun;
 
     private void Awake()
     {
@@ -65,6 +68,12 @@ public class GameFlowController : MonoBehaviour
 
     private void Start()
     {
+        if (routeMapStartupMode == RouteMapStartupMode.MainMenuRound)
+        {
+            ShowMainMenuRound(true);
+            return;
+        }
+
         if (mode == GameFlowMode.DirectLevel)
         {
             EnsureFacades();
@@ -130,8 +139,14 @@ public class GameFlowController : MonoBehaviour
         if (player == null)
             player = gameObject.AddComponent<BgmRecordPlayer>();
 
+        bool startsAtMainMenu = routeMapStartupMode == RouteMapStartupMode.MainMenuRound;
+        player.PlayOnStart = !startsAtMainMenu;
+
         if (runConfig != null && runConfig.bgmPlaylist != null)
-            player.Configure(runConfig.bgmPlaylist, true);
+            player.Configure(runConfig.bgmPlaylist, !startsAtMainMenu);
+
+        if (runConfig != null && runConfig.mainMenuBgm != null && startsAtMainMenu)
+            player.PlayPrompt(runConfig.mainMenuBgm);
 
         if (FindObjectOfType<BgmRecordOnGUIFrontend>() == null)
             gameObject.AddComponent<BgmRecordOnGUIFrontend>();
@@ -189,14 +204,76 @@ public class GameFlowController : MonoBehaviour
 
     public void StartRun(RunConfigSO config, GameFlowMode targetMode = GameFlowMode.RoundFlow)
     {
+        if (_isStartingRun)
+            return;
+
+        _isStartingRun = true;
         runConfig = config;
         mode = targetMode;
         _runStartApplied = false;
+        IsMainMenuVisible = false;
+
+        HideMainMenu();
+        PlayRunBgm();
 
         if (mode == GameFlowMode.RouteMap)
             InitializeRouteMap();
         else if (mode == GameFlowMode.RoundFlow)
             InitializeRoundFlow();
+
+        _isStartingRun = false;
+    }
+
+    public void StartRoundRunFromMainMenu()
+    {
+        if (runConfig == null)
+        {
+            Debug.LogError("[GameFlowController] Main menu cannot start RoundFlow because RunConfig is missing.");
+            return;
+        }
+
+        StartRun(runConfig, GameFlowMode.RoundFlow);
+    }
+
+    public void ShowMainMenuRound(bool instant = false)
+    {
+        EnsureFacades();
+        ExitLevel();
+        _isStartingRun = false;
+        IsMainMenuVisible = true;
+        PlayMainMenuBgm();
+        SetRouteVisible(false);
+        HandZone.SetCardsLocked(true);
+        HideRunUiPanels();
+        ShowMainMenuPart(MainMenuUIIds.Backdrop, instant);
+        ShowMainMenuPart(MainMenuUIIds.Title, instant);
+        ShowMainMenuPart(MainMenuUIIds.Start, instant);
+        ShowMainMenuPart(MainMenuUIIds.Settings, instant);
+        ShowMainMenuPart(MainMenuUIIds.Quit, instant);
+    }
+
+    public void ReturnToMainMenuRound()
+    {
+        if (IsMainMenuVisible)
+        {
+            PlayMainMenuBgm();
+            HideSettingsPanel();
+            return;
+        }
+
+        mode = GameFlowMode.RoundFlow;
+        IsMainMenuVisible = true;
+        IsInLevel = false;
+        HandZone.SetCardsLocked(true);
+        LevelPlayer.ActiveInstance?.StopPlayback();
+        PlayMainMenuBgm();
+
+        if (_routeFrontend != null)
+            _routeFrontend.CloseDeck();
+
+        _roundController = FindObjectOfType<RunRoundController>();
+        HideRunUiPanels();
+        ShowMainMenuRound(false);
     }
 
     public void InitializeRoundFlow()
@@ -224,6 +301,28 @@ public class GameFlowController : MonoBehaviour
             gameObject.AddComponent<RunShopOnGUIFrontend>();
 
         _roundController.StartRun(runConfig, RoundSettings);
+    }
+
+    private void PlayMainMenuBgm()
+    {
+        if (runConfig == null || runConfig.mainMenuBgm == null)
+            return;
+
+        var player = FindObjectOfType<BgmRecordPlayer>();
+        player?.PlayPrompt(runConfig.mainMenuBgm);
+    }
+
+    private void PlayRunBgm()
+    {
+        if (runConfig == null || runConfig.bgmPlaylist == null)
+            return;
+
+        var player = FindObjectOfType<BgmRecordPlayer>();
+        if (player == null)
+            return;
+
+        player.Configure(runConfig.bgmPlaylist, false);
+        player.PlayDefault();
     }
 
     public void OnRouteClassicLevelStarted()
@@ -400,5 +499,59 @@ public class GameFlowController : MonoBehaviour
 
             _routeFrontend.Visible = isVisible;
         }
+    }
+
+    private static void HideMainMenu()
+    {
+        HideMainMenuPart(MainMenuUIIds.Backdrop);
+        HideMainMenuPart(MainMenuUIIds.Title);
+        HideMainMenuPart(MainMenuUIIds.Start);
+        HideMainMenuPart(MainMenuUIIds.Settings);
+        HideMainMenuPart(MainMenuUIIds.Quit);
+    }
+
+    private static void HideRunUiPanels()
+    {
+        HideRunRoundPart(RunRoundUIIds.Backdrop);
+        HideRunRoundPart(RunRoundUIIds.Hud);
+        HideRunRoundPart(RunRoundUIIds.ClassicChoice);
+        HideRunRoundPart(RunRoundUIIds.EscortChoice);
+        HideRunRoundPart(RunRoundUIIds.SkipChoice);
+        HideRunRoundPart(RunRoundUIIds.ShopChoice);
+        HideRunRoundPart(RunRoundUIIds.EventChoice);
+        HideRunRoundPart(RunRoundUIIds.Result);
+        HideSettingsPanel();
+        HideHandPilePanel(HandPileUIIds.DrawPile);
+        HideHandPilePanel(HandPileUIIds.DiscardPile);
+    }
+
+    private static void HideRunRoundPart(string uiid)
+    {
+        PostSystem.Instance?.Send("期望隐藏面板", uiid);
+    }
+
+    private static void HideSettingsPanel()
+    {
+        PostSystem.Instance?.Send("期望隐藏面板", new RunSettingsPanelUIRequest());
+    }
+
+    private static void HideHandPilePanel(string uiid)
+    {
+        PostSystem.Instance?.Send("期望隐藏面板", new HandPileUIRequest(uiid, 0));
+    }
+
+    private void ShowMainMenuPart(string uiid, bool instant)
+    {
+        PostSystem.Instance?.Send("期望显示面板", new MainMenuUIRequest(uiid)
+        {
+            Controller = this,
+            RunConfig = runConfig,
+            Instant = instant
+        });
+    }
+
+    private static void HideMainMenuPart(string uiid)
+    {
+        PostSystem.Instance?.Send("期望隐藏面板", new MainMenuUIRequest(uiid));
     }
 }

@@ -16,7 +16,7 @@ public abstract class RunRoundChoicePanelAnimatorBase<TRequest> : SpaceUIAnimato
     {
         base.Awake();
         期望显示面板 += OnShowPanel;
-        期望隐藏面板 += _ => FadeOut();
+        期望隐藏面板 += _ => this.FadeOutIfVisible();
     }
 
     private void OnShowPanel(object data)
@@ -28,12 +28,12 @@ public abstract class RunRoundChoicePanelAnimatorBase<TRequest> : SpaceUIAnimato
         SetText(bodyText, request.Body);
         SetText(footerText, request.Footer);
         BindButton(request);
-        FadeIn();
+        this.FadeInIfHidden();
     }
 
     protected override void CloseAction()
     {
-        FadeOut();
+        this.FadeOutIfVisible();
     }
 
     protected abstract void InvokeChoice(RunRoundController controller);

@@ -18,3 +18,14 @@ MonoBehaviour:
   spawnInterval: 0
   spawnEntityBP: {fileID: 0}
   prefab: {fileID: 0}
+  instancedMesh: {fileID: 4300000, guid: 4fa3151bae07a8a48b16ffcd73670583, type: 2}
+  instancedMaterial: {fileID: 0}
+  visualScale: {x: 1, y: 1, z: 1}
+  showUnitLabel: 1
+  unitLabelText: "\u7832"
+  unitLabelColor: {r: 0.3584906, g: 0.2870301, b: 0.20494838, a: 1}
+  unitLabelOffset: {x: 0, y: 0, z: 0}
+  unitLabelScale: 1
+  references:
+    version: 2
+    RefIds: []

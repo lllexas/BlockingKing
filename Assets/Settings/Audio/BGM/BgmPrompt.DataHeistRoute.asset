@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53cb8577ca2574a4b93d5063baba2923, type: 3}
+  m_Name: BgmPrompt.DataHeistRoute
+  m_EditorClassIdentifier: 
+  title: Data Heist Groove
+  promptZh: "\u53EF\u65E0\u7F1D\u5FAA\u73AF\u7684\u7EAF\u97F3\u4E50\u6218\u672F progressive house\uFF0C125 BPM\uFF0C\u65E0\u4EBA\u58F0\u3002\u6570\u636E\u7A83\u53D6\u822C\u7684\u79D8\u5BC6\u63A8\u8FDB\u611F\uFF0C\u51B7\u8272\u9713\u8679\u754C\u9762\u548C\u5730\u56FE\u8DEF\u7EBF\u9009\u62E9\u3002\u7A33\u5B9A\u56DB\u62CD\u5F8B\u52A8\uFF0C\u6E05\u6670\u4F4E\u97F3\u8109\u51B2\uFF0C\u77ED\u4FC3\u5408\u6210\u5668\u7436\u97F3\uFF0C\u660E\u4EAE\u4F46\u514B\u5236\u7684 lead\uFF0C\u6709\u4E0A\u5934\u7684\u524D\u8FDB\u611F\u3002\u9002\u5408\u56DE\u5408\u9009\u62E9\u3001\u5956\u52B1\u8DEF\u7EBF\u548C\u6218\u6597\u95F4\u9699\u3002"
+  promptEn: Loopable instrumental tactical progressive house, 125 BPM, no vocals. Covert data-heist momentum, cold neon interface, map route decisions. Steady four-on-the-floor groove, clean bass pulse, short synth arpeggios, bright but restrained lead, catchy forward motion. Supports turn choices, reward routes, and pauses between battles.
+  prompt: Loopable instrumental tactical progressive house, 125 BPM, no vocals. Covert data-heist momentum, cold neon interface, map route decisions. Steady four-on-the-floor groove, clean bass pulse, short synth arpeggios, bright but restrained lead, catchy forward motion. Supports turn choices, reward routes, and pauses between battles.
+  negativePrompt: vocals, lyrics, orchestral epic trailer, cinematic choir, pop song structure, guitar solo, overly emotional melody, dramatic drop, dubstep wobble drop, ambient drone, slow cinematic intro, noisy mix
+  bpm: 125
+  beatGrouping: 4
+  roundTripBeat: 1
+  generatedClip: {fileID: 0}
+  generator: Suno
+  generatedAt: Pending
+  notes: Mid-energy route/progression groove candidate; useful if combat prompt feels too dense.

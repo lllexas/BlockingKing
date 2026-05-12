@@ -190,11 +190,26 @@ public sealed class LevelFeatureSelectionTableSO : TableBaseSO, IPoolAnalyzable
         if (entry == null || !entry.enabled || entry.level == null)
             return false;
 
-        return InRange(entry.width, filters.width) &&
-               InRange(entry.height, filters.height) &&
-               InRange(entry.area, filters.area) &&
-               InRange(entry.wallRate, filters.wallRate) &&
-               InRange(entry.effectiveBoxCount, filters.effectiveBoxes);
+        if (!PassesFilters(entry.width, entry.height, entry.area, entry.wallRate, entry.effectiveBoxCount, filters))
+            return false;
+
+        var runtimeMetrics = LevelFeatureMetricsUtility.Analyze(entry.level);
+        return PassesFilters(
+            runtimeMetrics.Width,
+            runtimeMetrics.Height,
+            runtimeMetrics.Area,
+            runtimeMetrics.WallRate,
+            runtimeMetrics.EffectiveBoxCount,
+            filters);
+    }
+
+    private static bool PassesFilters(int width, int height, int area, float wallRate, int effectiveBoxCount, FeatureFilters filters)
+    {
+        return InRange(width, filters.width) &&
+               InRange(height, filters.height) &&
+               InRange(area, filters.area) &&
+               InRange(wallRate, filters.wallRate) &&
+               InRange(effectiveBoxCount, filters.effectiveBoxes);
     }
 
     private float GetSelectionWeight(LevelCollageSourceEntry entry)

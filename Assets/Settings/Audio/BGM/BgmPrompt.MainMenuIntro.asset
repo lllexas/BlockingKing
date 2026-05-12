@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53cb8577ca2574a4b93d5063baba2923, type: 3}
+  m_Name: BgmPrompt.MainMenuIntro
+  m_EditorClassIdentifier: 
+  title: Main Menu Intro
+  promptZh: "\u53EF\u65E0\u7F1D\u5FAA\u73AF\u7684\u7EAF\u97F3\u4E50\u4E3B\u83DC\u5355\u7535\u5B50\u5F15\u5165\u66F2\uFF0C96
+    BPM\uFF0C\u56DB\u56DB\u62CD\uFF0C\u65E0\u4EBA\u58F0\u3002\u5148\u7531\u7B80\u5355\u6613\u8BB0\u7684\u65CB\u5F8B\u5F15\u5165\uFF0C\u7136\u540E\u8BA9\u8F7B\u67D4\u7535\u5B50\u9F13\u70B9\u9010\u6E10\u8FDB\u5165\u3002\u67D4\u548C\u94A2\u7434\u548C\u73BB\u7483\u611F\u5408\u6210\u5668\u4E3B\u97F3\uFF0C\u6E29\u6696\u6A21\u62DF
+    pad\uFF0C\u5706\u6DA6\u5408\u6210\u4F4E\u97F3\uFF0C\u5C11\u91CF\u6545\u969C\u8D28\u611F\u3002\u5F15\u4EBA\u8FDB\u5165\u4F46\u5E26\u795E\u79D8\u611F\u7684\u9713\u8679\u89E3\u8C1C\u4E16\u754C\uFF0C\u6218\u672F\u6218\u6597\u524D\u7684\u5E73\u9759\u671F\u5F85\u3002\u65CB\u5F8B\u5E94\u50CF\u6E38\u620F\u7684\u8EAB\u4EFD\u52A8\u673A\uFF0C\u800C\u4E0D\u662F\u6D41\u884C\u6B4C\u526F\u6B4C\u3002"
+  promptEn: Loopable instrumental main menu electronic intro, 96 BPM, 4/4 time, no
+    vocals. A simple memorable melody introduces the track first, then a gentle electronic
+    drum pulse gradually enters. Soft piano and glassy synth lead, warm analog pad,
+    rounded synth bass, subtle glitch texture. Inviting but mysterious neon puzzle
+    world, calm anticipation before tactical combat. The melody should feel like
+    the game's identity motif, not a pop chorus, seamless game loop.
+  prompt: Loopable instrumental main menu electronic intro, 96 BPM, 4/4 time, no
+    vocals. A simple memorable melody introduces the track first, then a gentle electronic
+    drum pulse gradually enters. Soft piano and glassy synth lead, warm analog pad,
+    rounded synth bass, subtle glitch texture. Inviting but mysterious neon puzzle
+    world, calm anticipation before tactical combat. The melody should feel like
+    the game's identity motif, not a pop chorus, seamless game loop.
+  negativePrompt: vocals, lyrics, pop song structure, pop chorus, orchestral epic
+    trailer, cinematic choir, guitar solo, dramatic drop, dubstep wobble drop, aggressive
+    combat drums, party dance, ambient drone, noisy mix
+  bpm: 96
+  roundTripBeat: 1
+  generatedClip: {fileID: 8300000, guid: 36a73f7345c694442b29571279b19db1, type: 3}
+  generator: Suno
+  generatedAt: Pending
+  notes: Main menu attract loop. Melody enters first, then gentle drums; should introduce
+    the game's identity without becoming combat music.
+  bpm: 96
+  beatGrouping: 4
+  roundTripBeat: 1

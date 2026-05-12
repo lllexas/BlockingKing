@@ -9,6 +9,7 @@ using UnityEngine;
 public enum EnemyIntentPresentationMode
 {
     AllInOneBatch,
+    AllInTwoBatch,
     BatchByIntentType,
     Serial
 }
@@ -35,9 +36,11 @@ public class IntentSystem : MonoBehaviour
     private readonly List<EntityHandle> _enemyIntentBatch = new();
     private readonly List<EntityHandle> _enemyMoveBatch = new();
     private readonly List<EntityHandle> _enemyAttackBatch = new();
+    private readonly List<EntityHandle> _enemyOtherBatch = new();
     private readonly List<EntityHandle> _allInOneBatch = new();
     private readonly List<EntityHandle> _spawnBatch = new();
     private EnemyBeatKind _allInOneBeatKind = EnemyBeatKind.None;
+    private EnemyBeatKind _enemyOtherBeatKind = EnemyBeatKind.None;
     private EnemyBeatKind _spawnBeatKind = EnemyBeatKind.None;
     private EntityHandle _playerIntentActor = EntityHandle.None;
     private Coroutine _runner;
@@ -60,6 +63,9 @@ public class IntentSystem : MonoBehaviour
 
     public void ConfigureEnemyIntentPresentation(EnemyIntentPresentationMode mode)
     {
+        if (enemyIntentPresentationMode != mode)
+            Debug.Log($"[IntentSystem] Enemy intent presentation mode changed: {enemyIntentPresentationMode} -> {mode}");
+
         enemyIntentPresentationMode = mode;
     }
 
@@ -126,6 +132,9 @@ public class IntentSystem : MonoBehaviour
 
     public bool SetIntent(EntityHandle actor, IntentType intentType, Intent intent)
     {
+        if (LevelPlayer.IsActiveStageInputLocked)
+            return false;
+
         var entitySystem = EntitySystem.Instance;
         if (entitySystem == null || !entitySystem.IsValid(actor) || intent == null)
             return false;
@@ -160,6 +169,9 @@ public class IntentSystem : MonoBehaviour
     {
         for (int i = 0; i < _executionSteps.Count; i++)
         {
+            if (LevelPlayer.IsActiveStageInputLocked)
+                break;
+
             var entitySystem = EntitySystem.Instance;
             if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
                 break;
@@ -183,8 +195,10 @@ public class IntentSystem : MonoBehaviour
         _enemyIntentBatch.Clear();
         _enemyMoveBatch.Clear();
         _enemyAttackBatch.Clear();
+        _enemyOtherBatch.Clear();
         _spawnBatch.Clear();
         _allInOneBeatKind = EnemyBeatKind.None;
+        _enemyOtherBeatKind = EnemyBeatKind.None;
         _spawnBeatKind = EnemyBeatKind.None;
 
         _playerIntentActor = ResolvePlayerIntentActor(entitySystem);
@@ -212,6 +226,15 @@ public class IntentSystem : MonoBehaviour
                     _spawnBatch.Add(actor);
 
                 _allInOneBeatKind = MergeEnemyBeatKind(_allInOneBeatKind, ResolveEnemyBeatKind(entitySystem, i));
+                continue;
+            }
+
+            if (enemyIntentPresentationMode == EnemyIntentPresentationMode.AllInTwoBatch &&
+                TryGetAllInTwoBatch(entitySystem, i, out var allInTwoBatch, out var allInTwoBeatKind))
+            {
+                allInTwoBatch.Add(actor);
+                if (allInTwoBatch == _enemyOtherBatch)
+                    _enemyOtherBeatKind = MergeEnemyBeatKind(_enemyOtherBeatKind, allInTwoBeatKind);
                 continue;
             }
 
@@ -244,6 +267,18 @@ public class IntentSystem : MonoBehaviour
         if (enemyIntentPresentationMode == EnemyIntentPresentationMode.AllInOneBatch)
             return;
 
+        if (enemyIntentPresentationMode == EnemyIntentPresentationMode.AllInTwoBatch)
+        {
+            int insertIndex = _playerIntentActor != EntityHandle.None ? 1 : 0;
+            if (_enemyMoveBatch.Count > 0)
+                _executionSteps.Insert(insertIndex++, IntentExecutionStep.Batch(_enemyMoveBatch, EnemyBeatKind.Move));
+
+            if (_enemyOtherBatch.Count > 0)
+                _executionSteps.Insert(insertIndex, IntentExecutionStep.Batch(_enemyOtherBatch, ResolveEnemyOtherBeatKind()));
+
+            return;
+        }
+
         if (_enemyIntentBatch.Count > 0)
             _executionSteps.Insert(_playerIntentActor != EntityHandle.None ? 1 + (_spawnBatch.Count > 0 ? 1 : 0) : (_spawnBatch.Count > 0 ? 1 : 0), IntentExecutionStep.Batch(_enemyIntentBatch, ResolveBatchBeatKind(entitySystem, _enemyIntentBatch)));
 
@@ -261,6 +296,11 @@ public class IntentSystem : MonoBehaviour
     private EnemyBeatKind ResolveAllInOneBeatKind()
     {
         return _allInOneBeatKind == EnemyBeatKind.None ? EnemyBeatKind.Empty : _allInOneBeatKind;
+    }
+
+    private EnemyBeatKind ResolveEnemyOtherBeatKind()
+    {
+        return _enemyOtherBeatKind == EnemyBeatKind.None ? EnemyBeatKind.Empty : _enemyOtherBeatKind;
     }
 
     private EnemyBeatKind ResolveBatchBeatKind(EntitySystem entitySystem, List<EntityHandle> actors)
@@ -351,6 +391,32 @@ public class IntentSystem : MonoBehaviour
         if (intent.Type == IntentType.Attack)
         {
             batch = _enemyAttackBatch;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryGetAllInTwoBatch(EntitySystem entitySystem, int index, out List<EntityHandle> batch, out EnemyBeatKind beatKind)
+    {
+        batch = null;
+        beatKind = EnemyBeatKind.None;
+
+        if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null || index < 0)
+            return false;
+
+        ref var intent = ref entitySystem.entities.intentComponents[index];
+        if (intent.Type == IntentType.Move && intent.Intent is MoveIntent && CanBatchEnemyIntent(entitySystem, index))
+        {
+            batch = _enemyMoveBatch;
+            beatKind = EnemyBeatKind.Move;
+            return true;
+        }
+
+        if (CanBatchAllInOneIntent(entitySystem, index))
+        {
+            batch = _enemyOtherBatch;
+            beatKind = ResolveEnemyBeatKind(entitySystem, index);
             return true;
         }
 
@@ -610,6 +676,7 @@ public class IntentSystem : MonoBehaviour
         _enemyIntentBatch.Clear();
         _enemyMoveBatch.Clear();
         _enemyAttackBatch.Clear();
+        _enemyOtherBatch.Clear();
         _spawnBatch.Clear();
         _playerIntentActor = EntityHandle.None;
         if (_runner != null)

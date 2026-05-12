@@ -19,4 +19,14 @@ public class EntityBP : ScriptableObject
 
     [Header("Presentation")]
     public GameObject prefab;
+    public Mesh instancedMesh;
+    public Material instancedMaterial;
+    public Vector3 visualScale = Vector3.one;
+
+    [Header("Unit Label")]
+    public bool showUnitLabel;
+    public string unitLabelText;
+    public Color unitLabelColor = Color.white;
+    public Vector3 unitLabelOffset = Vector3.zero;
+    public float unitLabelScale = 1f;
 }

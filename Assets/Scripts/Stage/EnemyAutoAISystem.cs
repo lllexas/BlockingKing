@@ -22,6 +22,7 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
 
     private int[] _wallBreakDistanceField;
     private int[] _noWallBreakDistanceField;
+    private int[] _seekDistanceField;
     private int[] _activeBuildField;
     private readonly List<int> _openSet = new();
     private readonly HashSet<int> _reservedMoveCells = new();
@@ -160,6 +161,9 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
 
         if (_noWallBreakDistanceField == null || _noWallBreakDistanceField.Length != size)
             _noWallBreakDistanceField = new int[size];
+
+        if (_seekDistanceField == null || _seekDistanceField.Length != size)
+            _seekDistanceField = new int[size];
     }
 
     private void BuildDistanceField(EntitySystem entitySystem, Vector2Int corePosition, int[] distanceField, bool allowWallBreak)
@@ -278,6 +282,12 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
                 continue;
             }
 
+            if (AllowAttack && TryMoveTowardFutureAttackPoint(entitySystem, core.Position, props, aggroTarget.Position, canBreakWalls, moveDistance, out var futureAttackMoveIntent))
+            {
+                intentSystem.SetIntent(enemyHandle, IntentType.Move, futureAttackMoveIntent);
+                continue;
+            }
+
             int[] movementField = canBreakWalls ? _wallBreakDistanceField : _noWallBreakDistanceField;
             if (!TryGetNextAction(entitySystem, core.Id, core.Position, movementField, canBreakWalls, moveDistance, out var actionType, out var direction, out var actionDistance))
                 continue;
@@ -365,6 +375,10 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
             if (!IsInCrossRange(enemyPosition, targetPosition, rangedAttackRange))
                 return false;
 
+            Vector2Int direction = GetCrossDirection(enemyPosition, targetPosition);
+            if (direction == Vector2Int.zero || !HasWallBetween(entitySystem, enemyPosition, targetPosition, direction))
+                return false;
+
             attackIntent = IntentSystem.Instance.Request<AttackIntent>();
             attackIntent.Setup(targetPosition);
             return true;
@@ -383,6 +397,142 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
         attackIntent.Setup(targetPosition);
         return true;
 
+    }
+
+    private bool TryMoveTowardFutureAttackPoint(
+        EntitySystem entitySystem,
+        Vector2Int enemyPosition,
+        PropertyComponent props,
+        Vector2Int targetPosition,
+        bool allowWallBreak,
+        int moveDistance,
+        out MoveIntent moveIntent)
+    {
+        moveIntent = null;
+
+        if (IsEnemyKind(props, _curseCasterTagId, "Curse", "Caster", "Sorcerer"))
+            return false;
+
+        if (IsEnemyKind(props, _grenadierTagId, "Grenadier") ||
+            IsEnemyKind(props, _crossbowTagId, "Crossbow", "Arbalest") ||
+            IsEnemyKind(props, _artilleryTagId, "Artillery", "Cannon"))
+        {
+            BuildDistanceField(entitySystem, enemyPosition, _seekDistanceField, allowWallBreak);
+            if (!TryFindNearestAttackStandPoint(entitySystem, enemyPosition, props, targetPosition, _seekDistanceField, out var standPoint))
+                return false;
+
+            if (standPoint == enemyPosition)
+                return false;
+
+            Vector2Int direction = GetStepTowardPoint(entitySystem, enemyPosition, standPoint, _seekDistanceField);
+            if (direction == Vector2Int.zero)
+                return false;
+
+            moveIntent = IntentSystem.Instance.Request<MoveIntent>();
+            moveIntent.Setup(direction, Mathf.Max(1, Mathf.Min(moveDistance, 1)));
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryFindNearestAttackStandPoint(
+        EntitySystem entitySystem,
+        Vector2Int enemyPosition,
+        PropertyComponent props,
+        Vector2Int targetPosition,
+        int[] seekDistanceField,
+        out Vector2Int standPoint)
+    {
+        standPoint = default;
+        if (seekDistanceField == null)
+            return false;
+
+        int bestTravel = int.MaxValue;
+        int bestScore = int.MaxValue;
+        bool found = false;
+        var entities = entitySystem.entities;
+
+        for (int i = 0; i < seekDistanceField.Length; i++)
+        {
+            int travel = seekDistanceField[i];
+            if (travel < 0 || travel > bestTravel)
+                continue;
+
+            Vector2Int pos = FromMapIndex(entities, i);
+            if (!CanAttackFromPosition(entitySystem, pos, props, targetPosition))
+                continue;
+
+            int score = travel * 100 + ManhattanDistance(pos, targetPosition) * 8;
+            if (score >= bestScore)
+                continue;
+
+            bestScore = score;
+            bestTravel = travel;
+            standPoint = pos;
+            found = true;
+        }
+
+        return found;
+    }
+
+    private bool CanAttackFromPosition(EntitySystem entitySystem, Vector2Int enemyPosition, PropertyComponent props, Vector2Int targetPosition)
+    {
+        if (IsEnemyKind(props, _grenadierTagId, "Grenadier") ||
+            IsEnemyKind(props, _crossbowTagId, "Crossbow", "Arbalest"))
+        {
+            Vector2Int direction = GetCrossDirection(enemyPosition, targetPosition);
+            return direction != Vector2Int.zero &&
+                   IsInCrossRange(enemyPosition, targetPosition, 6) &&
+                   HasWallBetween(entitySystem, enemyPosition, targetPosition, direction);
+        }
+
+        if (IsEnemyKind(props, _artilleryTagId, "Artillery", "Cannon"))
+        {
+            Vector2Int direction = GetCrossDirection(enemyPosition, targetPosition);
+            return direction != Vector2Int.zero &&
+                   IsInCrossRange(enemyPosition, targetPosition, 6) &&
+                   HasWallBetween(entitySystem, enemyPosition, targetPosition, direction);
+        }
+
+        if (IsEnemyKind(props, _curseCasterTagId, "Curse", "Caster", "Sorcerer"))
+            return false;
+
+        return IsCrossAdjacent(enemyPosition, targetPosition);
+    }
+
+    private Vector2Int GetStepTowardPoint(EntitySystem entitySystem, Vector2Int from, Vector2Int to, int[] distanceField)
+    {
+        Vector2Int bestDirection = Vector2Int.zero;
+        int bestField = int.MaxValue;
+        int bestDistance = int.MaxValue;
+
+        for (int i = 0; i < Directions.Length; i++)
+        {
+            Vector2Int next = from + Directions[i];
+            if (!entitySystem.IsInsideMap(next) || entitySystem.IsWall(next) || entitySystem.GetOccupantId(next) >= 0)
+                continue;
+
+            int index = ToMapIndex(entitySystem.entities, next);
+            int field = distanceField[index];
+            if (field < 0)
+                continue;
+
+            int manhattan = ManhattanDistance(next, to);
+            if (field > bestField || (field == bestField && manhattan >= bestDistance))
+                continue;
+
+            bestField = field;
+            bestDistance = manhattan;
+            bestDirection = Directions[i];
+        }
+
+        return bestDirection;
+    }
+
+    private static int ManhattanDistance(Vector2Int a, Vector2Int b)
+    {
+        return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
     }
 
     private void RefreshCurseLocks(EntitySystem entitySystem)

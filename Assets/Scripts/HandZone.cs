@@ -19,6 +19,7 @@ public class HandZone : MonoBehaviour
     [SerializeField] private RectTransform drawPileAnchor;
     [SerializeField] private RectTransform discardPileAnchor;
     [SerializeField] private CardView cardPrefab;
+    [SerializeField] private HandZoneAnimator handZoneAnimator;
 
     [Header("Layout")]
     [SerializeField] private Vector2 cardSize = new Vector2(180f, 240f);
@@ -49,6 +50,7 @@ public class HandZone : MonoBehaviour
     [SerializeField] private TMP_Text drawPileCountText;
     [SerializeField] private TMP_Text discardPileCountText;
     [SerializeField] private TMP_Text handCountText;
+    [SerializeField] private bool usePilePanelAnimators;
 
     [Header("Grid Overlay")]
     [SerializeField] private Color cardReleaseRangeColor = new Color(0.2f, 0.75f, 1f, 0.28f);
@@ -61,6 +63,7 @@ public class HandZone : MonoBehaviour
     public static bool IsAnyCardInteractionActive { get; private set; }
     public static HandZone ActiveInstance { get; private set; }
     public static bool CardsLocked { get; private set; }
+    public static bool DidConsumeStageBlockingPointerInputThisFrame => _stageBlockingPointerInputFrame == Time.frameCount;
 
     private readonly List<CardSO> _drawPile = new List<CardSO>();
     private readonly List<CardSO> _discardPile = new List<CardSO>();
@@ -96,6 +99,8 @@ public class HandZone : MonoBehaviour
     private float _cachedMaxFanAngle;
     private float _cachedFanArcDepth;
     private float _cachedHoverLift;
+    private static int _stageBlockingPointerInputFrame = -1;
+    private bool _hasPilePanelAnimators;
 
     public CardHandState State => handState;
 
@@ -148,6 +153,12 @@ public class HandZone : MonoBehaviour
 
         if (cardLayer == null)
             cardLayer = transform as RectTransform;
+
+        if (handZoneAnimator == null)
+            handZoneAnimator = GetComponent<HandZoneAnimator>();
+
+        _hasPilePanelAnimators = FindObjectOfType<DrawPilePanelAnimator>(true) != null ||
+                                 FindObjectOfType<DiscardPilePanelAnimator>(true) != null;
 
         CacheLayoutSettings();
     }
@@ -307,7 +318,7 @@ public class HandZone : MonoBehaviour
 
     public bool TryPlayCard(CardView view, CardReleaseTarget target)
     {
-        if (CardsLocked)
+        if (CardsLocked || LevelPlayer.IsActiveStageInputLocked)
             return false;
 
         if (view == null)
@@ -854,6 +865,7 @@ public class HandZone : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(1))
         {
+            MarkStageBlockingPointerInputConsumed();
             CancelPendingCard();
             return;
         }
@@ -861,6 +873,7 @@ public class HandZone : MonoBehaviour
         if (!Input.GetMouseButtonDown(0))
             return;
 
+        MarkStageBlockingPointerInputConsumed();
         var pending = _pendingCard;
         if (!TryResolveCardReleaseTarget(pending, out var target))
             return;
@@ -892,6 +905,11 @@ public class HandZone : MonoBehaviour
         pending.SetInteractable(true);
         pending.SetHoverState(false, hoverTweenDuration, hoverEase);
         RelayoutHand(true);
+    }
+
+    private static void MarkStageBlockingPointerInputConsumed()
+    {
+        _stageBlockingPointerInputFrame = Time.frameCount;
     }
 
     public static bool TryCancelActivePendingCard()
@@ -1217,11 +1235,32 @@ public class HandZone : MonoBehaviour
 
     private void SetVisualVisible(bool visible)
     {
-        SetGameObjectVisible(cardLayer, visible, gameObject);
-        SetGameObjectVisible(drawPileAnchor, visible);
-        SetGameObjectVisible(discardPileAnchor, visible);
-        SetGameObjectVisible(drawPileCountText, visible);
-        SetGameObjectVisible(discardPileCountText, visible);
+        if (handZoneAnimator != null)
+        {
+            if (visible)
+                handZoneAnimator.ShowHandZone();
+            else
+                handZoneAnimator.HideHandZone();
+        }
+
+        if (handZoneAnimator == null)
+            SetGameObjectVisible(cardLayer, visible, gameObject);
+
+        if (ShouldUsePilePanelAnimators())
+        {
+            if (visible)
+                PublishPilePanels();
+            else
+                HidePilePanels();
+        }
+        else
+        {
+            SetGameObjectVisible(drawPileAnchor, visible);
+            SetGameObjectVisible(discardPileAnchor, visible);
+            SetGameObjectVisible(drawPileCountText, visible);
+            SetGameObjectVisible(discardPileCountText, visible);
+        }
+
         SetGameObjectVisible(handCountText, visible);
     }
 
@@ -1476,5 +1515,25 @@ public class HandZone : MonoBehaviour
 
         if (handCountText != null)
             handCountText.text = _hand.Count.ToString();
+
+        if (ShouldUsePilePanelAnimators() && !CardsLocked)
+            PublishPilePanels();
+    }
+
+    private bool ShouldUsePilePanelAnimators()
+    {
+        return usePilePanelAnimators || _hasPilePanelAnimators;
+    }
+
+    private void PublishPilePanels()
+    {
+        PostSystem.Instance?.Send("期望显示面板", new HandPileUIRequest(HandPileUIIds.DrawPile, _drawPile.Count));
+        PostSystem.Instance?.Send("期望显示面板", new HandPileUIRequest(HandPileUIIds.DiscardPile, _discardPile.Count));
+    }
+
+    private static void HidePilePanels()
+    {
+        PostSystem.Instance?.Send("期望隐藏面板", new HandPileUIRequest(HandPileUIIds.DrawPile, 0));
+        PostSystem.Instance?.Send("期望隐藏面板", new HandPileUIRequest(HandPileUIIds.DiscardPile, 0));
     }
 }

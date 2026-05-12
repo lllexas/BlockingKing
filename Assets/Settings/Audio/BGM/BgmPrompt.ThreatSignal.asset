@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53cb8577ca2574a4b93d5063baba2923, type: 3}
+  m_Name: BgmPrompt.ThreatSignal
+  m_EditorClassIdentifier: 
+  title: Threat Dance Signal
+  promptZh: "\u53EF\u65E0\u7F1D\u5FAA\u73AF\u7684\u7EAF\u97F3\u4E50\u9ED1\u6697\u6218\u672F electro house\uFF0C128 BPM\uFF0C\u65E0\u4EBA\u58F0\u3002\u9AD8\u538B\u8D5B\u535A\u7ADE\u6280\u573A\uFF0C\u654C\u65B9\u610F\u56FE\u8B66\u544A\u4E0D\u65AD\u903C\u8FD1\u3002\u5F3A\u52B2\u56DB\u62CD\u5E95\u9F13\uFF0C\u6EDA\u52A8\u4F4E\u97F3\u7EBF\uFF0C\u950B\u5229\u5408\u6210\u5668\u8282\u594F\u97F3\u578B\uFF0C\u77ED\u4FC3\u7684\u8B66\u62A5\u5F0F hook\uFF0C\u6545\u969C\u97F3\u70B9\u7F00\u3002\u7D27\u5F20\u3001\u5E05\u6C14\u3001\u6709\u821E\u52A8\u611F\uFF0C\u4F46\u4E0D\u8981\u5927\u7206\u70B8\u6216\u957F\u94FA\u57AB\u3002"
+  promptEn: Loopable instrumental dark tactical electro house, 128 BPM, no vocals. Cyber arena under pressure, approaching enemy intent warnings. Strong four-on-the-floor kick, rolling bassline, sharp synth rhythm patterns, short alarm-like hook, glitch accents. Tense, stylish, danceable, but no huge drops or long build-ups.
+  prompt: Loopable instrumental dark tactical electro house, 128 BPM, no vocals. Cyber arena under pressure, approaching enemy intent warnings. Strong four-on-the-floor kick, rolling bassline, sharp synth rhythm patterns, short alarm-like hook, glitch accents. Tense, stylish, danceable, but no huge drops or long build-ups.
+  negativePrompt: vocals, lyrics, orchestral epic trailer, cinematic choir, pop song structure, guitar solo, overly emotional melody, dramatic drop, dubstep wobble drop, ambient drone, slow cinematic intro, noisy mix
+  bpm: 128
+  beatGrouping: 4
+  roundTripBeat: 1
+  generatedClip: {fileID: 0}
+  generator: Suno
+  generatedAt: Pending
+  notes: Higher-pressure danceable version for danger-heavy combat.

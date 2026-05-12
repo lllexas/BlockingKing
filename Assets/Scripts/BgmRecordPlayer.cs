@@ -10,12 +10,23 @@ public sealed class BgmRecordPlayer : MonoBehaviour
     [SerializeField] private bool syncBeatTime = true;
 
     private int _currentTrackIndex = -1;
+    private BgmPromptSO _currentPrompt;
+    private bool _hasPlaybackStarted;
     private bool _beatSyncPending;
+    private float _lastAppliedBpm = -1f;
+    private bool _lastAppliedRoundTripBeat;
+    private BgmPromptSO.BeatGrouping _lastAppliedBeatGrouping = BgmPromptSO.BeatGrouping.QuadBeat;
 
     public BgmPlaylistSO Playlist => playlist;
     public int CurrentTrackIndex => _currentTrackIndex;
     public BgmPlaylistSO.Track CurrentTrack => playlist != null ? playlist.GetTrack(_currentTrackIndex) : null;
+    public BgmPromptSO CurrentPrompt => _currentPrompt;
     public bool HasTracks => playlist != null && playlist.Count > 0;
+    public bool PlayOnStart
+    {
+        get => playOnStart;
+        set => playOnStart = value;
+    }
 
     private void Awake()
     {
@@ -30,14 +41,22 @@ public sealed class BgmRecordPlayer : MonoBehaviour
 
     private void Start()
     {
-        if (playOnStart)
+        if (playOnStart && !_hasPlaybackStarted)
             PlayDefault();
     }
 
     private void Update()
     {
         if (_beatSyncPending)
-            ApplyBeatTime(CurrentTrack);
+        {
+            var track = CurrentTrack;
+            if (track != null)
+                ApplyBeatTime(track.ResolvedBpm, track.ResolvedBeatGrouping, track.ResolvedRoundTripBeat);
+            else if (_currentPrompt != null)
+                ApplyBeatTime(_currentPrompt.bpm, _currentPrompt.beatGrouping, _currentPrompt.roundTripBeat);
+        }
+
+        SyncBeatTimeContinuously();
     }
 
     private void OnDestroy()
@@ -53,6 +72,18 @@ public sealed class BgmRecordPlayer : MonoBehaviour
             PlayDefault();
     }
 
+    public void PlayPrompt(BgmPromptSO prompt, bool loop = true)
+    {
+        if (prompt == null || prompt.generatedClip == null)
+            return;
+
+        _currentTrackIndex = -1;
+        _currentPrompt = prompt;
+        _hasPlaybackStarted = true;
+        AudioBus.Ensure().PlayMusic(prompt.generatedClip, loop);
+        ApplyBeatConfiguration(prompt);
+    }
+
     public void PlayDefault()
     {
         if (!HasTracks)
@@ -66,6 +97,7 @@ public sealed class BgmRecordPlayer : MonoBehaviour
         if (!HasTracks)
             return;
 
+        _currentPrompt = null;
         PlayTrack(_currentTrackIndex < 0 ? playlist.GetDefaultIndex() : _currentTrackIndex + 1);
     }
 
@@ -74,6 +106,7 @@ public sealed class BgmRecordPlayer : MonoBehaviour
         if (!HasTracks)
             return;
 
+        _currentPrompt = null;
         PlayTrack(_currentTrackIndex < 0 ? playlist.GetDefaultIndex() : _currentTrackIndex - 1);
     }
 
@@ -87,14 +120,25 @@ public sealed class BgmRecordPlayer : MonoBehaviour
         if (track == null || track.ResolvedClip == null)
             return;
 
+        _currentPrompt = null;
+        _hasPlaybackStarted = true;
         _currentTrackIndex = wrapped;
         AudioBus.Ensure().PlayMusic(track.ResolvedClip, loop);
-        ApplyBeatTime(track);
+        ApplyBeatConfiguration(track.PromptAsset);
     }
 
-    private void ApplyBeatTime(BgmPlaylistSO.Track track)
+    private void ApplyBeatConfiguration(BgmPromptSO prompt)
     {
-        if (!syncBeatTime || track == null || track.ResolvedBpm <= 0f)
+        if (prompt == null)
+            return;
+
+        ApplyBeatTime(prompt.bpm, prompt.beatGrouping, prompt.roundTripBeat);
+        ConfigureIntentPresentation(prompt);
+    }
+
+    private void ApplyBeatTime(float bpm, BgmPromptSO.BeatGrouping beatGrouping, bool roundTripBeat)
+    {
+        if (!syncBeatTime || bpm <= 0f)
             return;
 
         var drawSystem = DrawSystem.Instance;
@@ -104,7 +148,54 @@ public sealed class BgmRecordPlayer : MonoBehaviour
             return;
         }
 
-        drawSystem.ConfigureBeatBpm(track.ResolvedBpm, track.ResolvedRoundTripBeat);
+        drawSystem.ConfigureBeatBpm(bpm, beatGrouping, roundTripBeat);
         _beatSyncPending = false;
+        _lastAppliedBpm = bpm;
+        _lastAppliedRoundTripBeat = roundTripBeat;
+        _lastAppliedBeatGrouping = beatGrouping;
+    }
+
+    private static void ConfigureIntentPresentation(BgmPromptSO prompt)
+    {
+        var intentSystem = IntentSystem.Instance;
+        if (intentSystem == null || prompt == null)
+            return;
+
+        var mode = prompt.UsesAllInTwoPresentation
+            ? EnemyIntentPresentationMode.AllInTwoBatch
+            : EnemyIntentPresentationMode.AllInOneBatch;
+
+        intentSystem.ConfigureEnemyIntentPresentation(mode);
+        Debug.Log($"[BgmRecordPlayer] Intent presentation => {mode} via BGM '{prompt.ResolvedTitle}' (BPM={prompt.bpm:0.#}, beatGrouping={prompt.beatGrouping}, roundTripBeat={prompt.roundTripBeat})");
+    }
+
+    private void SyncBeatTimeContinuously()
+    {
+        var drawSystem = DrawSystem.Instance;
+        if (drawSystem == null)
+            return;
+
+        if (_currentPrompt != null)
+        {
+            if (!Mathf.Approximately(_lastAppliedBpm, _currentPrompt.bpm) ||
+                _lastAppliedRoundTripBeat != _currentPrompt.roundTripBeat ||
+                _lastAppliedBeatGrouping != _currentPrompt.beatGrouping)
+            {
+                ApplyBeatConfiguration(_currentPrompt);
+            }
+
+            return;
+        }
+
+        var track = CurrentTrack;
+        if (track == null)
+            return;
+
+        if (!Mathf.Approximately(_lastAppliedBpm, track.ResolvedBpm) ||
+            _lastAppliedRoundTripBeat != track.ResolvedRoundTripBeat ||
+            _lastAppliedBeatGrouping != track.ResolvedBeatGrouping)
+        {
+            ApplyBeatConfiguration(track.PromptAsset);
+        }
     }
 }

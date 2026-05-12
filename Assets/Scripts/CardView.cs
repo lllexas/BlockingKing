@@ -44,6 +44,13 @@ public class CardView : MonoBehaviour,
     private Vector2 _upperBaseSize;
 
     public CardSO Card { get; private set; }
+    public event Action<CardView> DrawImpactRequested;
+    public event Action<CardView> HoverImpactRequested;
+    public event Action<CardView> HoverImpactStopped;
+    public event Action<CardView> PressImpactRequested;
+    public event Action<CardView> AimImpactRequested;
+    public event Action<CardView> AimImpactStopped;
+    public event Action<CardView> ReleaseImpactRequested;
 
     public RectTransform RectTransform => rectTransform != null ? rectTransform : (rectTransform = GetComponent<RectTransform>());
 
@@ -157,6 +164,7 @@ public class CardView : MonoBehaviour,
         RectTransform.anchoredPosition = anchoredPosition;
         RectTransform.localScale = Vector3.one * scale;
         RectTransform.localEulerAngles = new Vector3(0f, 0f, rotationZ);
+        AimImpactStopped?.Invoke(this);
     }
 
     public void TweenTo(Vector2 anchoredPosition, float scale, float rotationZ, float duration, Ease ease, Action onComplete = null)
@@ -173,6 +181,14 @@ public class CardView : MonoBehaviour,
 
     public void SetHoverState(bool hovered, float duration = 0.12f, Ease ease = Ease.OutCubic, Action onComplete = null)
     {
+        if (hovered)
+            HoverImpactRequested?.Invoke(this);
+        else
+        {
+            HoverImpactStopped?.Invoke(this);
+            AimImpactStopped?.Invoke(this);
+        }
+
         _layoutMotion?.Kill();
         _layoutMotion = DOTween.Sequence();
         _layoutMotion.Join(upperRoot != null
@@ -189,6 +205,21 @@ public class CardView : MonoBehaviour,
     {
         if (hoverHoldArea != null)
             hoverHoldArea.gameObject.SetActive(active);
+    }
+
+    public void PlayDrawImpact()
+    {
+        DrawImpactRequested?.Invoke(this);
+    }
+
+    public void PlayAimImpact()
+    {
+        AimImpactRequested?.Invoke(this);
+    }
+
+    public void PlayReleaseImpact()
+    {
+        ReleaseImpactRequested?.Invoke(this);
     }
 
     private void ApplyLayout(bool hovered)
@@ -233,6 +264,7 @@ public class CardView : MonoBehaviour,
         if (!_interactable || eventData.button != PointerEventData.InputButton.Left)
             return;
 
+        PressImpactRequested?.Invoke(this);
         _clickHandler?.Invoke(this);
     }
 
@@ -241,6 +273,7 @@ public class CardView : MonoBehaviour,
         if (!_interactable || eventData.button != PointerEventData.InputButton.Left)
             return;
 
+        PressImpactRequested?.Invoke(this);
         _beginDragHandler?.Invoke(this, eventData);
     }
 

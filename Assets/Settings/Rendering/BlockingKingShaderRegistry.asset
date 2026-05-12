@@ -24,6 +24,7 @@ MonoBehaviour:
   - {fileID: 4800000, guid: ca48d4412f96285409b2044fec58fa5b, type: 3}
   - {fileID: 4800000, guid: a736dc5097a5b84498c255b2c83208b8, type: 3}
   - {fileID: 4800000, guid: 4a249b3d128c38a4d8fec636588d440e, type: 3}
+  - {fileID: 4800000, guid: 3a9d06d94c2d4cebb8a09351f97d41a2, type: 3}
   runtimeMaterials:
   - {fileID: 2100000, guid: 391fd5930ef59f1489fdef6fc7e9fade, type: 2}
   - {fileID: 2100000, guid: 45f220d28a55447489d4a042648c602b, type: 2}
@@ -39,3 +40,4 @@ MonoBehaviour:
   - {fileID: 2100000, guid: c6bce5a827bb9c549af3f15fea9ea42b, type: 2}
   - {fileID: 2100000, guid: 43067182b83a8c443a9f6d9cc94155fd, type: 2}
   - {fileID: 2100000, guid: 702167fccd7fd1a4c8f234f5d661f982, type: 2}
+  - {fileID: 2100000, guid: 4c09ab8fa65b4b0fb49df02524cad651, type: 2}

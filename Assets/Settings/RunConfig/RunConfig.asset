@@ -19,3 +19,5 @@ MonoBehaviour:
   roundSettings: {fileID: 11400000, guid: 8949a57160ca0cc4c97f5938a2d0ba9e, type: 2}
   difficultySettings: {fileID: 11400000, guid: 41ca1ed71d52f4d4688389c4fbe45e28, type: 2}
   rewardSettings: {fileID: 11400000, guid: f931c454a3dc5af448ab5682992462ab, type: 2}
+  mainMenuBgm: {fileID: 11400000, guid: 1762ca61d4944d32846fac48465a4aa0, type: 2}
+  bgmPlaylist: {fileID: 11400000, guid: 7c41424d35c24ae8b20f576ee9ad1ff1, type: 2}

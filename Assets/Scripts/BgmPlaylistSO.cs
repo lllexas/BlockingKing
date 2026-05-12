@@ -9,25 +9,22 @@ public sealed class BgmPlaylistSO : ScriptableObject
     {
         public BgmPromptSO promptAsset;
         public string title;
-        public AudioClip clip;
-        [Min(1f)] public float bpm = 125f;
-        [Tooltip("When enabled, DrawSystem beatDuration is half of the musical beat interval. This matches current AllInOne player/enemy round-trip rhythm.")]
-        public bool roundTripBeat = true;
+
+        public BgmPromptSO PromptAsset => promptAsset;
 
         public string ResolvedTitle => promptAsset != null
             ? promptAsset.ResolvedTitle
             : !string.IsNullOrWhiteSpace(title)
                 ? title
-                : clip != null
-                    ? clip.name
-                    : "Untitled";
+                : "Untitled";
 
         public AudioClip ResolvedClip => promptAsset != null && promptAsset.generatedClip != null
             ? promptAsset.generatedClip
-            : clip;
+            : null;
 
-        public float ResolvedBpm => promptAsset != null ? promptAsset.bpm : bpm;
-        public bool ResolvedRoundTripBeat => promptAsset != null ? promptAsset.roundTripBeat : roundTripBeat;
+        public float ResolvedBpm => promptAsset != null ? promptAsset.bpm : 0f;
+        public BgmPromptSO.BeatGrouping ResolvedBeatGrouping => promptAsset != null ? promptAsset.beatGrouping : BgmPromptSO.BeatGrouping.QuadBeat;
+        public bool ResolvedRoundTripBeat => promptAsset != null && promptAsset.roundTripBeat;
     }
 
     public Track[] tracks;

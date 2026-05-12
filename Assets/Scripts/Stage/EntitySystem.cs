@@ -289,6 +289,9 @@ public class EntitySystem : MonoBehaviour
 
     private void UpdateTick()
     {
+        if (LevelPlayer.IsActiveStageInputLocked)
+            return;
+
         var intentSystem = IntentSystem.Instance;
         if (intentSystem != null && !intentSystem.CanAcceptTick)
             return;
@@ -324,6 +327,9 @@ public class EntitySystem : MonoBehaviour
     private void HandleIntentQueueCompleted()
     {
         if (!isActiveAndEnabled || !_initialized)
+            return;
+
+        if (LevelPlayer.IsActiveStageInputLocked)
             return;
 
         EnemyAutoAISystem.Instance?.Tick();

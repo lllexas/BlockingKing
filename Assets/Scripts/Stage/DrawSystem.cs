@@ -81,7 +81,16 @@ public class DrawSystem : MonoBehaviour
     [SerializeField] private Color statsOccludedOutlineColor = new(0.08f, 0.08f, 0.08f, 1f);
     [SerializeField] private Color attackTextColor = new(0.95f, 0.35f, 0.25f);
     [SerializeField] private Color healthTextColor = new(0.35f, 0.9f, 0.45f);
+    [SerializeField] private Color blockTextColor = new(0.25f, 0.85f, 1f);
     [SerializeField] private Color countdownTextColor = new(1f, 0.16f, 0.08f);
+
+    [Header("Unit Label Text")]
+    [SerializeField] private bool showUnitLabelText = true;
+    [SerializeField] private float unitLabelTextHeightPadding = 0.025f;
+    [SerializeField] private float unitLabelTextScale = 1f;
+    [SerializeField] private float unitLabelTextFontSize = 3f;
+    [SerializeField] private float unitLabelTextMinFontSize = 0.5f;
+    [SerializeField] private Vector2 unitLabelTextRectSize = new(0.45f, 0.32f);
 
     private readonly Matrix4x4[] _playerMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _boxMatrices = new Matrix4x4[BatchSize];
@@ -90,7 +99,9 @@ public class DrawSystem : MonoBehaviour
     private readonly Matrix4x4[] _coreBoxGlassMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[][] _enemyMatricesByKind = new Matrix4x4[EnemyVisualKindCount][];
     private readonly Matrix4x4[] _wallMatrices = new Matrix4x4[BatchSize];
+    private readonly Dictionary<PresentationBatchKey, PresentationBatch> _presentationBatches = new();
     private readonly List<StatTextPair> _statTexts = new();
+    private readonly List<UnitLabelText> _unitLabelTexts = new();
     private int _playerCount;
     private int _boxCount;
     private int _coreBoxCount;
@@ -99,6 +110,7 @@ public class DrawSystem : MonoBehaviour
     private readonly int[] _enemyCountsByKind = new int[EnemyVisualKindCount];
     private int _wallCount;
     private int _statTextCount;
+    private int _unitLabelTextCount;
     private Material _runtimeStatsVisibleMaterial;
     private Material _runtimeStatsOccludedMaterial;
     private Material _runtimeStatsMaterialSource;
@@ -190,6 +202,23 @@ public class DrawSystem : MonoBehaviour
             : Mathf.Max(0.03f, 60f / bpm);
     }
 
+    public void ConfigureBeatBpm(float bpm, BgmPromptSO.BeatGrouping beatGrouping, bool roundTripBeat = true)
+    {
+        if (bpm <= 0f)
+            return;
+
+        float beatFactor = beatGrouping switch
+        {
+            BgmPromptSO.BeatGrouping.TripleBeat => 1f / 3f,
+            BgmPromptSO.BeatGrouping.CompoundSix => 1f / 6f,
+            _ => 1f / 2f
+        };
+
+        beatDuration = roundTripBeat
+            ? Mathf.Max(0.03f, 60f / bpm * beatFactor)
+            : Mathf.Max(0.03f, 60f / bpm);
+    }
+
     public void SetWallMaterial(Material material)
     {
         if (material == null)
@@ -220,6 +249,8 @@ public class DrawSystem : MonoBehaviour
         _coreBoxGlassCount = 0;
         ResetEnemyCounts();
         _wallCount = 0;
+        ResetPresentationBatches();
+        _unitLabelTextCount = 0;
 
         var entities = entitySystem.entities;
         if (entities.entityCount <= 0)
@@ -231,6 +262,7 @@ public class DrawSystem : MonoBehaviour
             }
 
             HideUnusedStatTexts();
+            HideUnusedUnitLabelTexts();
             return;
         }
 
@@ -243,21 +275,25 @@ public class DrawSystem : MonoBehaviour
             switch (core.EntityType)
             {
                 case EntityType.Player:
-                    AddPlayer(i, core.Position);
-                    AddStatsText(i, core.EntityType, core.Position, CombatStats.GetAttack(entities.statusComponents[i]), CombatStats.GetCurrentHealth(entities.statusComponents[i]));
+                    if (!TryAddBPPresentation(i, core.EntityType, core.Position, entities.propertyComponents[i], playerMaterial))
+                        AddPlayer(i, core.Position);
+                    AddStatsText(i, core.EntityType, core.Position, entities.statusComponents[i]);
                     break;
                 case EntityType.Box:
-                    AddBox(i, core.Position, entities.propertyComponents[i].IsCore);
+                    if (!TryAddBPPresentation(i, core.EntityType, core.Position, entities.propertyComponents[i], entities.propertyComponents[i].IsCore ? coreBoxMaterial : boxMaterial))
+                        AddBox(i, core.Position, entities.propertyComponents[i].IsCore);
                     if (entities.propertyComponents[i].IsCore)
-                        AddStatsText(i, core.EntityType, core.Position, CombatStats.GetAttack(entities.statusComponents[i]), CombatStats.GetCurrentHealth(entities.statusComponents[i]));
+                        AddStatsText(i, core.EntityType, core.Position, entities.statusComponents[i]);
                     break;
                 case EntityType.Enemy:
-                    AddEnemy(i, core.Position, entities.propertyComponents[i]);
-                    AddStatsText(i, core.EntityType, core.Position, CombatStats.GetAttack(entities.statusComponents[i]), CombatStats.GetCurrentHealth(entities.statusComponents[i]));
+                    if (!TryAddBPPresentation(i, core.EntityType, core.Position, entities.propertyComponents[i], ResolveEnemyMaterial(entities.propertyComponents[i])))
+                        AddEnemy(i, core.Position, entities.propertyComponents[i]);
+                    AddStatsText(i, core.EntityType, core.Position, entities.statusComponents[i]);
                     break;
                 case EntityType.Wall:
-                    AddWall(i, core.Position);
-                    AddStatsText(i, core.EntityType, core.Position, CombatStats.GetAttack(entities.statusComponents[i]), CombatStats.GetCurrentHealth(entities.statusComponents[i]));
+                    if (!TryAddBPPresentation(i, core.EntityType, core.Position, entities.propertyComponents[i], wallMaterial))
+                        AddWall(i, core.Position);
+                    AddStatsText(i, core.EntityType, core.Position, entities.statusComponents[i]);
                     break;
                 case EntityType.Target:
                     if (entities.counterComponents[i].NextTick > 0)
@@ -273,7 +309,9 @@ public class DrawSystem : MonoBehaviour
         FlushCoreBoxGlass();
         FlushEnemies();
         FlushWalls();
+        FlushPresentationBatches();
         HideUnusedStatTexts();
+        HideUnusedUnitLabelTexts();
     }
 
     private void AddPlayer(int entityIndex, Vector2Int gridPos)
@@ -318,6 +356,41 @@ public class DrawSystem : MonoBehaviour
         _wallMatrices[_wallCount++] = Matrix4x4.TRS(GetVisualPosition(entityIndex, EntityType.Wall, gridPos), Quaternion.identity, wallScale);
         if (_wallCount == BatchSize)
             FlushWalls();
+    }
+
+    private bool TryAddBPPresentation(int entityIndex, EntityType entityType, Vector2Int gridPos, PropertyComponent properties, Material fallbackMaterial)
+    {
+        EntityBP bp = properties.SourceBP;
+        if (bp == null || bp.instancedMesh == null)
+            return false;
+
+        Material material = bp.instancedMaterial != null ? bp.instancedMaterial : fallbackMaterial;
+        if (material == null)
+            return false;
+
+        material.enableInstancing = true;
+        Vector3 scale = ResolveVisualScale(bp.visualScale, ResolveDefaultScale(entityType, properties));
+        var key = new PresentationBatchKey(bp.instancedMesh, material);
+        if (!_presentationBatches.TryGetValue(key, out var batch))
+        {
+            batch = new PresentationBatch(bp.instancedMesh, material);
+            _presentationBatches.Add(key, batch);
+        }
+
+        Vector3 position = GetBPMeshVisualPosition(entityIndex, entityType, gridPos);
+        batch.Add(Matrix4x4.TRS(position, Quaternion.identity, scale));
+        AddUnitLabelText(entityIndex, entityType, gridPos, bp, scale, position);
+        if (batch.Count == BatchSize)
+            FlushPresentationBatch(batch);
+
+        return true;
+    }
+
+    private Vector3 GetBPMeshVisualPosition(int entityIndex, EntityType entityType, Vector2Int gridPos)
+    {
+        Vector3 position = GetVisualPosition(entityIndex, entityType, gridPos);
+        position.y -= ToEntityWorld(entityType, gridPos).y;
+        return position;
     }
 
     private void FlushPlayers()
@@ -433,25 +506,59 @@ public class DrawSystem : MonoBehaviour
         _wallCount = 0;
     }
 
-    private void AddStatsText(int entityIndex, EntityType entityType, Vector2Int gridPos, int attack, int health)
+    private void FlushPresentationBatches()
+    {
+        foreach (var pair in _presentationBatches)
+            FlushPresentationBatch(pair.Value);
+    }
+
+    private void FlushPresentationBatch(PresentationBatch batch)
+    {
+        if (batch == null || batch.Count == 0)
+            return;
+
+        if (batch.Mesh == null || batch.Material == null)
+        {
+            batch.Clear();
+            return;
+        }
+
+        Graphics.DrawMeshInstanced(batch.Mesh, 0, batch.Material, batch.Matrices, batch.Count);
+        batch.Clear();
+    }
+
+    private void ResetPresentationBatches()
+    {
+        foreach (var pair in _presentationBatches)
+            pair.Value.Clear();
+    }
+
+    private void AddStatsText(int entityIndex, EntityType entityType, Vector2Int gridPos, in StatusComponent status)
     {
         if (!showStatsText)
             return;
 
+        int attack = CombatStats.GetAttack(status);
+        int health = CombatStats.GetCurrentHealth(status);
+        int block = Mathf.Max(0, status.Block);
         var pair = GetStatTextPair(_statTextCount++);
         pair.Root.SetActive(true);
         pair.SetAttackVisible(attack > 0);
         pair.SetHealthVisible(true);
+        pair.SetBlockVisible(block > 0);
         pair.SetCountdownVisible(false);
         if (attack > 0)
             pair.SetAttackText(attack.ToString());
 
         pair.SetHealthText(health.ToString());
+        if (block > 0)
+            pair.SetBlockText(block.ToString());
 
         Vector3 visualPosition = GetVisualPosition(entityIndex, entityType, gridPos);
         float y = statsTextHeight * cellSize;
         pair.AttackRoot.transform.position = new Vector3(visualPosition.x - 0.5f * cellSize, y, visualPosition.z - 0.5f * cellSize);
         pair.HealthRoot.transform.position = new Vector3(visualPosition.x + 0.5f * cellSize, y, visualPosition.z - 0.5f * cellSize);
+        pair.BlockRoot.transform.position = new Vector3(visualPosition.x + 0.5f * cellSize, y, visualPosition.z + 0.5f * cellSize);
     }
 
     private void AddCountdownText(int entityIndex, EntityType entityType, Vector2Int gridPos, int remainingTicks)
@@ -463,6 +570,7 @@ public class DrawSystem : MonoBehaviour
         pair.Root.SetActive(true);
         pair.SetAttackVisible(false);
         pair.SetHealthVisible(false);
+        pair.SetBlockVisible(false);
         pair.SetCountdownVisible(true);
         pair.SetCountdownText(remainingTicks.ToString());
 
@@ -486,8 +594,9 @@ public class DrawSystem : MonoBehaviour
 
         var attack = CreateStatTextStack(root.transform, "Attack", attackTextColor);
         var health = CreateStatTextStack(root.transform, "Health", healthTextColor);
+        var block = CreateStatTextStack(root.transform, "Block", blockTextColor);
         var countdown = CreateStatTextStack(root.transform, "Countdown", countdownTextColor);
-        return new StatTextPair(root, attack, health, countdown);
+        return new StatTextPair(root, attack, health, block, countdown);
     }
 
     private StatTextStack CreateStatTextStack(Transform parent, string name, Color color)
@@ -516,6 +625,7 @@ public class DrawSystem : MonoBehaviour
         text.alignment = parent.name switch
         {
             "Attack" => TextAlignmentOptions.BottomLeft,
+            "Block" => TextAlignmentOptions.TopRight,
             "Countdown" => TextAlignmentOptions.TopRight,
             _ => TextAlignmentOptions.BottomRight
         };
@@ -528,6 +638,7 @@ public class DrawSystem : MonoBehaviour
         rectTransform.pivot = parent.name switch
         {
             "Attack" => Vector2.zero,
+            "Block" => new Vector2(1f, 1f),
             "Countdown" => new Vector2(1f, 1f),
             _ => new Vector2(1f, 0f)
         };
@@ -645,6 +756,98 @@ public class DrawSystem : MonoBehaviour
             _statTexts[i].Root.SetActive(false);
 
         _statTextCount = 0;
+    }
+
+    private void AddUnitLabelText(int entityIndex, EntityType entityType, Vector2Int gridPos, EntityBP bp, Vector3 visualScale, Vector3 meshVisualPosition)
+    {
+        if (!showUnitLabelText
+            || bp == null
+            || string.IsNullOrEmpty(bp.unitLabelText)
+            || bp.instancedMesh == null)
+            return;
+
+        var label = GetUnitLabelText(_unitLabelTextCount++);
+        label.Root.SetActive(true);
+        label.SetText(ExpandUnitLabelText(bp.unitLabelText));
+        label.SetColor(bp.unitLabelColor);
+
+        Bounds bounds = bp.instancedMesh.bounds;
+        float topY = meshVisualPosition.y + bounds.max.y * visualScale.y;
+        float padding = Mathf.Max(0f, unitLabelTextHeightPadding) * cellSize;
+        Vector3 offset = new Vector3(
+            bp.unitLabelOffset.x * visualScale.x,
+            bp.unitLabelOffset.y * visualScale.y,
+            bp.unitLabelOffset.z * visualScale.z);
+        Vector3 labelPosition = new Vector3(meshVisualPosition.x, topY + padding, meshVisualPosition.z) + offset;
+
+        label.Root.transform.position = labelPosition;
+        label.Root.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        label.Root.transform.localScale = Vector3.one * (unitLabelTextScale * Mathf.Max(0.0001f, bp.unitLabelScale));
+    }
+
+    private UnitLabelText GetUnitLabelText(int index)
+    {
+        while (_unitLabelTexts.Count <= index)
+            _unitLabelTexts.Add(CreateUnitLabelText(_unitLabelTexts.Count));
+
+        return _unitLabelTexts[index];
+    }
+
+    private UnitLabelText CreateUnitLabelText(int index)
+    {
+        var root = new GameObject($"UnitLabelText_{index:000}");
+        root.transform.SetParent(transform, false);
+
+        var visible = CreateUnitLabelTextMesh(root.transform, "Visible", ResolveStatsVisibleMaterial());
+        var occluded = CreateUnitLabelTextMesh(root.transform, "Occluded", ResolveStatsOccludedMaterial());
+        var label = new UnitLabelText(root, visible, occluded);
+        label.Root.SetActive(false);
+        return label;
+    }
+
+    private TextMeshPro CreateUnitLabelTextMesh(Transform parent, string name, Material material)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = Vector3.zero;
+        go.transform.localRotation = Quaternion.identity;
+        go.transform.localScale = Vector3.one;
+
+        var text = go.AddComponent<TextMeshPro>();
+        text.font = ResolveStatsFont();
+        text.fontSharedMaterial = material;
+        text.alignment = TextAlignmentOptions.Center;
+        text.fontSize = unitLabelTextFontSize;
+        text.enableAutoSizing = true;
+        text.fontSizeMin = unitLabelTextMinFontSize;
+        text.fontSizeMax = unitLabelTextFontSize;
+        text.color = Color.white;
+        text.enableWordWrapping = false;
+        text.overflowMode = TextOverflowModes.Truncate;
+        text.text = string.Empty;
+
+        RectTransform rectTransform = text.rectTransform;
+        rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        rectTransform.sizeDelta = unitLabelTextRectSize;
+        return text;
+    }
+
+    private void HideUnusedUnitLabelTexts()
+    {
+        for (int i = _unitLabelTextCount; i < _unitLabelTexts.Count; i++)
+            _unitLabelTexts[i].Root.SetActive(false);
+
+        _unitLabelTextCount = 0;
+    }
+
+    private static string ExpandUnitLabelText(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return text;
+
+        return text
+            .Replace("\\n", "\n")
+            .Replace("\\t", "\t");
     }
 
     private Vector3 ToWorld(Vector2Int gridPos)
@@ -952,6 +1155,62 @@ public class DrawSystem : MonoBehaviour
         }
     }
 
+    private readonly struct PresentationBatchKey : System.IEquatable<PresentationBatchKey>
+    {
+        private readonly Mesh _mesh;
+        private readonly Material _material;
+
+        public PresentationBatchKey(Mesh mesh, Material material)
+        {
+            _mesh = mesh;
+            _material = material;
+        }
+
+        public bool Equals(PresentationBatchKey other)
+        {
+            return ReferenceEquals(_mesh, other._mesh) && ReferenceEquals(_material, other._material);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is PresentationBatchKey other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = _mesh != null ? _mesh.GetInstanceID() : 0;
+                hash = (hash * 397) ^ (_material != null ? _material.GetInstanceID() : 0);
+                return hash;
+            }
+        }
+    }
+
+    private sealed class PresentationBatch
+    {
+        public readonly Mesh Mesh;
+        public readonly Material Material;
+        public readonly Matrix4x4[] Matrices = new Matrix4x4[BatchSize];
+        public int Count;
+
+        public PresentationBatch(Mesh mesh, Material material)
+        {
+            Mesh = mesh;
+            Material = material;
+        }
+
+        public void Add(Matrix4x4 matrix)
+        {
+            Matrices[Count++] = matrix;
+        }
+
+        public void Clear()
+        {
+            Count = 0;
+        }
+    }
+
     private void EnsureResources()
     {
         EnsureEnemyBuffers();
@@ -1013,6 +1272,32 @@ public class DrawSystem : MonoBehaviour
         _enemyMaterialsByKind[(int)EnemyVisualKind.CurseCaster] ??= CreateUnitMaterial(enemyCurseCasterColor);
         _enemyMaterialsByKind[(int)EnemyVisualKind.Guokui] ??= CreateUnitMaterial(enemyGuokuiColor);
         _enemyMaterialsByKind[(int)EnemyVisualKind.Ertong] ??= CreateUnitMaterial(enemyErtongColor);
+    }
+
+    private Material ResolveEnemyMaterial(PropertyComponent properties)
+    {
+        int kind = (int)ResolveEnemyVisualKind(properties);
+        if (kind >= 0 && kind < _enemyMaterialsByKind.Length && _enemyMaterialsByKind[kind] != null)
+            return _enemyMaterialsByKind[kind];
+
+        return enemyMaterial;
+    }
+
+    private Vector3 ResolveDefaultScale(EntityType entityType, PropertyComponent properties)
+    {
+        return entityType switch
+        {
+            EntityType.Player => playerScale,
+            EntityType.Box => properties.IsCore ? boxScale : boxScale,
+            EntityType.Enemy => enemyScale,
+            EntityType.Wall => wallScale,
+            _ => Vector3.one
+        };
+    }
+
+    private static Vector3 ResolveVisualScale(Vector3 configuredScale, Vector3 fallbackScale)
+    {
+        return configuredScale == Vector3.zero ? fallbackScale : configuredScale;
     }
 
     private void ResetEnemyCounts()
@@ -1173,24 +1458,30 @@ public class DrawSystem : MonoBehaviour
         public readonly GameObject Root;
         public readonly GameObject AttackRoot;
         public readonly GameObject HealthRoot;
+        public readonly GameObject BlockRoot;
         public readonly GameObject CountdownRoot;
         private readonly TextMeshPro _attackVisible;
         private readonly TextMeshPro _attackOccluded;
         private readonly TextMeshPro _healthVisible;
         private readonly TextMeshPro _healthOccluded;
+        private readonly TextMeshPro _blockVisible;
+        private readonly TextMeshPro _blockOccluded;
         private readonly TextMeshPro _countdownVisible;
         private readonly TextMeshPro _countdownOccluded;
 
-        public StatTextPair(GameObject root, StatTextStack attack, StatTextStack health, StatTextStack countdown)
+        public StatTextPair(GameObject root, StatTextStack attack, StatTextStack health, StatTextStack block, StatTextStack countdown)
         {
             Root = root;
             AttackRoot = attack.Root;
             HealthRoot = health.Root;
+            BlockRoot = block.Root;
             CountdownRoot = countdown.Root;
             _attackVisible = attack.Visible;
             _attackOccluded = attack.Occluded;
             _healthVisible = health.Visible;
             _healthOccluded = health.Occluded;
+            _blockVisible = block.Visible;
+            _blockOccluded = block.Occluded;
             _countdownVisible = countdown.Visible;
             _countdownOccluded = countdown.Occluded;
         }
@@ -1217,6 +1508,17 @@ public class DrawSystem : MonoBehaviour
             HealthRoot.SetActive(visible);
         }
 
+        public void SetBlockText(string text)
+        {
+            _blockVisible.text = text;
+            _blockOccluded.text = text;
+        }
+
+        public void SetBlockVisible(bool visible)
+        {
+            BlockRoot.SetActive(visible);
+        }
+
         public void SetCountdownText(string text)
         {
             _countdownVisible.text = text;
@@ -1240,6 +1542,32 @@ public class DrawSystem : MonoBehaviour
             Root = root;
             Visible = visible;
             Occluded = occluded;
+        }
+    }
+
+    private readonly struct UnitLabelText
+    {
+        public readonly GameObject Root;
+        private readonly TextMeshPro _visible;
+        private readonly TextMeshPro _occluded;
+
+        public UnitLabelText(GameObject root, TextMeshPro visible, TextMeshPro occluded)
+        {
+            Root = root;
+            _visible = visible;
+            _occluded = occluded;
+        }
+
+        public void SetText(string text)
+        {
+            _visible.text = text;
+            _occluded.text = text;
+        }
+
+        public void SetColor(Color color)
+        {
+            _visible.color = color;
+            _occluded.color = color;
         }
     }
 }

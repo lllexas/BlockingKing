@@ -15,5 +15,6 @@ public class RunConfigSO : ScriptableObject
     public RunRoundConfigSO roundSettings;
     public RunDifficultyConfigSO difficultySettings;
     public RunRewardConfigSO rewardSettings;
+    public BgmPromptSO mainMenuBgm;
     public BgmPlaylistSO bgmPlaylist;
 }

@@ -15,14 +15,29 @@ public sealed class BgmRecordOnGUIFrontend : MonoBehaviour
         if (!visible)
             return;
 
+        if (GameFlowController.Instance != null && GameFlowController.Instance.IsMainMenuVisible)
+            return;
+
+        if (RunSettingsPanelAnimator.Instance != null && RunSettingsPanelAnimator.Instance.IsSettingsVisible)
+            return;
+
         EnsureStyles();
 
         int settingsX = Screen.width - margin - buttonSize;
         int recordX = settingsX - gap - buttonSize;
         int y = margin;
+        bool hasFormalRecordButton = BgmRecordAnimator.Instance != null;
 
         if (GUI.Button(new Rect(settingsX, y, buttonSize, buttonSize), "⚙", _buttonStyle))
-            RunSettingsOnGUIFrontend.Instance?.Toggle();
+        {
+            if (RunSettingsPanelAnimator.Instance != null)
+                RunSettingsPanelAnimator.Instance.Toggle();
+            else
+                RunSettingsOnGUIFrontend.Instance?.Toggle();
+        }
+
+        if (hasFormalRecordButton)
+            return;
 
         if (GUI.Button(new Rect(recordX, y, buttonSize, buttonSize), "◉", _buttonStyle))
             BgmRecordPlayer.Instance?.NextTrack();

@@ -210,3 +210,48 @@ SendMessage cannot be called during Awake, CheckConsistency, or OnValidate
 - BGM 淡入淡出
 
 在此之前，不要为了“音频架构完整”引入大型系统。
+
+## 2026-05-12 BGM 与节拍联动维护记录
+
+本轮把 BGM 从“播放列表里临时挂 clip 和 BPM”收束成以 `BgmPromptSO` 为权威数据源的结构。
+
+### 解决的问题
+
+- `BgmPlaylistSO` 不再重复保存 `clip / bpm`，只负责曲目顺序与选择；实际音频、BPM、节拍类型、回环策略都从 `BgmPromptSO` 读取。
+- `RunConfigSO` 增加独立的 `mainMenuBgm`，主菜单音乐不混进关卡播放列表。
+- `GameFlowController` 在主菜单启动时禁用唱片机自动播放关卡曲，避免游戏窗口第一次获得焦点前误播关卡 BGM。
+- 从主菜单点击开始游戏进入 run 时，会显式切到关卡 BGM。
+- `AudioBus.PlayMusic()` 改为顺序换歌：先淡出当前曲，淡出结束后再启动下一首并淡入。主菜单切关卡、关卡内切歌都走同一套逻辑。
+- `DrawSystem.ConfigureBeatBpm()` 增加带 `BeatGrouping` 的重载，BGM 切换时由 `BgmRecordPlayer` 统一同步当前 BPM 和节拍分组。
+- `BgmPromptSO` 增加 `BeatGrouping`，目前用于区分 `DupleBeat / TripleBeat / QuadBeat / CompoundSix`。
+- `IntentSystem` 增加 `AllInTwoBatch`。`TripleBeat` 和 `CompoundSix` 的 BGM 会路由到该模式；`DupleBeat` 和 `QuadBeat` 仍走 `AllInOneBatch`。
+- `AllInTwoBatch` 的目标节奏是：玩家占第 1 拍，敌人 Move 占第 2 拍，敌人其他 intent 占第 3 拍。这样 3 拍子和 6 拍子 BGM 不会再被“玩家一拍、敌人一拍”的二拍结构顶爆。
+
+### 促成的效果
+
+- 主菜单曲、正式关卡曲、唱片机切歌有了清晰边界。
+- BGM Prompt 资产可以同时承载 Suno 生成提示词、生成结果、BPM、节拍结构和备注，后续调音乐不用在多个 SO 里同步字段。
+- UI / 唱片机 / DrawSystem / IntentSystem 都以当前 BGM 为源头同步，减少“曲子换了但节拍没换”的错位风险。
+- 支持后续同时准备 2/4、3/4、4/4、6/8 的 BGM：2/4 与 4/4 保持常规敌人合拍展示，3/4 与 6/8 自动拆敌人两拍。
+
+### 当前排查日志
+
+切换 BGM 后，`BgmRecordPlayer` 会输出当前路由结果：
+
+```text
+[BgmRecordPlayer] Intent presentation => AllInTwoBatch via BGM '...' (BPM=84, beatGrouping=TripleBeat, roundTripBeat=True)
+```
+
+`IntentSystem` 只有在模式实际变化时输出：
+
+```text
+[IntentSystem] Enemy intent presentation mode changed: AllInOneBatch -> AllInTwoBatch
+```
+
+因此排查时先看 `BgmRecordPlayer` 确认 BGM 被判成哪个 presentation mode，再看 `IntentSystem` 确认模式是否真的发生变化。
+
+### 后续注意
+
+- `AllInTwoBatch` 是新增路径，后续如果敌人 intent 类型继续增加，要确认非 Move intent 是否仍应归入第 3 拍。
+- `DrawSystem` 的 BeatTime 现在由 BGM 驱动，但 2/4、3/4、4/4、6/8 对视觉 beat 的精确语义还需要结合实测继续校准。
+- 新增 BGM Prompt 资产时必须填写正确的 `beatGrouping`，否则 Intent 展示模式会跟着错。

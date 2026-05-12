@@ -196,8 +196,12 @@ public static class EscortLevelGenerator
             if (template.tiles == null || template.tiles.Length != template.width * template.height)
                 continue;
 
-            EscortLevelTemplateFeatures features = ToFeatures(entry);
-            if (!constraints.Passes(features))
+            EscortLevelTemplateFeatures cachedFeatures = ToFeatures(entry);
+            if (!constraints.Passes(cachedFeatures))
+                continue;
+
+            EscortLevelTemplateFeatures runtimeFeatures = AnalyzeTemplate(template, constraints);
+            if (!constraints.Passes(runtimeFeatures))
                 continue;
 
             int weight = Mathf.Max(1, entry.manualWeight);
@@ -216,6 +220,22 @@ public static class EscortLevelGenerator
             entry.wallCount,
             entry.boxCount,
             entry.boxOnTargetCount);
+    }
+
+    private static EscortLevelTemplateFeatures AnalyzeTemplate(LevelData level, EscortLevelGenerationConstraints constraints)
+    {
+        var metrics = LevelFeatureMetricsUtility.Analyze(
+            level,
+            constraints.WallTileID,
+            constraints.BoxTagID,
+            constraints.TargetTagID);
+
+        return new EscortLevelTemplateFeatures(
+            metrics.Width,
+            metrics.Height,
+            metrics.WallCount,
+            metrics.BoxCount,
+            metrics.BoxOnTargetCount);
     }
 
     private static int ResolveCityCount(int manhattanDistance, EscortLevelGenerationConstraints constraints)
