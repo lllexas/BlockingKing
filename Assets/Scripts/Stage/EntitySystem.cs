@@ -212,6 +212,11 @@ public class EntitySystem : MonoBehaviour
 
     public void DestroyEntity(EntityHandle handle)
     {
+        DestroyEntity(handle, int.MaxValue, default, false);
+    }
+
+    public void DestroyEntity(EntityHandle handle, int currentHealth, Vector2Int sourcePosition, bool hasSourcePosition)
+    {
         if (!IsValid(handle)) return;
 
         int idToRemove = handle.Id;
@@ -220,7 +225,8 @@ public class EntitySystem : MonoBehaviour
 
         var pos = entities.coreComponents[indexToRemove].Position;
         var entityType = entities.coreComponents[indexToRemove].EntityType;
-        int sourceTagId = entities.propertyComponents[indexToRemove].SourceTagId;
+        var properties = entities.propertyComponents[indexToRemove];
+        int sourceTagId = properties.SourceTagId;
         int mapIdx = pos.y * entities.mapWidth + pos.x;
         if (entities.coreComponents[indexToRemove].OccupiesGrid
             && mapIdx >= 0 && mapIdx < entities.gridMap.Length
@@ -256,7 +262,11 @@ public class EntitySystem : MonoBehaviour
             entityType: entityType,
             from: pos,
             to: pos,
-            sourceTagId: sourceTagId));
+            sourceTagId: sourceTagId,
+            entityProperties: properties,
+            currentHealth: currentHealth,
+            sourcePosition: sourcePosition,
+            hasSourcePosition: hasSourcePosition));
     }
 
     #endregion

@@ -25,6 +25,10 @@ public sealed class BgmPromptSO : ScriptableObject
     [Tooltip("When enabled, DrawSystem beatDuration is half of the musical beat interval. This matches current AllInOne player/enemy round-trip rhythm.")]
     public bool roundTripBeat = true;
 
+    [Header("Volume")]
+    [Tooltip("Per-track loudness correction in decibels. 0 dB keeps the generated clip at its original level; negative values reduce loud tracks; positive values boost quiet tracks.")]
+    [Range(-24f, 12f)] public float volumeOffsetDb;
+
     [Header("Generated Result")]
     public AudioClip generatedClip;
     public string generator;

@@ -31,6 +31,7 @@ MonoBehaviour:
   bpm: 122
   beatGrouping: 4
   roundTripBeat: 1
+  volumeOffsetDb: -5
   generatedClip: {fileID: 8300000, guid: 649407c11edc68c48a15f0454239cae8, type: 3}
   generator: Suno
   generatedAt: Pending

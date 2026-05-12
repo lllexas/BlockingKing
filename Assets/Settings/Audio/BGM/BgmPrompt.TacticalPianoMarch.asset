@@ -28,12 +28,11 @@ MonoBehaviour:
     drop, ambient drone, slow cinematic intro, romantic piano ballad, solo piano,
     orchestral brass, noisy mix
   bpm: 104
+  beatGrouping: 4
   roundTripBeat: 1
+  volumeOffsetDb: -8
   generatedClip: {fileID: 8300000, guid: 630d676999694244bb9e1545c646a51f, type: 3}
   generator: Suno
   generatedAt: Pending
   notes: Piano plus synthetic snare march. Best for tactical advance, enemy phase,
     or route pressure.
-  bpm: 104
-  beatGrouping: 4
-  roundTripBeat: 1

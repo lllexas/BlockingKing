@@ -41,6 +41,10 @@ public readonly struct StageEvent
     public readonly int SourceTagId;
     public readonly IntentResolutionContext ResolutionContext;
     public readonly EnemyBeatKind EnemyBeatKind;
+    public readonly PropertyComponent EntityProperties;
+    public readonly int CurrentHealth;
+    public readonly Vector2Int SourcePosition;
+    public readonly bool HasSourcePosition;
 
     public StageEvent(
         StageEventType type,
@@ -53,7 +57,11 @@ public readonly struct StageEvent
         Vector2Int to = default,
         int sourceTagId = 0,
         IntentResolutionContext resolutionContext = null,
-        EnemyBeatKind enemyBeatKind = EnemyBeatKind.None)
+        EnemyBeatKind enemyBeatKind = EnemyBeatKind.None,
+        PropertyComponent entityProperties = default,
+        int currentHealth = int.MaxValue,
+        Vector2Int sourcePosition = default,
+        bool hasSourcePosition = false)
     {
         Type = type;
         Actor = actor;
@@ -66,6 +74,10 @@ public readonly struct StageEvent
         SourceTagId = sourceTagId;
         ResolutionContext = resolutionContext;
         EnemyBeatKind = enemyBeatKind;
+        EntityProperties = entityProperties;
+        CurrentHealth = currentHealth;
+        SourcePosition = sourcePosition;
+        HasSourcePosition = hasSourcePosition;
     }
 }
 

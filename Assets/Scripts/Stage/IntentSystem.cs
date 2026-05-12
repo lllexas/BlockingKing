@@ -4,13 +4,31 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Intent 对象池 + 消费入口。
+/// Enemy intent presentation layout used when IntentSystem turns queued intents into beat-sized execution steps.
+/// Player intent is always the first beat. Enemy content is then either merged into one enemy beat or split by role.
 /// </summary>
 public enum EnemyIntentPresentationMode
 {
+    /// <summary>
+    /// Player + one enemy beat. Used for 2/4 and 4/4 presentation: P E.
+    /// All batchable enemy move, attack, spawn, and other supported enemy intents share the E beat.
+    /// </summary>
     AllInOneBatch,
+
+    /// <summary>
+    /// Player + enemy move + enemy non-move. Used for 3/4 and 6/8 presentation: P M A.
+    /// Missing M or A slots stay as empty beats when any enemy content exists, so the measure does not drift.
+    /// </summary>
     AllInTwoBatch,
+
+    /// <summary>
+    /// Legacy/debug layout that groups enemy intents by concrete intent type instead of by musical measure role.
+    /// </summary>
     BatchByIntentType,
+
+    /// <summary>
+    /// Legacy/debug layout that executes each non-player intent as its own presentation step.
+    /// </summary>
     Serial
 }
 
@@ -23,14 +41,29 @@ public enum EnemyBeatKind : byte
     Attack
 }
 
+/// <summary>
+/// Intent object pool, queue consumer, and presentation beat assembler.
+/// Builds player/enemy execution steps according to the selected enemy intent presentation mode.
+/// </summary>
 public class IntentSystem : MonoBehaviour
 {
     public static IntentSystem Instance { get; private set; }
     public event Action IntentQueueCompleted;
 
-    // 是否补全单拍小节：非单拍的小节一概补全；只有整轮能塌成单拍时，才允许压成 1 拍。
-    [SerializeField] private bool completeSingleBeatMeasure = false;
-    [SerializeField] private EnemyIntentPresentationMode enemyIntentPresentationMode = EnemyIntentPresentationMode.AllInOneBatch;
+    /// <summary>
+    /// Controls the player-only boundary case after the runtime has assembled beats for the selected presentation mode.
+    /// False means P_ / P__ may collapse to P when no enemy content exists. True keeps the empty enemy beat slots.
+    /// Partial enemy content still keeps its empty counterpart beat regardless of this flag: PM_ and P_A do not become PM or PA.
+    /// </summary>
+    [SerializeField, Tooltip("Player-only boundary case. Off: if no enemy content exists, P_ / P__ collapses to P. On: keep empty enemy beats and complete the selected measure. Partial enemy content always keeps its empty counterpart beat.")]
+    private bool completeSingleBeatMeasure = false;
+
+    /// <summary>
+    /// Selects how enemy intents are packed into presentation beats after the player beat.
+    /// AllInOneBatch builds PE for 2/4 and 4/4 music. AllInTwoBatch builds PMA for 3/4 and 6/8 music.
+    /// </summary>
+    [SerializeField, Tooltip("Enemy intent beat layout. AllInOneBatch: P + one merged enemy beat E, used by 2/4 and 4/4. AllInTwoBatch: P + enemy Move beat M + enemy non-Move beat A, used by 3/4 and 6/8.")]
+    private EnemyIntentPresentationMode enemyIntentPresentationMode = EnemyIntentPresentationMode.AllInOneBatch;
 
     private readonly Dictionary<Type, Stack<Intent>> _pools = new();
     private readonly List<EntityHandle> _activeIntentEntities = new();

@@ -15,9 +15,12 @@ MonoBehaviour:
   tracks:
   - promptAsset: {fileID: 11400000, guid: 5773019fdfdb48689d7792fdd5a04691, type: 2}
     title: 
-  - promptAsset: {fileID: 11400000, guid: 84f58972bc1d4d76b2a8081fca8edce9, type: 2}
-    title: 
+    volumeOffsetDb: 0
   - promptAsset: {fileID: 11400000, guid: 5ae458a6c2794208b2eeb0546cfb623f, type: 2}
     title: 
+    volumeOffsetDb: 0
+  - promptAsset: {fileID: 11400000, guid: 84f58972bc1d4d76b2a8081fca8edce9, type: 2}
+    title: 
+    volumeOffsetDb: 0
   defaultTrackIndex: 0
-
+  volumeOffsetDb: 0

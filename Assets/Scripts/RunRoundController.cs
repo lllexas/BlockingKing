@@ -184,7 +184,8 @@ public sealed class RunRoundController : MonoBehaviour
 
         State = RunRoundState.Shop;
         StatusMessage = "进入商店。";
-        HideRoundPanels();
+        HideRoundChoicePanels();
+        ShowBackdrop();
         ShowBgmRecord();
         var shopFrontend = FindObjectOfType<RunShopOnGUIFrontend>();
         if (shopFrontend == null)
@@ -224,7 +225,8 @@ public sealed class RunRoundController : MonoBehaviour
                 StatusMessage = string.IsNullOrWhiteSpace(CurrentPostCombatOffer.EventTitle)
                     ? "不期而遇。"
                     : CurrentPostCombatOffer.EventTitle;
-                HideRoundPanels();
+                HideRoundChoicePanels();
+                ShowBackdrop();
                 ShowBgmRecord();
                 GameFlowController.Instance?.OnRoundEventStageStarted();
                 return;
@@ -557,6 +559,7 @@ public sealed class RunRoundController : MonoBehaviour
 
             case RunRoundState.PostCombatOffer:
                 SetCameraFlowPaused(true);
+                ShowBackdrop();
                 ShowHud();
                 PostSystem.Instance?.Send("期望显示面板", new RunRoundShopChoiceUIRequest
                 {
@@ -580,11 +583,13 @@ public sealed class RunRoundController : MonoBehaviour
 
             case RunRoundState.Event:
                 SetCameraFlowPaused(true);
+                ShowBackdrop();
                 ShowHud();
                 break;
 
             case RunRoundState.Defeat:
                 SetCameraFlowPaused(true);
+                ShowBackdrop();
                 PostSystem.Instance?.Send("期望显示面板", new RunResultUIRequest
                 {
                     Controller = this,
@@ -595,6 +600,7 @@ public sealed class RunRoundController : MonoBehaviour
 
             case RunRoundState.RunComplete:
                 SetCameraFlowPaused(true);
+                ShowBackdrop();
                 PostSystem.Instance?.Send("期望显示面板", new RunResultUIRequest
                 {
                     Controller = this,
@@ -627,6 +633,22 @@ public sealed class RunRoundController : MonoBehaviour
     private static void HideRoundPanels()
     {
         PostSystem.Instance?.Send("期望隐藏所有面板", null);
+    }
+
+    private static void HideRoundChoicePanels()
+    {
+        HideRoundPanel(RunRoundUIIds.Hud);
+        HideRoundPanel(RunRoundUIIds.ClassicChoice);
+        HideRoundPanel(RunRoundUIIds.EscortChoice);
+        HideRoundPanel(RunRoundUIIds.SkipChoice);
+        HideRoundPanel(RunRoundUIIds.ShopChoice);
+        HideRoundPanel(RunRoundUIIds.EventChoice);
+        HideRoundPanel(RunRoundUIIds.Result);
+    }
+
+    private static void HideRoundPanel(string uiid)
+    {
+        PostSystem.Instance?.Send("期望隐藏面板", uiid);
     }
 
     private static void SetCameraFlowPaused(bool paused)

@@ -32,12 +32,11 @@ MonoBehaviour:
     drop, ambient drone, slow cinematic intro, romantic piano ballad, solo cello
     recital, cheerful party dance, noisy mix
   bpm: 84
+  beatGrouping: 3
   roundTripBeat: 1
+  volumeOffsetDb: -5
   generatedClip: {fileID: 8300000, guid: c6a4df351f3e8374c8f3c83aa05522bf, type: 3}
   generator: Suno
   generatedAt: Pending
   notes: Dialogue-like relief waltz with cello as the lead voice. Use as a breather
     track between tense sections.
-  bpm: 84
-  beatGrouping: 3
-  roundTripBeat: 1

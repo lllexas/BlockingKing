@@ -24,6 +24,7 @@ public class AudioBus : MonoBehaviour
     private AudioSource _activeMusicSource;
     private Coroutine _musicFadeRoutine;
     private float _activeMusicVolumeScale = 1f;
+    private float _activeMusicVolumeOffsetScale = 1f;
     private readonly List<AudioSource> _sfxSources = new();
     private int _nextSfxSourceIndex;
 
@@ -85,12 +86,28 @@ public class AudioBus : MonoBehaviour
         ApplyVolumes();
     }
 
+    public void SetActiveMusicVolumeOffset(float decibels)
+    {
+        _activeMusicVolumeOffsetScale = DecibelsToLinear(decibels);
+        ApplyVolumes();
+    }
+
     public void PlayMusic(AudioClip clip, bool loop = true)
     {
         PlayMusic(clip, loop, musicFadeDuration);
     }
 
+    public void PlayMusicWithVolumeOffset(AudioClip clip, bool loop, float volumeOffsetDb)
+    {
+        PlayMusic(clip, loop, musicFadeDuration, volumeOffsetDb);
+    }
+
     public void PlayMusic(AudioClip clip, bool loop, float fadeDuration)
+    {
+        PlayMusic(clip, loop, fadeDuration, 0f);
+    }
+
+    public void PlayMusic(AudioClip clip, bool loop, float fadeDuration, float volumeOffsetDb)
     {
         EnsureSources();
         if (_activeMusicSource == null)
@@ -102,10 +119,15 @@ public class AudioBus : MonoBehaviour
             return;
         }
 
+        float volumeOffsetScale = DecibelsToLinear(volumeOffsetDb);
         if (_activeMusicSource.clip == clip && _activeMusicSource.isPlaying)
+        {
+            _activeMusicVolumeOffsetScale = volumeOffsetScale;
+            ApplyVolumes();
             return;
+        }
 
-        ReplaceMusic(clip, loop, fadeDuration);
+        ReplaceMusic(clip, loop, fadeDuration, volumeOffsetScale);
     }
 
     public void StopMusic()
@@ -215,7 +237,7 @@ public class AudioBus : MonoBehaviour
 
     private float GetMusicOutputVolume()
     {
-        return masterVolume * musicVolume;
+        return masterVolume * musicVolume * _activeMusicVolumeOffsetScale;
     }
 
     private float GetSfxOutputVolume()
@@ -223,7 +245,7 @@ public class AudioBus : MonoBehaviour
         return masterVolume * sfxVolume;
     }
 
-    private void ReplaceMusic(AudioClip clip, bool loop, float fadeDuration)
+    private void ReplaceMusic(AudioClip clip, bool loop, float fadeDuration, float volumeOffsetScale)
     {
         if (_musicFadeRoutine != null)
             StopCoroutine(_musicFadeRoutine);
@@ -237,6 +259,7 @@ public class AudioBus : MonoBehaviour
             StopSource(source);
             source.clip = clip;
             source.loop = loop;
+            _activeMusicVolumeOffsetScale = volumeOffsetScale;
             source.volume = GetMusicOutputVolume();
             source.Play();
             _activeMusicSource = source;
@@ -245,10 +268,10 @@ public class AudioBus : MonoBehaviour
             return;
         }
 
-        _musicFadeRoutine = StartCoroutine(ReplaceMusicRoutine(source, clip, loop, fadeDuration));
+        _musicFadeRoutine = StartCoroutine(ReplaceMusicRoutine(source, clip, loop, fadeDuration, volumeOffsetScale));
     }
 
-    private System.Collections.IEnumerator ReplaceMusicRoutine(AudioSource source, AudioClip clip, bool loop, float duration)
+    private System.Collections.IEnumerator ReplaceMusicRoutine(AudioSource source, AudioClip clip, bool loop, float duration, float volumeOffsetScale)
     {
         float elapsed = 0f;
         while (elapsed < duration)
@@ -266,6 +289,7 @@ public class AudioBus : MonoBehaviour
 
         source.clip = clip;
         source.loop = loop;
+        _activeMusicVolumeOffsetScale = volumeOffsetScale;
         source.volume = 0f;
         source.Play();
         _activeMusicSource = source;
@@ -328,5 +352,10 @@ public class AudioBus : MonoBehaviour
 
         source.Stop();
         source.clip = null;
+    }
+
+    private static float DecibelsToLinear(float decibels)
+    {
+        return Mathf.Pow(10f, decibels / 20f);
     }
 }

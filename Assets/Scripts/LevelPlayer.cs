@@ -82,7 +82,7 @@ public class LevelPlayer : MonoBehaviour
 
     [Header("ECS")]
     [SerializeField] private int maxEntityCount = 256;
-    [SerializeField, Tooltip("Controls how enemy move/attack presentation is grouped.")]
+    [SerializeField, Tooltip("Forwarded to IntentSystem. AllInOneBatch builds PE for 2/4 and 4/4 music; AllInTwoBatch builds PMA for 3/4 and 6/8 music.")]
     private EnemyIntentPresentationMode enemyIntentPresentationMode = EnemyIntentPresentationMode.AllInOneBatch;
 
     [Header("Play Mode")]
@@ -139,6 +139,7 @@ public class LevelPlayer : MonoBehaviour
     private GUIStyle _settlementPanelStyle;
     private readonly HashSet<Vector2Int> _targetCells = new();
     private readonly HashSet<Vector2Int> _coreTargetCells = new();
+    private EventBusSystem _registeredEventBus;
 
     public LevelData CurrentLevel => _level;
     public TileMappingConfig CurrentConfig => _config;
@@ -329,6 +330,7 @@ public class LevelPlayer : MonoBehaviour
 
         TickSystem.OnTick -= HandleTick;
         TickSystem.OnTick += HandleTick;
+        RegisterStageEventBus();
 
         if (_playRule.ShouldStartSpawningOnBegin)
         {
@@ -353,6 +355,7 @@ public class LevelPlayer : MonoBehaviour
         }
 
         TickSystem.OnTick -= HandleTick;
+        UnregisterStageEventBus();
         _playRule?.End(this);
         SpawnSystem.Instance?.StopSpawning();
         var flow = GameFlowController.Instance;
@@ -470,6 +473,30 @@ public class LevelPlayer : MonoBehaviour
             {
                 count++;
             }
+        }
+
+        return count;
+    }
+
+    internal int CountNonCoreBoxesOnTargets()
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+            return 0;
+
+        int count = 0;
+        var entities = entitySystem.entities;
+        for (int i = 0; i < entities.entityCount; i++)
+        {
+            ref var core = ref entities.coreComponents[i];
+            if (core.EntityType != EntityType.Box ||
+                entities.propertyComponents[i].IsCore ||
+                !_targetCells.Contains(core.Position))
+            {
+                continue;
+            }
+
+            count++;
         }
 
         return count;
@@ -844,35 +871,11 @@ public class LevelPlayer : MonoBehaviour
         return true;
     }
 
-    internal bool TryConsumeEscortRewardBox(EntityHandle boxHandle, Vector2Int cell)
-    {
-        var entitySystem = EntitySystem.Instance;
-        if (entitySystem == null || !entitySystem.IsInitialized || !entitySystem.IsValid(boxHandle))
-            return false;
-
-        int boxIndex = entitySystem.GetIndex(boxHandle);
-        if (boxIndex < 0 ||
-            entitySystem.entities.coreComponents[boxIndex].EntityType != EntityType.Box ||
-            entitySystem.entities.propertyComponents[boxIndex].IsCore)
-        {
-            return false;
-        }
-
-        if (!TryFindEscortRewardTargetAtCell(entitySystem, cell, out var targetHandle))
-            return false;
-
-        int gold = GetEscortRewardBoxGold();
-        AwardGold(gold, "escort reward box");
-        entitySystem.DestroyEntity(boxHandle);
-        if (entitySystem.IsValid(targetHandle))
-            entitySystem.DestroyEntity(targetHandle);
-
-        Debug.Log($"[LevelPlayer] Escort reward box consumed at {cell}, gold={gold}");
-        return true;
-    }
-
     internal void AwardEscortCompletionRewards()
     {
+        int rewardBoxCount = CountNonCoreBoxesOnTargets();
+        int rewardBoxGold = Mathf.Max(0, rewardBoxCount) * GetEscortRewardBoxGold();
+        AwardGold(rewardBoxGold, "escort reward boxes on targets");
         AwardGold(GetEscortCompletionGold(), "escort completion");
 
         var rewardPool = GetEscortCompletionRewardPool();
@@ -1265,7 +1268,36 @@ public class LevelPlayer : MonoBehaviour
         if (!_isPlaying || _isSettled || _playRule == null)
             return;
 
+        RegisterStageEventBus();
         _playRule.OnTick(this);
+        _playRule.Evaluate(this);
+    }
+
+    private void RegisterStageEventBus()
+    {
+        var bus = EventBusSystem.Instance;
+        if (bus == null || _registeredEventBus == bus)
+            return;
+
+        UnregisterStageEventBus();
+        _registeredEventBus = bus;
+        _registeredEventBus.On(StageEventType.IntentResolutionEnd, OnIntentResolutionEnd);
+    }
+
+    private void UnregisterStageEventBus()
+    {
+        if (_registeredEventBus == null)
+            return;
+
+        _registeredEventBus.Off(StageEventType.IntentResolutionEnd, OnIntentResolutionEnd);
+        _registeredEventBus = null;
+    }
+
+    private void OnIntentResolutionEnd(StageEvent evt)
+    {
+        if (!_isPlaying || _isSettled || _playRule == null)
+            return;
+
         _playRule.Evaluate(this);
     }
 
@@ -1537,34 +1569,6 @@ public class LevelPlayer : MonoBehaviour
         int index = entitySystem.GetIndex(handle);
         return index >= 0 &&
                entitySystem.entities.coreComponents[index].EntityType == EntityType.Box;
-    }
-
-    private bool TryFindEscortRewardTargetAtCell(EntitySystem entitySystem, Vector2Int cell, out EntityHandle targetHandle)
-    {
-        targetHandle = EntityHandle.None;
-        if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
-            return false;
-
-        int targetTagID = ResolveTagID("target", DefaultTargetTagID);
-        int targetEnemyTagID = ResolveTagID("Target.Enemy", DefaultTargetEnemyTagID);
-        var entities = entitySystem.entities;
-        for (int i = 0; i < entities.entityCount; i++)
-        {
-            if (entities.coreComponents[i].EntityType != EntityType.Target ||
-                entities.coreComponents[i].Position != cell)
-            {
-                continue;
-            }
-
-            int sourceTagId = entities.propertyComponents[i].SourceTagId;
-            if (sourceTagId != targetTagID && sourceTagId != targetEnemyTagID)
-                continue;
-
-            targetHandle = entitySystem.GetHandleFromId(entities.coreComponents[i].Id);
-            return entitySystem.IsValid(targetHandle);
-        }
-
-        return false;
     }
 
     private void ConfigureCardWallHealth(CardEffectSystem cardEffectSystem, int unstableWallTagID)
@@ -1936,18 +1940,15 @@ public class LevelPlayer : MonoBehaviour
 
     private sealed class EscortPlayRule : ILevelPlayRule
     {
-        private LevelPlayer _player;
         private bool _completionRewardsGranted;
 
         public bool ShouldStartSpawningOnBegin => true;
 
         public void Begin(LevelPlayer player, LevelPlayRequest request)
         {
-            _player = player;
             player.SetRemainingSteps(-1);
             _completionRewardsGranted = false;
             HandZone.SetCardsLocked(false);
-            EventBusSystem.Instance?.On(StageEventType.EntityMoved, OnEntityMoved);
         }
 
         public void OnTick(LevelPlayer player)
@@ -1956,8 +1957,6 @@ public class LevelPlayer : MonoBehaviour
 
         public void End(LevelPlayer player)
         {
-            EventBusSystem.Instance?.Off(StageEventType.EntityMoved, OnEntityMoved);
-            _player = null;
         }
 
         public void Evaluate(LevelPlayer player)
@@ -1982,18 +1981,6 @@ public class LevelPlayer : MonoBehaviour
 
             if (!player.IsAnyCoreBoxAlive())
                 player.SettleLevel(LevelPlayResult.Failure, "core box destroyed");
-        }
-
-        private void OnEntityMoved(StageEvent evt)
-        {
-            if (evt.EntityType != EntityType.Box)
-                return;
-
-            var player = _player;
-            if (player == null || player._playRule != this || player._isSettled)
-                return;
-
-            player.TryConsumeEscortRewardBox(evt.Entity, evt.To);
         }
     }
 }

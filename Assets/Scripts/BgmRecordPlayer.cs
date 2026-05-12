@@ -14,6 +14,7 @@ public sealed class BgmRecordPlayer : MonoBehaviour
     private bool _hasPlaybackStarted;
     private bool _beatSyncPending;
     private float _lastAppliedBpm = -1f;
+    private float _lastAppliedVolumeOffsetDb = float.NaN;
     private bool _lastAppliedRoundTripBeat;
     private BgmPromptSO.BeatGrouping _lastAppliedBeatGrouping = BgmPromptSO.BeatGrouping.QuadBeat;
 
@@ -21,6 +22,7 @@ public sealed class BgmRecordPlayer : MonoBehaviour
     public int CurrentTrackIndex => _currentTrackIndex;
     public BgmPlaylistSO.Track CurrentTrack => playlist != null ? playlist.GetTrack(_currentTrackIndex) : null;
     public BgmPromptSO CurrentPrompt => _currentPrompt;
+    public float CurrentVolumeOffsetDb => _currentPrompt != null ? _currentPrompt.volumeOffsetDb : ResolveTrackVolumeOffsetDb(CurrentTrack);
     public bool HasTracks => playlist != null && playlist.Count > 0;
     public bool PlayOnStart
     {
@@ -82,7 +84,8 @@ public sealed class BgmRecordPlayer : MonoBehaviour
         _currentTrackIndex = -1;
         _currentPrompt = prompt;
         _hasPlaybackStarted = true;
-        AudioBus.Ensure().PlayMusic(prompt.generatedClip, loop);
+        _lastAppliedVolumeOffsetDb = prompt.volumeOffsetDb;
+        AudioBus.Ensure().PlayMusicWithVolumeOffset(prompt.generatedClip, loop, prompt.volumeOffsetDb);
         ApplyBeatConfiguration(prompt);
     }
 
@@ -126,8 +129,15 @@ public sealed class BgmRecordPlayer : MonoBehaviour
         _currentPrompt = null;
         _hasPlaybackStarted = true;
         _currentTrackIndex = wrapped;
-        AudioBus.Ensure().PlayMusic(track.ResolvedClip, loop);
+        float volumeOffsetDb = ResolveTrackVolumeOffsetDb(track);
+        _lastAppliedVolumeOffsetDb = volumeOffsetDb;
+        AudioBus.Ensure().PlayMusicWithVolumeOffset(track.ResolvedClip, loop, volumeOffsetDb);
         ApplyBeatConfiguration(track.PromptAsset);
+    }
+
+    private float ResolveTrackVolumeOffsetDb(BgmPlaylistSO.Track track)
+    {
+        return (playlist != null ? playlist.volumeOffsetDb : 0f) + (track != null ? track.ResolvedVolumeOffsetDb : 0f);
     }
 
     private void ApplyBeatConfiguration(BgmPromptSO prompt)
@@ -174,15 +184,15 @@ public sealed class BgmRecordPlayer : MonoBehaviour
 
     private void SyncBeatTimeContinuously()
     {
-        var drawSystem = DrawSystem.Instance;
-        if (drawSystem == null)
-            return;
-
         if (_currentPrompt != null)
         {
-            if (!Mathf.Approximately(_lastAppliedBpm, _currentPrompt.bpm) ||
+            if (!Mathf.Approximately(_lastAppliedVolumeOffsetDb, _currentPrompt.volumeOffsetDb))
+                ApplyMusicVolumeOffset(_currentPrompt.volumeOffsetDb);
+
+            if (DrawSystem.Instance != null &&
+                (!Mathf.Approximately(_lastAppliedBpm, _currentPrompt.bpm) ||
                 _lastAppliedRoundTripBeat != _currentPrompt.roundTripBeat ||
-                _lastAppliedBeatGrouping != _currentPrompt.beatGrouping)
+                _lastAppliedBeatGrouping != _currentPrompt.beatGrouping))
             {
                 ApplyBeatConfiguration(_currentPrompt);
             }
@@ -194,12 +204,23 @@ public sealed class BgmRecordPlayer : MonoBehaviour
         if (track == null)
             return;
 
-        if (!Mathf.Approximately(_lastAppliedBpm, track.ResolvedBpm) ||
+        float volumeOffsetDb = ResolveTrackVolumeOffsetDb(track);
+        if (!Mathf.Approximately(_lastAppliedVolumeOffsetDb, volumeOffsetDb))
+            ApplyMusicVolumeOffset(volumeOffsetDb);
+
+        if (DrawSystem.Instance != null &&
+            (!Mathf.Approximately(_lastAppliedBpm, track.ResolvedBpm) ||
             _lastAppliedRoundTripBeat != track.ResolvedRoundTripBeat ||
-            _lastAppliedBeatGrouping != track.ResolvedBeatGrouping)
+            _lastAppliedBeatGrouping != track.ResolvedBeatGrouping))
         {
             ApplyBeatConfiguration(track.PromptAsset);
         }
+    }
+
+    private void ApplyMusicVolumeOffset(float volumeOffsetDb)
+    {
+        _lastAppliedVolumeOffsetDb = volumeOffsetDb;
+        AudioBus.Ensure().SetActiveMusicVolumeOffset(volumeOffsetDb);
     }
 
     private static void PreloadPlaylistAudio(BgmPlaylistSO targetPlaylist)

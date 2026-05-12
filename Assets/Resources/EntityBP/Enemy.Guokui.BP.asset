@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cbc03074f43d0df44ab3b30a4ac7a637, type: 3}
   m_Name: Enemy.Guokui.BP
   m_EditorClassIdentifier: 
-  health: 1
-  attack: 1
+  health: 4
+  attack: 2
   auras: []
   spawnInterval: 0
   spawnEntityBP: {fileID: 0}

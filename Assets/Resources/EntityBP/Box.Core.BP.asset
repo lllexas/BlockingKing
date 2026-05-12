@@ -12,6 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cbc03074f43d0df44ab3b30a4ac7a637, type: 3}
   m_Name: Box.Core.BP
   m_EditorClassIdentifier: 
-  health: 80
+  health: 30
   attack: 0
+  auras: []
+  spawnInterval: 0
+  spawnEntityBP: {fileID: 0}
   prefab: {fileID: 0}
+  instancedMesh: {fileID: 0}
+  instancedMaterial: {fileID: 0}
+  visualScale: {x: 1, y: 1, z: 1}
+  showUnitLabel: 0
+  unitLabelText: 
+  unitLabelColor: {r: 1, g: 1, b: 1, a: 1}
+  unitLabelOffset: {x: 0, y: 0, z: 0}
+  unitLabelScale: 1
+  references:
+    version: 2
+    RefIds: []

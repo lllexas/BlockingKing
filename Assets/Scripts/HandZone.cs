@@ -99,6 +99,7 @@ public class HandZone : MonoBehaviour
     private float _cachedMaxFanAngle;
     private float _cachedFanArcDepth;
     private float _cachedHoverLift;
+    private RectTransform _rewardPresentationLayer;
     private static int _stageBlockingPointerInputFrame = -1;
     private bool _hasPilePanelAnimators;
 
@@ -394,7 +395,8 @@ public class HandZone : MonoBehaviour
         if (card == null || count <= 0)
             return false;
 
-        if (cardPrefab == null || cardLayer == null)
+        var rewardLayer = ResolveRewardPresentationLayer();
+        if (cardPrefab == null || rewardLayer == null)
             return false;
 
         var deck = EnsureDeckFacade();
@@ -404,16 +406,18 @@ public class HandZone : MonoBehaviour
         bool anyPlayed = false;
         for (int i = 0; i < count; i++)
         {
-            var view = Instantiate(cardPrefab, cardLayer);
+            rewardLayer.SetAsLastSibling();
+
+            var view = Instantiate(cardPrefab, rewardLayer);
             view.transform.SetAsLastSibling();
             view.SetLayoutSizes(cardSize, hoverCardSize);
             view.Bind(card, null);
             view.SetInteractable(false);
             view.SetHoverState(false, hoverTweenDuration, hoverEase);
-            view.Snap(GetRewardPresentationStartPosition(), 1.0f, 0f);
+            view.Snap(GetRewardPresentationStartPosition(rewardLayer), 1.0f, 0f);
 
-            var target = GetAnchorLocalPosition(drawPileAnchor, DefaultDrawFallback());
-            view.TweenTo(GetRewardPresentationHoldPosition(), 1.0f, 0f, 1.0f, cardEase, () =>
+            var target = GetAnchorLocalPosition(drawPileAnchor, rewardLayer, DefaultDrawFallback(rewardLayer));
+            view.TweenTo(GetRewardPresentationHoldPosition(rewardLayer), 1.0f, 0f, 1.0f, cardEase, () =>
             {
                 if (view == null)
                     return;
@@ -1189,22 +1193,67 @@ public class HandZone : MonoBehaviour
         return fallback;
     }
 
+    private Vector2 GetAnchorLocalPosition(RectTransform anchor, RectTransform targetLayer, Vector2 fallback)
+    {
+        if (anchor == null || targetLayer == null)
+            return fallback;
+
+        Camera cam = GetCanvasCamera();
+        Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(cam, anchor.position);
+        return RectTransformUtility.ScreenPointToLocalPointInRectangle(targetLayer, screenPoint, cam, out var localPoint)
+            ? localPoint
+            : fallback;
+    }
+
     private Vector2 DefaultDrawFallback()
     {
         Rect rect = cardLayer != null ? cardLayer.rect : new Rect(0f, 0f, Screen.width, Screen.height);
         return new Vector2(rect.xMin + cardSize.x * 0.5f + 60f, rect.yMin + cardSize.y * 0.5f + 60f);
     }
 
-    private Vector2 GetRewardPresentationStartPosition()
+    private Vector2 DefaultDrawFallback(RectTransform layer)
     {
-        Rect rect = cardLayer != null ? cardLayer.rect : new Rect(0f, 0f, Screen.width, Screen.height);
+        Rect rect = layer != null ? layer.rect : new Rect(0f, 0f, Screen.width, Screen.height);
+        return new Vector2(rect.xMin + cardSize.x * 0.5f + 60f, rect.yMin + cardSize.y * 0.5f + 60f);
+    }
+
+    private Vector2 GetRewardPresentationStartPosition(RectTransform layer)
+    {
+        Rect rect = layer != null ? layer.rect : new Rect(0f, 0f, Screen.width, Screen.height);
         return new Vector2((rect.xMin + rect.xMax) * 0.5f, (rect.yMin + rect.yMax) * 0.5f);
     }
 
-    private Vector2 GetRewardPresentationHoldPosition()
+    private Vector2 GetRewardPresentationHoldPosition(RectTransform layer)
     {
-        Rect rect = cardLayer != null ? cardLayer.rect : new Rect(0f, 0f, Screen.width, Screen.height);
+        Rect rect = layer != null ? layer.rect : new Rect(0f, 0f, Screen.width, Screen.height);
         return new Vector2((rect.xMin + rect.xMax) * 0.5f, (rect.yMin + rect.yMax) * 0.5f + 24f);
+    }
+
+    private RectTransform ResolveRewardPresentationLayer()
+    {
+        if (_rewardPresentationLayer != null)
+            return _rewardPresentationLayer;
+
+        RectTransform parent = null;
+        if (rootCanvas != null)
+            parent = rootCanvas.transform as RectTransform;
+
+        if (parent == null)
+            parent = cardLayer;
+
+        if (parent == null)
+            return null;
+
+        var layerObject = new GameObject("RewardCardPresentationLayer", typeof(RectTransform));
+        _rewardPresentationLayer = layerObject.GetComponent<RectTransform>();
+        _rewardPresentationLayer.SetParent(parent, false);
+        _rewardPresentationLayer.anchorMin = Vector2.zero;
+        _rewardPresentationLayer.anchorMax = Vector2.one;
+        _rewardPresentationLayer.offsetMin = Vector2.zero;
+        _rewardPresentationLayer.offsetMax = Vector2.zero;
+        _rewardPresentationLayer.pivot = new Vector2(0.5f, 0.5f);
+        _rewardPresentationLayer.SetAsLastSibling();
+        return _rewardPresentationLayer;
     }
 
     private Vector2 DefaultDiscardFallback()

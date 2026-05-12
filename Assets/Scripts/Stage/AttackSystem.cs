@@ -31,6 +31,7 @@ public class AttackSystem : MonoBehaviour
         if (actorIndex < 0)
             return;
 
+        Vector2Int actorPosition = entitySystem.entities.coreComponents[actorIndex].Position;
         int attack = CombatStats.GetAttack(entitySystem.entities.statusComponents[actorIndex]);
         if (attack <= 0)
             return;
@@ -40,11 +41,11 @@ public class AttackSystem : MonoBehaviour
             Vector2Int targetPosition = intent.TargetPositions[i];
             float multiplier = intent.DamageMultipliers[i];
             int damage = Mathf.Max(1, Mathf.RoundToInt(attack * multiplier));
-            ApplyDamageToCell(entitySystem, actor, targetPosition, damage);
+            ApplyDamageToCell(entitySystem, actor, actorPosition, targetPosition, damage);
         }
     }
 
-    private static void ApplyDamageToCell(EntitySystem entitySystem, EntityHandle actor, Vector2Int targetPosition, int damage)
+    private static void ApplyDamageToCell(EntitySystem entitySystem, EntityHandle actor, Vector2Int actorPosition, Vector2Int targetPosition, int damage)
     {
         if (damage <= 0 || !entitySystem.IsInsideMap(targetPosition))
             return;
@@ -76,7 +77,10 @@ public class AttackSystem : MonoBehaviour
             entityType: core.EntityType,
             from: targetPosition,
             to: targetPosition,
-            sourceTagId: entitySystem.entities.propertyComponents[targetIndex].SourceTagId));
+            sourceTagId: entitySystem.entities.propertyComponents[targetIndex].SourceTagId,
+            currentHealth: CombatStats.GetCurrentHealth(status),
+            sourcePosition: actorPosition,
+            hasSourcePosition: actorPosition != targetPosition));
 
         int absorbed = Mathf.Max(0, previousBlock - status.Block);
         Debug.Log($"[AttackSystem] Hit {core.EntityType} at {targetPosition}, damage={damage}, blockAbsorbed={absorbed}, health={CombatStats.GetCurrentHealth(status)}, block={status.Block}");

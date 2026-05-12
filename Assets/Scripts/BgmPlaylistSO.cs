@@ -9,6 +9,8 @@ public sealed class BgmPlaylistSO : ScriptableObject
     {
         public BgmPromptSO promptAsset;
         public string title;
+        [Tooltip("Additional loudness correction for this playlist entry, in decibels. Added on top of the prompt asset offset.")]
+        [Range(-24f, 12f)] public float volumeOffsetDb;
 
         public BgmPromptSO PromptAsset => promptAsset;
 
@@ -25,10 +27,13 @@ public sealed class BgmPlaylistSO : ScriptableObject
         public float ResolvedBpm => promptAsset != null ? promptAsset.bpm : 0f;
         public BgmPromptSO.BeatGrouping ResolvedBeatGrouping => promptAsset != null ? promptAsset.beatGrouping : BgmPromptSO.BeatGrouping.QuadBeat;
         public bool ResolvedRoundTripBeat => promptAsset != null && promptAsset.roundTripBeat;
+        public float ResolvedVolumeOffsetDb => (promptAsset != null ? promptAsset.volumeOffsetDb : 0f) + volumeOffsetDb;
     }
 
     public Track[] tracks;
     public int defaultTrackIndex;
+    [Tooltip("Global loudness correction for this playlist, in decibels. Added on top of the prompt asset and track entry offsets.")]
+    [Range(-24f, 12f)] public float volumeOffsetDb;
 
     public int Count => tracks?.Length ?? 0;
 

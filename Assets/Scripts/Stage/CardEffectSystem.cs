@@ -658,10 +658,22 @@ public class CardEffectSystem : MonoBehaviour
             return false;
 
         int damage = Mathf.Max(1, CombatStats.GetAttack(entitySystem.entities.statusComponents[actorIndex]));
+        Vector2Int actorPosition = entitySystem.entities.coreComponents[actorIndex].Position;
         ref var targetCore = ref entitySystem.entities.coreComponents[targetIndex];
         ref var targetStatus = ref entitySystem.entities.statusComponents[targetIndex];
         CombatStats.DealDamage(ref targetStatus, damage);
         int currentHealth = CombatStats.GetCurrentHealth(targetStatus);
+        EventBusSystem.Instance?.Publish(new StageEvent(
+            StageEventType.EntityDamaged,
+            actor: actor,
+            entity: target,
+            entityType: targetCore.EntityType,
+            from: targetCore.Position,
+            to: targetCore.Position,
+            sourceTagId: entitySystem.entities.propertyComponents[targetIndex].SourceTagId,
+            currentHealth: currentHealth,
+            sourcePosition: actorPosition,
+            hasSourcePosition: actorPosition != targetCore.Position));
         Debug.Log($"[CardEffectSystem] Hit {targetCore.EntityType} at {targetCore.Position}, damage={damage}, health={currentHealth}");
 
         return currentHealth <= 0;

@@ -69,6 +69,14 @@ public class DrawSystem : MonoBehaviour
     [SerializeField, Range(0f, 0.5f)] private float attackLungeDistance = 0.28f;
     [SerializeField, Range(0f, 1.5f)] private float spawnRiseDistance = 0.75f;
 
+    [Header("Death Motion")]
+    [SerializeField] private bool enableDeathMotion = true;
+    [SerializeField, Min(0f)] private float deathZeroHpDistance = 2f;
+    [SerializeField, Min(0f)] private float deathDistancePerOverkill = 1f;
+    [SerializeField, Min(0f)] private float deathHeightPerOverkillStep = 1f;
+    [SerializeField, Min(0.01f)] private float deathDuration = 0.55f;
+    [SerializeField] private float deathSinkY = -5f;
+
     [Header("World Text")]
     [SerializeField, FormerlySerializedAs("statsFont")] private TMP_FontAsset worldTextFont;
     [SerializeField, FormerlySerializedAs("statsTextMaterial")] private Material worldTextMaterial;
@@ -105,6 +113,7 @@ public class DrawSystem : MonoBehaviour
     private readonly Dictionary<PresentationBatchKey, PresentationBatch> _presentationBatches = new();
     private readonly List<StatTextPair> _statTexts = new();
     private readonly List<UnitLabelText> _unitLabelTexts = new();
+    private readonly List<DeathVisual> _deathVisuals = new();
     private int _playerCount;
     private int _boxCount;
     private int _coreBoxCount;
@@ -305,6 +314,8 @@ public class DrawSystem : MonoBehaviour
             }
         }
 
+        DrawDeathVisuals();
+
         FlushPlayers();
         FlushBoxes();
         FlushCoreBoxes();
@@ -389,11 +400,104 @@ public class DrawSystem : MonoBehaviour
         return true;
     }
 
+    private bool TryAddBPPresentation(EntityType entityType, Vector2Int gridPos, PropertyComponent properties, Vector3 visualPosition, Material fallbackMaterial)
+    {
+        EntityBP bp = properties.SourceBP;
+        if (bp == null || bp.instancedMesh == null)
+            return false;
+
+        Material material = bp.instancedMaterial != null ? bp.instancedMaterial : fallbackMaterial;
+        if (material == null)
+            return false;
+
+        material.enableInstancing = true;
+        Vector3 scale = ResolveVisualScale(bp.visualScale, ResolveDefaultScale(entityType, properties));
+        var key = new PresentationBatchKey(bp.instancedMesh, material);
+        if (!_presentationBatches.TryGetValue(key, out var batch))
+        {
+            batch = new PresentationBatch(bp.instancedMesh, material);
+            _presentationBatches.Add(key, batch);
+        }
+
+        Vector3 position = visualPosition;
+        position.y -= ToEntityWorld(entityType, gridPos).y;
+        batch.Add(Matrix4x4.TRS(position, Quaternion.identity, scale));
+        if (batch.Count == BatchSize)
+            FlushPresentationBatch(batch);
+
+        return true;
+    }
+
     private Vector3 GetBPMeshVisualPosition(int entityIndex, EntityType entityType, Vector2Int gridPos)
     {
         Vector3 position = GetVisualPosition(entityIndex, entityType, gridPos);
         position.y -= ToEntityWorld(entityType, gridPos).y;
         return position;
+    }
+
+    private void DrawDeathVisuals()
+    {
+        if (_deathVisuals.Count == 0)
+            return;
+
+        float now = Time.time;
+        for (int i = _deathVisuals.Count - 1; i >= 0; i--)
+        {
+            var visual = _deathVisuals[i];
+            if (visual.IsComplete(now))
+            {
+                _deathVisuals.RemoveAt(i);
+                continue;
+            }
+
+            Vector3 position = visual.Evaluate(now);
+            if (TryAddBPPresentation(visual.EntityType, visual.GridPosition, visual.Properties, position, ResolveDefaultMaterial(visual.EntityType, visual.Properties)))
+                continue;
+
+            AddDefaultDeathVisual(visual, position);
+        }
+    }
+
+    private void AddDefaultDeathVisual(DeathVisual visual, Vector3 position)
+    {
+        switch (visual.EntityType)
+        {
+            case EntityType.Player:
+                _playerMatrices[_playerCount++] = Matrix4x4.TRS(position, Quaternion.identity, playerScale);
+                if (_playerCount == BatchSize)
+                    FlushPlayers();
+                break;
+            case EntityType.Box:
+                if (visual.Properties.IsCore)
+                {
+                    _coreBoxMatrices[_coreBoxCount++] = Matrix4x4.TRS(position, Quaternion.identity, boxScale);
+                    _coreBoxGlassMatrices[_coreBoxGlassCount++] = Matrix4x4.TRS(position, Quaternion.identity, boxGlassScale);
+                    if (_coreBoxCount == BatchSize)
+                        FlushCoreBoxes();
+                    if (_coreBoxGlassCount == BatchSize)
+                        FlushCoreBoxGlass();
+                    break;
+                }
+
+                _boxMatrices[_boxCount++] = Matrix4x4.TRS(position, Quaternion.identity, boxScale);
+                _boxGlassMatrices[_boxGlassCount++] = Matrix4x4.TRS(position, Quaternion.identity, boxGlassScale);
+                if (_boxCount == BatchSize)
+                    FlushBoxes();
+                if (_boxGlassCount == BatchSize)
+                    FlushBoxGlass();
+                break;
+            case EntityType.Enemy:
+                int kind = (int)ResolveEnemyVisualKind(visual.Properties);
+                _enemyMatricesByKind[kind][_enemyCountsByKind[kind]++] = Matrix4x4.TRS(position, Quaternion.identity, enemyScale);
+                if (_enemyCountsByKind[kind] == BatchSize)
+                    FlushEnemyKind(kind);
+                break;
+            case EntityType.Wall:
+                _wallMatrices[_wallCount++] = Matrix4x4.TRS(position, Quaternion.identity, wallScale);
+                if (_wallCount == BatchSize)
+                    FlushWalls();
+                break;
+        }
     }
 
     private void FlushPlayers()
@@ -979,6 +1083,7 @@ public class DrawSystem : MonoBehaviour
                 ScheduleSpawn(evt);
                 break;
             case StageEventType.EntityDestroyed:
+                ScheduleDeath(evt);
                 ClearMotion(evt.Entity);
                 break;
             case StageEventType.PresentationBatchBegin:
@@ -1067,6 +1172,69 @@ public class DrawSystem : MonoBehaviour
         Vector3 to = ToEntityWorld(evt.EntityType, evt.To);
         Vector3 from = to + Vector3.down * (spawnRiseDistance * cellSize);
         motion.Schedule(VisualMotionType.Rise, _activeIntentSlotId, from, to, _activeIntentStartTime, _activeIntentEndTime);
+    }
+
+    private void ScheduleDeath(StageEvent evt)
+    {
+        if (!enableDeathMotion)
+            return;
+
+        Vector3 start = ToEntityWorld(evt.EntityType, evt.From);
+        Vector3 end = start;
+        float height = 0f;
+
+        if (evt.HasSourcePosition)
+        {
+            Vector2Int direction = NormalizeDeathDirection(evt.From - evt.SourcePosition);
+            if (direction != Vector2Int.zero)
+            {
+                height = ResolveDeathArcHeight(evt.CurrentHealth);
+                float distance = ResolveDeathDistance(evt.CurrentHealth);
+                end += new Vector3(direction.x, 0f, direction.y) * (distance * cellSize);
+            }
+        }
+
+        end.y = deathSinkY * cellSize;
+        float startTime = Time.time;
+        float endTime = startTime + deathDuration;
+        _deathVisuals.Add(new DeathVisual(
+            evt.EntityType,
+            evt.From,
+            evt.EntityProperties,
+            start,
+            end,
+            height * cellSize,
+            startTime,
+            endTime));
+
+        if (_nextBeatStartTime < endTime)
+            _nextBeatStartTime = endTime;
+    }
+
+    private float ResolveDeathArcHeight(int currentHealth)
+    {
+        if (currentHealth == int.MaxValue || currentHealth > 0)
+            return 0f;
+
+        return Mathf.Max(0f, 1 - currentHealth) * deathHeightPerOverkillStep;
+    }
+
+    private float ResolveDeathDistance(int currentHealth)
+    {
+        if (currentHealth == int.MaxValue || currentHealth > 0)
+            return 0f;
+
+        return deathZeroHpDistance + Mathf.Max(0, -currentHealth) * deathDistancePerOverkill;
+    }
+
+    private static Vector2Int NormalizeDeathDirection(Vector2Int direction)
+    {
+        if (direction == Vector2Int.zero)
+            return Vector2Int.zero;
+
+        return new Vector2Int(
+            direction.x == 0 ? 0 : (direction.x > 0 ? 1 : -1),
+            direction.y == 0 ? 0 : (direction.y > 0 ? 1 : -1));
     }
 
     private bool TryGetMotion(EntityHandle entity, out RefVisualMotion motion)
@@ -1216,6 +1384,53 @@ public class DrawSystem : MonoBehaviour
         }
     }
 
+    private readonly struct DeathVisual
+    {
+        public readonly EntityType EntityType;
+        public readonly Vector2Int GridPosition;
+        public readonly PropertyComponent Properties;
+        private readonly Vector3 _start;
+        private readonly Vector3 _end;
+        private readonly float _arcHeight;
+        private readonly float _startTime;
+        private readonly float _endTime;
+
+        public DeathVisual(
+            EntityType entityType,
+            Vector2Int gridPosition,
+            PropertyComponent properties,
+            Vector3 start,
+            Vector3 end,
+            float arcHeight,
+            float startTime,
+            float endTime)
+        {
+            EntityType = entityType;
+            GridPosition = gridPosition;
+            Properties = properties;
+            _start = start;
+            _end = end;
+            _arcHeight = Mathf.Max(0f, arcHeight);
+            _startTime = startTime;
+            _endTime = Mathf.Max(startTime + 0.001f, endTime);
+        }
+
+        public Vector3 Evaluate(float time)
+        {
+            float t = Mathf.Clamp01(Mathf.InverseLerp(_startTime, _endTime, time));
+            Vector3 position = Vector3.LerpUnclamped(_start, _end, t);
+            if (_arcHeight > 0f)
+                position.y += 4f * _arcHeight * t * (1f - t);
+
+            return position;
+        }
+
+        public bool IsComplete(float time)
+        {
+            return time >= _endTime;
+        }
+    }
+
     private void EnsureResources()
     {
         EnsureEnemyBuffers();
@@ -1286,6 +1501,18 @@ public class DrawSystem : MonoBehaviour
             return _enemyMaterialsByKind[kind];
 
         return enemyMaterial;
+    }
+
+    private Material ResolveDefaultMaterial(EntityType entityType, PropertyComponent properties)
+    {
+        return entityType switch
+        {
+            EntityType.Player => playerMaterial,
+            EntityType.Box => properties.IsCore ? coreBoxMaterial : boxMaterial,
+            EntityType.Enemy => ResolveEnemyMaterial(properties),
+            EntityType.Wall => wallMaterial,
+            _ => unitFallbackMaterial
+        };
     }
 
     private Vector3 ResolveDefaultScale(EntityType entityType, PropertyComponent properties)
