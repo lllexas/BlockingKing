@@ -59,6 +59,12 @@ public class AttackSystem : MonoBehaviour
             return;
 
         ref var core = ref entitySystem.entities.coreComponents[targetIndex];
+        if (core.EntityType == EntityType.Box && BoxDisplacementUtility.TryBounceEdgeBox(entitySystem, target))
+        {
+            Debug.Log($"[AttackSystem] Edge box bounced from {targetPosition}.");
+            return;
+        }
+
         if (!CanReceiveAttackDamage(entitySystem, targetIndex))
             return;
 

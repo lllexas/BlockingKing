@@ -1,237 +1,265 @@
 # BlockingKing
 
-一个以推箱子为核心空间规则的 3D 肉鸽原型。
+一个以推箱子为核心规则的 Unity 3D 卡牌肉鸽 Demo。
 
-当前项目已经接入：
+## 快速体验
 
-- Classic / Escort 双主战斗模式
-- 敌人 intent 节拍执行
-- 手牌与卡牌释放
-- RoundFlow 肉鸽流程
-- 商店、事件、奖励、结算等 run 基础系统
+- [BlockingKing Releases](https://github.com/lllexas/BlockingKing/releases)
 
-项目状态：
+推荐 Unity 版本：
 
-- 可玩原型
-- 持续施工中
-- 系统层已经成型，内容与体验仍在快速迭代
+```text
+Unity 2022.3 LTS
+当前工程版本：2022.3.57f1c2
+```
 
-## 快速开始
+## “产品标准”
 
-Unity 版本：
+本项目不是只实现一个推箱子规则原型，而是按“可以被玩家打开、理解、游玩、结束，并能被策划继续生产内容”的标准收束。
 
-- `2022.3.57f1c2`
+当前已经完成的产品闭环：
 
-主要场景：
+```text
+主菜单入口
+进入一局 Run
+选择 Classic / Escort / Skip
+进入关卡
+推箱、战斗、出牌、悔棋
+结算奖励
+进入 Shop / Event
+继续下一轮
+最终形成一局完整体验
+```
 
-- `Assets/Scenes/StageScene.unity`
-- `Assets/Scenes/SampleScene.unity`
-- `Assets/Scenes/TilemapLevelEditor.unity`
+当前已经完成的生产闭环：
 
-推荐入口：
+```text
+用 3D 关卡编辑器编辑 LevelData
+保存关卡
+通过 RunConfig 配置关卡池、奖励、难度、商店、事件、BGM
+进入 Run 中验证
+再回到编辑器和配置继续调整
+```
 
-- 日常运行 / 主游戏流程：`StageScene.unity`
-- TileMap 编辑：`TilemapLevelEditor.unity`
+## 核心玩法
 
-项目主流程由 `GameFlowController` 驱动，支持这些模式：
+BlockingKing 的目标不是把推箱子做得更难，而是降低推箱子的畏难感。
 
-- `DirectLevel`
-- `RouteMap`
-- `RoundFlow`
-- `Tutorial`
-- `LevelEdit`
+传统推箱子容易让玩家担心：
 
-当前最重要的正式入口是：
+```text
+一步错，可能全盘错
+不知道什么时候已经死局
+重开会让前面的思考白费
+高难谜题容易直接劝退
+```
 
-- `RoundFlow`
-- `Tutorial`
+本项目通过以下系统承接这些压力：
 
-## 运行说明
+- `Classic`：先纯推箱拿高收益，再进入卡牌 + 战斗兜底阶段
+- `Escort`：护送核心箱，在隐式回合压力下推进路线
+- `卡牌`：用战车、主教、骑士、火炮等棋子式能力修正局面
+- `悔棋`：允许退一步，但要付递增金币或血量代价
+- `Skip`：不想打当前局面时，可以跳过拿低收益保底
+- `Shop / Event`：战后补强和资源交换
+- `节拍与音乐`：玩家和敌人的回合动作与 BGM 速度隐式对齐，降低连续解谜的干硬感
 
-### 1. 跑一局 RoundFlow
+当前主要关卡体验：
 
-打开：
+```text
+Classic：经典推箱子关，分为纯推箱预结算阶段和卡牌战斗完成阶段
+Escort：护送关，围绕核心箱、敌人压力、位移护盾和路线推进展开
+```
 
-- `Assets/Scenes/StageScene.unity`
+更完整的设计说明见：
 
-确认场景中的 `GameFlowController` 已正确挂载：
+- [Gameplay 设计原理：降低推箱子畏难感的 3D 肉鸽方案](Doc/Demo/Gameplay设计原理_技术策划Demo.md)
 
-- `RunConfig`
-- `RunRoundConfig`
-- 相关 UI / runtime 系统
+## 快速入口
 
-`GameFlowController` 会通过 `RunConfig` 把整套 run 配置串起来。
+建议按这个顺序阅读：
 
-主配置入口：
+1. [Gameplay 设计原理](Doc/Demo/Gameplay设计原理_技术策划Demo.md)
+2. [3D 关卡编辑器：面向策划的实时关卡生产工具](Doc/Demo/3D关卡编辑器_技术策划Demo.md)
+3. [肉鸽进程配置工具：RunConfig 驱动的局内流程配置](Doc/Demo/肉鸽进程配置工具_RunConfig_技术策划Demo.md)
+4. [当前 UI 系统：主菜单、Run 面板、手牌、商店与结算](Doc/Demo/当前UI系统_技术策划Demo.md)
 
-- `Assets/Settings/RunConfig/RunConfig.asset`
+其中：
 
-### 2. 直接测关卡
+- `Gameplay` 说明为什么这套玩法按产品体验成立。
+- `3D 关卡编辑器` 对应题目中的“关卡编辑器”要求。
+- `RunConfig` 说明如何用配置驱动一局完整 Run。
+- `当前 UI 系统` 说明玩家入口、局内 HUD、手牌、商店、结算等界面。
 
-如果要直接测单关逻辑，核心入口是：
+## 工程运行
 
-- `LevelPlayer`
+1. 使用 Unity 打开仓库根目录。
+2. 打开主场景：
 
-它负责：
+```text
+Assets/Scenes/StageScene.unity
+```
 
-- 读取 `LevelData`
-- 构建 ECS 世界
-- 驱动战斗 / intent / draw / 结算
+3. 确认场景中的 `GameFlowController` 使用当前 Run 配置：
 
-### 3. 教程与编辑模式
+```text
+Assets/Settings/RunConfig/RunConfig.asset
+```
 
-`GameFlowController` 同时支持：
+4. 确认场景中的 `GameFlowController` 的 Mode 字段和 Route Map Startup Mode 字段枚举分别为：
 
-- `Tutorial`
-- `LevelEdit`
+```text
+RoundFlow
+Main Menu Round
+```
 
-教程模式依赖：
+## 运行环境
 
-- `tutorialLevel`
-- `tutorialTileConfig`
+- Unity：`2022.3.57f1c2`
+- 渲染管线：URP
+- 主要依赖：Odin Inspector、DOTween、TextMesh Pro
 
-编辑模式依赖：
+Unity 内建议直接打开 `StageScene.unity` 后进入 Play Mode。
 
-- `LevelEditSession`
+## 关卡编辑器
 
-## 仓库结构
+项目包含 Play Mode 3D 关卡编辑器。
 
-### 代码
+入口：
 
-- `Assets/Scripts`
+```text
+在 Project 右键菜单栏 BlockingKing 内创建或选中 LevelData
+  -> Inspector 点击「3D 编辑」
+  -> 进入 GameFlowMode.LevelEdit
+```
 
-主要系统分布：
+编辑器能力：
 
-- `GameFlowController`
-  - 总流程入口
-- `RunRoundController`
-  - RoundFlow 肉鸽循环
-- `RunRouteFacade`
-  - 大地图 / 路线生成与节点推进
-- `LevelPlayer`
-  - 单关运行、ECS 构建、战斗结算
-- `HandZone`
-  - 手牌、出牌、卡牌交互
-- `Assets/Scripts/Stage`
-  - intent / entity / move / attack / draw / overlay 等战斗底层系统
+- 在真实 3D 运行场景中编辑 `LevelData`
+- 从 `TileMappingConfig` 自动生成 terrain / tag palette
+- 支持刷地形、刷 tag、擦除、撤销、重做、保存、放弃
+- 每次编辑后通过 `LevelPlayer` 重建运行数据与 3D 地形
+- 退出 Play Mode 后恢复原 GameFlow 状态
 
-### 配置
+详细说明：
 
-- `Assets/Settings/RunConfig`
+- [3D 关卡编辑器 Demo 文档](Doc/Demo/3D关卡编辑器_技术策划Demo.md)
+- [3D 关卡编辑器使用指南](Doc/T14_3D关卡编辑器使用指南.md)
 
-这里是当前最重要的 run 配置入口。
+## Run 配置
 
-推荐优先认识这些资产：
+当前肉鸽流程由 `RunConfigSO` 作为总入口：
 
-- `Assets/Settings/RunConfig/RunConfig.asset`
-- `Assets/Settings/RunConfig/Domains/RunRoundConfig.asset`
-- `Assets/Settings/RunConfig/Domains/RunDifficultyConfig.asset`
-- `Assets/Settings/RunConfig/Domains/RunRewardConfig.asset`
-- `Assets/Settings/RunConfig/Domains/RunRound/ClassicLevelFeatureSelectionTable.asset`
-- `Assets/Settings/RunConfig/Domains/RunRound/EscortLevelFeatureSelectionTable.asset`
-- `Assets/Settings/RunConfig/Domains/RunDifficulties/EnemySpawnDifficultyProfile.Default.asset`
-- `Assets/Settings/RunConfig/Domains/RunDifficulties/EnemySpawnTimingProfile.asset`
+```text
+Assets/Settings/RunConfig/RunConfig.asset
+```
 
-### 文档
+配置分层：
 
-- `Plan/`
+- `RunStartSettings`：开局卡组、金币、生命值、手牌规则
+- `RunRoundConfigSO`：一局 Run 的主循环、Classic / Escort / Skip、Shop / Event
+- `RunDifficultyConfigSO`：敌人血量、攻击、奖励倍率和刷怪节奏
+- `RunRewardConfigSO`：Classic / Escort 奖励结算
+- BGM 配置：主菜单音乐和 Run 内音乐
 
-这里放当前施工中的设计文档、优先级清单和系统说明。
+说明：
 
-## 核心系统概览
+- 当前正式主流程是 `RoundFlow`
+- `RunRouteConfigSO` 是早期路线图原型，目前不作为主流程
 
-### 1. Run 配置分层
+详细说明：
 
-当前 run 配置大致按这几层拆分：
+- [RunConfig 技术策划 Demo 文档](Doc/Demo/肉鸽进程配置工具_RunConfig_技术策划Demo.md)
+- [RunConfig 内部说明](Doc/T16_肉鸽进程配置工具_RunConfig说明.md)
 
-- `RunConfig`
-  - 总装配层
-- `RunRoundConfig`
-  - 一局流程结构
-- `LevelFeatureSelectionTable + LevelFeatureFilter`
-  - 关卡段落与地图筛选
-- `RunDifficultyConfig`
-  - 数值曲线
-- `EnemySpawnDifficultyProfile`
-  - 敌人构成
-- `EnemySpawnTimingProfile`
-  - 刷怪节奏
-- `RunRewardConfig`
-  - 奖励与经济
+## 主要场景
 
-### 2. 战斗系统
+```text
+Assets/Scenes/StageScene.unity
+  主运行场景，推荐评审时优先打开
 
-战斗部分当前基于 ECS 风格数据组织，关键模块包括：
+Assets/Scenes/SampleScene.unity
+  备用测试场景
 
-- `EntitySystem`
-- `IntentSystem`
-- `EnemyAutoAISystem`
-- `MoveSystem`
-- `AttackSystem`
-- `CardEffectSystem`
-- `DrawSystem`
-- `GridOverlayDrawSystem`
+Assets/Scenes/TilemapLevelEditor.unity
+  早期 Tilemap 编辑相关场景
+```
 
-战斗演出和输入节拍目前已经和 intent 队列打通。
+## 主要代码入口
 
-### 3. UI 与面板
+```text
+Assets/Scripts/GameFlowController.cs
+  总流程入口，负责 DirectLevel / RoundFlow / Tutorial / LevelEdit 等模式切换
 
-当前项目同时存在两类 UI：
+Assets/Scripts/RunRoundController.cs
+  RoundFlow 肉鸽循环
 
-- `SpaceUIAnimator` 体系下的正式面板
-- 还没完全替换掉的部分 OnGUI / 过渡前端
+Assets/Scripts/LevelPlayer.cs
+  单关加载、运行数据构建、关卡运行、战斗结算
 
-主要 run 面板已经逐步迁入正式体系，例如：
+Assets/Scripts/Level3DEditorController.cs
+  3D 关卡编辑器的 Play Mode 交互
 
-- `RunRoundBackdropPanelAnimator`
-- `RunDeckPanelAnimator`
-- `RunShopPanelAnimator`
-- `RunCombatSettlementPanelAnimator`
-- `RunResultPanelAnimator`
+Assets/Scripts/LevelDataInspector.cs
+  LevelData Inspector 入口、保存、放弃、退出和状态恢复
 
-## 配置入口
+Assets/Scripts/Stage/
+  Entity / Intent / Move / Attack / Draw / Overlay 等关卡运行系统
+```
 
-如果你是程序：
+## 主要资源入口
 
-- 先看 `GameFlowController`
-- 再看 `RunRoundController`
-- 再看 `LevelPlayer`
+```text
+Assets/Settings/RunConfig/
+  当前 Run 配置
 
-如果你是策划：
+Assets/Settings/TileMappingConfig.asset
+  tile / tag 到运行时表现和实体语义的映射
 
-- 先看 `Assets/Settings/RunConfig/RunConfig.asset`
-- 再看 `Plan/` 里的配置文档
+Assets/Resources/
+  运行时可加载资源
+
+Assets/Scenes/
+  场景入口
+```
 
 ## 文档导航
 
-当前建议先读这几份：
+- [Gameplay 设计原理：降低推箱子畏难感的 3D 肉鸽方案](Doc/Demo/Gameplay设计原理_技术策划Demo.md)
+- [3D 关卡编辑器：面向策划的实时关卡生产工具](Doc/Demo/3D关卡编辑器_技术策划Demo.md)
+- [肉鸽进程配置工具：RunConfig 驱动的局内流程配置](Doc/Demo/肉鸽进程配置工具_RunConfig_技术策划Demo.md)
+- [当前 UI 系统：主菜单、Run 面板、手牌、商店与结算](Doc/Demo/当前UI系统_技术策划Demo.md)
 
-- [Plan/肉鸽难度曲线与Round配置_操作指南.md](</G:/ProjectOfGame/BlockingKing/Plan/肉鸽难度曲线与Round配置_操作指南.md>)
-- [Plan/肉鸽难度曲线与Round配置_设计原理说明.md](</G:/ProjectOfGame/BlockingKing/Plan/肉鸽难度曲线与Round配置_设计原理说明.md>)
-- [Plan/2026-05-13_下午_剩余需求统计.md](</G:/ProjectOfGame/BlockingKing/Plan/2026-05-13_下午_剩余需求统计.md>)
-- [Plan/推箱子肉鸽设计方案.md](</G:/ProjectOfGame/BlockingKing/Plan/推箱子肉鸽设计方案.md>)
+维护细节：
 
-## 当前开发状态
+- [T13 3D 关卡编辑器维护指南](Doc/T13_3D关卡编辑器维护指南.md)
+- [T14 3D 关卡编辑器使用指南](Doc/T14_3D关卡编辑器使用指南.md)
+- [T15 3D 关卡编辑器后续开发指南](Doc/T15_3D关卡编辑器后续开发指南.md)
+- [T16 肉鸽进程配置工具 RunConfig 说明](Doc/T16_肉鸽进程配置工具_RunConfig说明.md)
 
-目前已经基本接上的部分：
+设计资料：
 
-- run 基础流程
-- Classic / Escort 主战斗模式
-- intent 节拍展示与执行
-- 手牌 / 卡牌释放
-- 商店 / 事件 / 奖励 / 战斗结算
-- 单位死亡动画
+- [关卡设计纲要](Doc/Design/01_关卡设计.md)
+- [卡牌设计](Doc/Design/03_卡牌设计.md)
+- [怪物设计](Doc/Design/04_怪物设计.md)
 
-仍在持续迭代的部分：
+## 当前状态
 
-- 教程
-- 难度曲线收束
-- 炮兵逻辑优化
-- 事件表现与内容
-- 遗物 / 藏品实际效果系统
+这是一个一周周期内完成的可玩产品级 Demo。
 
-## 备注
+已经完成的重点是：
 
-这是一个快速迭代中的原型仓库。
+- 推箱子核心规则可运行
+- 单关体验链路可运行
+- 肉鸽 Run 流程可运行
+- 关卡编辑器可进入、可编辑、可保存
+- Release 可直接下载体验
+- 配置资产能够驱动开局、循环、难度、奖励和 BGM
 
-README 的职责是提供入口，不替代 `Plan/` 里的专题文档。
+可继续扩展的方向：
+
+- 教程体验打磨
+- 数值曲线收束
+- 事件内容扩展
+- UI 表现统一
+- 关卡编辑器验证面板和高级编辑模式

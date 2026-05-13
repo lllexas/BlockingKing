@@ -289,6 +289,7 @@ public class GameFlowController : MonoBehaviour
     {
         EnsureFacades();
         ApplyRunStartSettings();
+        ResetTutorialGold();
         HideMainMenu();
         HideRunUiPanels();
         SetRouteVisible(false);
@@ -307,6 +308,18 @@ public class GameFlowController : MonoBehaviour
         }
 
         director.StartTutorial();
+    }
+
+    private static void ResetTutorialGold()
+    {
+        var inventory = GraphHub.Instance?.GetFacade<RunInventoryFacade>();
+        if (inventory == null)
+        {
+            inventory = new RunInventoryFacade();
+            GraphHub.Instance?.RegisterFacade(inventory);
+        }
+
+        inventory?.SetGold(0);
     }
 
     public void StartRoundRunFromMainMenu()
@@ -342,6 +355,7 @@ public class GameFlowController : MonoBehaviour
     public void ShowMainMenuRound(bool instant = false)
     {
         EnsureFacades();
+        StopTutorialDirector();
         ExitLevel();
         _isStartingRun = false;
         IsMainMenuVisible = true;
@@ -361,11 +375,13 @@ public class GameFlowController : MonoBehaviour
     {
         if (IsMainMenuVisible)
         {
+            StopTutorialDirector();
             PlayMainMenuBgm();
             HideSettingsPanel();
             return;
         }
 
+        StopTutorialDirector();
         mode = GameFlowMode.RoundFlow;
         IsMainMenuVisible = true;
         IsInLevel = false;
@@ -487,6 +503,7 @@ public class GameFlowController : MonoBehaviour
     {
         ExitLevel();
         Debug.Log($"[GameFlowController] Tutorial settled: {result}");
+        ReturnToMainMenuRound();
     }
 
     public void EnterLevel()
@@ -642,6 +659,12 @@ public class GameFlowController : MonoBehaviour
     private static void HideBgmRecord()
     {
         PostSystem.Instance?.Send("期望隐藏面板", new BgmRecordUIRequest(BgmRecordUIIds.RecordButton));
+    }
+
+    private static void StopTutorialDirector()
+    {
+        var director = FindObjectOfType<TutorialStageDirector>();
+        director?.StopTutorial();
     }
 
     private static void HideRunRoundPart(string uiid)

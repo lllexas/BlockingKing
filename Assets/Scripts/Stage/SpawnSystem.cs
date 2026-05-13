@@ -7,6 +7,7 @@ using UnityEngine;
 public class SpawnSystem : MonoBehaviour, ITickSystem
 {
     public static SpawnSystem Instance { get; private set; }
+    private const int DefaultSpawnInterval = 8;
 
     private EntityBP _defaultEnemyBP;
     private int _defaultEnemyTagId;
@@ -250,7 +251,7 @@ public class SpawnSystem : MonoBehaviour, ITickSystem
 
     public int ResolveSpawnInterval(int fallback, Vector2Int spawnPosition, int globalTick)
     {
-        fallback = fallback > 0 ? fallback : 3;
+        fallback = fallback > 0 ? fallback : DefaultSpawnInterval;
         return _timingProfile != null
             ? _timingProfile.ResolveInterval(fallback, _routeLayer, spawnPosition, globalTick)
             : Mathf.Max(1, fallback);
@@ -258,7 +259,7 @@ public class SpawnSystem : MonoBehaviour, ITickSystem
 
     public int ResolveInitialSpawnDelay(int fallback, Vector2Int spawnPosition, int globalTick)
     {
-        fallback = fallback >= 0 ? fallback : ResolveSpawnInterval(3, spawnPosition, globalTick);
+        fallback = fallback >= 0 ? fallback : ResolveSpawnInterval(DefaultSpawnInterval, spawnPosition, globalTick);
         return _timingProfile != null
             ? _timingProfile.ResolveInitialDelay(fallback, _routeLayer, spawnPosition, globalTick)
             : Mathf.Max(0, fallback);

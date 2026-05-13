@@ -96,6 +96,7 @@ public class IntentSystem : MonoBehaviour
     public bool IsRunning => _runner != null;
     public EnemyIntentPresentationMode EnemyPresentationMode => enemyIntentPresentationMode;
     public bool CanAcceptTick => _runner == null;
+    public bool CanRestoreLevelUndo => _runner == null;
     public bool IsExecutingPlayerStep => IsRunningStepValid
                                          && _executionSteps[_runningStepIndex].IsPlayerIntentStep;
 
@@ -200,6 +201,18 @@ public class IntentSystem : MonoBehaviour
 
     public bool SetPlayerIntent(EntityHandle actor, IntentType intentType, Intent intent)
     {
+        if (LevelPlayer.IsActiveStageInputLocked)
+            return false;
+
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsValid(actor) || intent == null)
+            return false;
+
+        int index = entitySystem.GetIndex(actor);
+        if (index < 0)
+            return false;
+
+        LevelUndoSystem.CaptureBeforePlayerIntent(intentType);
         if (!SetIntent(actor, intentType, intent))
             return false;
 

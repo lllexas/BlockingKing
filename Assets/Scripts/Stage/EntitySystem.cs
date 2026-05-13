@@ -65,6 +65,163 @@ public class EntitySystem : MonoBehaviour
 
     #endregion
 
+    #region Snapshot
+
+    public EntitySystemSnapshot CaptureSnapshot()
+    {
+        var snapshot = new EntitySystemSnapshot
+        {
+            Initialized = _initialized,
+            VersionEpoch = _versionEpoch,
+            MaxEntityCount = _maxEntityCount,
+            TerrainVersion = TerrainVersion,
+            GlobalTick = GlobalTick,
+            DefaultFloorTerrainId = _defaultFloorTerrainId,
+            WallTerrainIds = new List<int>(_wallTerrainIds)
+        };
+
+        if (!_initialized || entities == null)
+            return snapshot;
+
+        snapshot.EntityCount = entities.entityCount;
+        snapshot.MapWidth = entities.mapWidth;
+        snapshot.MapHeight = entities.mapHeight;
+        snapshot.CoreComponents = CopyArray(entities.coreComponents);
+        snapshot.StatusComponents = CopyArray(entities.statusComponents);
+        snapshot.PropertyComponents = CopyArray(entities.propertyComponents);
+        snapshot.CounterComponents = CopyArray(entities.counterComponents);
+        snapshot.IntentComponents = CopyIntentComponents(entities.intentComponents);
+        snapshot.VisualMotionComponents = new VisualMotionComponent[_maxEntityCount];
+        snapshot.VisualImpulseComponents = new VisualImpulseComponent[_maxEntityCount];
+        snapshot.GroundMap = CopyArray(entities.groundMap);
+        snapshot.GridMap = CopyArray(entities.gridMap);
+        snapshot.IdToDataIndex = CopyArray(_idToDataIndex);
+        snapshot.DataIndexToId = CopyArray(_dataIndexToId);
+        snapshot.IdVersions = CopyArray(_idVersions);
+        snapshot.FreeIds = _freeIds != null ? _freeIds.ToArray() : System.Array.Empty<int>();
+        return snapshot;
+    }
+
+    public void RestoreSnapshot(EntitySystemSnapshot snapshot)
+    {
+        if (snapshot == null || !snapshot.Initialized)
+            return;
+
+        entities ??= new EntityComponents();
+        _initialized = true;
+        _versionEpoch = snapshot.VersionEpoch;
+        _maxEntityCount = snapshot.MaxEntityCount;
+        TerrainVersion = snapshot.TerrainVersion + 1;
+        GlobalTick = snapshot.GlobalTick;
+        _defaultFloorTerrainId = snapshot.DefaultFloorTerrainId;
+
+        _wallTerrainIds.Clear();
+        if (snapshot.WallTerrainIds != null)
+        {
+            for (int i = 0; i < snapshot.WallTerrainIds.Count; i++)
+                _wallTerrainIds.Add(snapshot.WallTerrainIds[i]);
+        }
+
+        entities.entityCount = snapshot.EntityCount;
+        entities.mapWidth = snapshot.MapWidth;
+        entities.mapHeight = snapshot.MapHeight;
+        entities.coreComponents = CopyArray(snapshot.CoreComponents);
+        entities.statusComponents = CopyArray(snapshot.StatusComponents);
+        entities.propertyComponents = CopyArray(snapshot.PropertyComponents);
+        entities.counterComponents = CopyArray(snapshot.CounterComponents);
+        entities.intentComponents = CopyIntentComponents(snapshot.IntentComponents);
+        entities.visualMotionComponents = new VisualMotionComponent[_maxEntityCount];
+        entities.visualImpulseComponents = new VisualImpulseComponent[_maxEntityCount];
+        entities.groundMap = CopyArray(snapshot.GroundMap);
+        entities.gridMap = CopyArray(snapshot.GridMap);
+        _idToDataIndex = CopyArray(snapshot.IdToDataIndex);
+        _dataIndexToId = CopyArray(snapshot.DataIndexToId);
+        _idVersions = CopyArray(snapshot.IdVersions);
+        _freeIds = new System.Collections.Generic.Queue<int>(snapshot.FreeIds ?? System.Array.Empty<int>());
+
+        TickSystem.OnTick -= UpdateTick;
+        TickSystem.OnTick += UpdateTick;
+        TryRegisterIntentSystem();
+    }
+
+    private static T[] CopyArray<T>(T[] source)
+    {
+        if (source == null)
+            return null;
+
+        var result = new T[source.Length];
+        System.Array.Copy(source, result, source.Length);
+        return result;
+    }
+
+    private static IntentComponent[] CopyIntentComponents(IntentComponent[] source)
+    {
+        if (source == null)
+            return null;
+
+        var result = new IntentComponent[source.Length];
+        for (int i = 0; i < source.Length; i++)
+        {
+            result[i].Type = source[i].Type;
+            result[i].Intent = CloneIntent(source[i].Intent);
+        }
+
+        return result;
+    }
+
+    private static Intent CloneIntent(Intent intent)
+    {
+        switch (intent)
+        {
+            case MoveIntent move:
+            {
+                var clone = new MoveIntent();
+                if (move.Active)
+                    clone.Setup(move.Direction, move.Distance);
+                return clone;
+            }
+            case AttackIntent attack:
+            {
+                var clone = new AttackIntent();
+                for (int i = 0; i < attack.TargetCount; i++)
+                    clone.AddTarget(attack.TargetPositions[i], attack.DamageMultipliers[i]);
+                clone.Active = attack.Active;
+                return clone;
+            }
+            case CardIntent card:
+            {
+                var clone = new CardIntent();
+                clone.Card = card.Card;
+                clone.PlayerCell = card.PlayerCell;
+                clone.TargetCell = card.TargetCell;
+                clone.Direction = card.Direction;
+                clone.HasDirection = card.HasDirection;
+                clone.Active = card.Active;
+                return clone;
+            }
+            case SpawnIntent spawn:
+            {
+                var clone = new SpawnIntent();
+                if (spawn.Active)
+                    clone.Setup(spawn.Origin, spawn.EntityBP);
+                return clone;
+            }
+            case NoopIntent noop:
+            {
+                var clone = new NoopIntent();
+                if (noop.Active)
+                    clone.Setup();
+                return clone;
+            }
+            case null:
+                return null;
+            default:
+                return null;
+        }
+    }
+
+    #endregion
+
     #region Initialize
 
     public void Initialize(int maxEntityCount, int mapWidth, int mapHeight)

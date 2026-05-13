@@ -33,9 +33,9 @@ public sealed class TutorialGroundHint
 
 public static class TutorialGroundHintLayout
 {
-    public static readonly Vector2 Q2 = new(-3f, 3f);
-    public static readonly Vector2 Q3 = new(-3f, -3f);
-    public static readonly Vector2 Q4 = new(3f, -3f);
+    public static readonly Vector2 Q2 = new(-2f, 2f);
+    public static readonly Vector2 Q3 = new(-2f, -1.4f);
+    public static readonly Vector2 Q4 = new(2f, -1.4f);
     public static readonly Vector2 Card = new(3.6f, 1.15f);
     public static readonly Vector2 WideCard = new(4.4f, 1.25f);
 }
@@ -62,6 +62,8 @@ public sealed class TutorialStep
 [DefaultExecutionOrder(120)]
 public sealed class TutorialStageDirector : MonoBehaviour
 {
+    private const int TutorialTargetEnemySpawnInterval = 15;
+
     [Header("Levels")]
     [SerializeField] private LevelData pushLevel;
     [SerializeField] private LevelData breakWallLevel;
@@ -118,7 +120,7 @@ public sealed class TutorialStageDirector : MonoBehaviour
                 new TutorialGroundHint
                 {
                     hintId = "card_play",
-                    text = "拖拽出牌\n再选择目标",
+                    text = "拖拽出牌\n或左键点目标\n智能出牌",
                     centerXZ = TutorialGroundHintLayout.Q2,
                     rectSize = TutorialGroundHintLayout.Card
                 },
@@ -183,7 +185,7 @@ public sealed class TutorialStageDirector : MonoBehaviour
                 new TutorialGroundHint
                 {
                     hintId = "card_play",
-                    text = "拖拽出牌\n再选择目标",
+                    text = "拖拽出牌\n或左键点目标\n智能出牌",
                     centerXZ = TutorialGroundHintLayout.Q2,
                     rectSize = TutorialGroundHintLayout.Card
                 },
@@ -208,7 +210,7 @@ public sealed class TutorialStageDirector : MonoBehaviour
                 new TutorialGroundHint
                 {
                     hintId = "card_play",
-                    text = "拖拽出牌\n再选择目标",
+                    text = "拖拽出牌\n或左键点目标\n智能出牌",
                     centerXZ = TutorialGroundHintLayout.Q2,
                     rectSize = TutorialGroundHintLayout.Card
                 }
@@ -231,10 +233,14 @@ public sealed class TutorialStageDirector : MonoBehaviour
     private TutorialAct? _currentAct;
     private LevelData _currentLevel;
     private HandZone _observedHandZone;
+    private GUIStyle _settleLabelStyle;
+    private GUIStyle _settleShadowStyle;
     private string _overrideTitle;
     private string _overrideMessage;
     private bool _overrideHidden;
     private bool _isReloadingAct;
+    private bool _isAdvancingAfterVictoryPause;
+    private bool _classicPhaseTwoPrepared;
     private readonly List<string> _activeGroundHintIds = new();
 
     private void OnEnable()
@@ -266,13 +272,56 @@ public sealed class TutorialStageDirector : MonoBehaviour
         EvaluateCurrentStep();
     }
 
+    private void OnGUI()
+    {
+        if (!IsTutorialActive() || CurrentStep()?.act != TutorialAct.ClassicPhaseOne)
+            return;
+
+        var player = LevelPlayer.ActiveInstance;
+        if (player == null || !player.IsPlaying)
+            return;
+
+        EnsureSettleStyles();
+        int boxCount = player.CountBoxesOnTargets();
+        string text = $"经典前半  箱子: {boxCount}";
+        float width = Mathf.Min(420f, Screen.width - 32f);
+        var rect = new Rect((Screen.width - width) * 0.5f, 18f, width, 42f);
+        var shadowRect = new Rect(rect.x + 2f, rect.y + 2f, rect.width, rect.height);
+        GUI.Label(shadowRect, text, _settleShadowStyle);
+        GUI.Label(rect, text, _settleLabelStyle);
+
+        var buttonRect = new Rect((Screen.width - 180f) * 0.5f, rect.yMax + 8f, 180f, 44f);
+        if (GUI.Button(buttonRect, "结算"))
+            AdvanceOrCompleteCurrentStep();
+    }
+
     public void StartTutorial()
     {
         _stepIndex = -1;
         _currentAct = null;
         _currentLevel = null;
+        _isReloadingAct = false;
+        _isAdvancingAfterVictoryPause = false;
+        _classicPhaseTwoPrepared = false;
         ClearPromptOverride();
         AdvanceStep();
+    }
+
+    public void StopTutorial()
+    {
+        _stepIndex = -1;
+        _ticksInStep = 0;
+        _currentAct = null;
+        _currentLevel = null;
+        _overrideTitle = null;
+        _overrideMessage = null;
+        _overrideHidden = true;
+        _isReloadingAct = false;
+        _isAdvancingAfterVictoryPause = false;
+        _classicPhaseTwoPrepared = false;
+        UnregisterHandZone();
+        HidePromptPanel();
+        ClearGroundHints();
     }
 
     public void AdvanceStep()
@@ -454,16 +503,91 @@ public sealed class TutorialStageDirector : MonoBehaviour
             return;
         }
 
+        if (step.act == TutorialAct.ClassicPhaseOne)
+            return;
+
+        if (step.act == TutorialAct.ClassicPhaseTwo)
+        {
+            if (player.AreAllBoxesOnTargets() && !player.HasAnyEnemyAlive())
+                AdvanceOrCompleteCurrentStep();
+
+            return;
+        }
+
         if (player.AreAllBoxesOnTargets())
             AdvanceOrCompleteCurrentStep();
     }
 
     private void AdvanceOrCompleteCurrentStep()
     {
+        if (_isAdvancingAfterVictoryPause)
+            return;
+
+        if (CurrentStep()?.act == TutorialAct.ClassicPhaseOne)
+        {
+            AdvanceFromClassicPhaseOne();
+            return;
+        }
+
         if (CurrentStep()?.completeTutorial == true)
             CompleteTutorial(LevelPlayResult.Success, CurrentStep()?.stepId);
         else
+            PlayVictoryPauseThenAdvance();
+    }
+
+    private void PlayVictoryPauseThenAdvance()
+    {
+        var player = LevelPlayer.ActiveInstance;
+        if (player == null || !player.IsPlaying)
+        {
             AdvanceStep();
+            return;
+        }
+
+        _isAdvancingAfterVictoryPause = true;
+        HidePrompt();
+        ClearGroundHints();
+        player.PlayTutorialVictoryPause(CurrentStep()?.stepId, () =>
+        {
+            _isAdvancingAfterVictoryPause = false;
+            AdvanceStep();
+        });
+    }
+
+    private void AdvanceFromClassicPhaseOne()
+    {
+        PrepareClassicPhaseTwoInPlace();
+        PlayPreparePauseThenAdvance();
+    }
+
+    private void PlayPreparePauseThenAdvance()
+    {
+        var player = LevelPlayer.ActiveInstance;
+        if (player == null || !player.IsPlaying)
+        {
+            AdvanceStep();
+            return;
+        }
+
+        _isAdvancingAfterVictoryPause = true;
+        HidePrompt();
+        ClearGroundHints();
+        player.PlayPreparePause(CurrentStep()?.stepId, () =>
+        {
+            _isAdvancingAfterVictoryPause = false;
+            AdvanceStep();
+        });
+    }
+
+    private void PrepareClassicPhaseTwoInPlace()
+    {
+        var player = LevelPlayer.ActiveInstance;
+        if (player == null || !player.IsPlaying)
+            return;
+
+        int converted = player.ConvertUnoccupiedClassicTargetsToEnemyTargets();
+        _classicPhaseTwoPrepared = true;
+        Debug.Log($"[TutorialStageDirector] Classic phase two prepared in place. Converted targets={converted}");
     }
 
     private void CompleteTutorial(LevelPlayResult result, string reason)
@@ -473,9 +597,6 @@ public sealed class TutorialStageDirector : MonoBehaviour
         HandZone.SetCardsLocked(true);
         SpawnSystem.Instance?.StopSpawning();
         LevelPlayer.ActiveInstance?.SettleTutorial(result, string.IsNullOrWhiteSpace(reason) ? "tutorial completed" : reason);
-
-        if (ReturnToMainMenuOnComplete)
-            GameFlowController.Instance?.ReturnToMainMenuRound();
     }
 
     private TutorialStep CurrentStep()
@@ -533,12 +654,22 @@ public sealed class TutorialStageDirector : MonoBehaviour
             return false;
         }
 
+        bool keepClassicPhaseState = _currentAct == TutorialAct.ClassicPhaseOne &&
+                                     act == TutorialAct.ClassicPhaseTwo &&
+                                     _classicPhaseTwoPrepared;
+
         bool sameLevelIsRunning = _currentAct.HasValue &&
-                                  _currentAct.Value == act &&
+                                  (_currentAct.Value == act || keepClassicPhaseState) &&
                                   _currentLevel == level &&
                                   player.CurrentLevel == level &&
                                   player.PlayMode == LevelPlayMode.DirectorControlled &&
                                   player.IsPlaying;
+
+        if (keepClassicPhaseState && sameLevelIsRunning)
+        {
+            _currentAct = act;
+            return true;
+        }
 
         if (sameLevelIsRunning)
             return true;
@@ -549,6 +680,7 @@ public sealed class TutorialStageDirector : MonoBehaviour
             Level = level,
             Config = null,
             Mode = LevelPlayMode.DirectorControlled,
+            TargetEnemySpawnIntervalOverride = TutorialTargetEnemySpawnInterval,
             RewardSettings = GameFlowController.Instance != null ? GameFlowController.Instance.RewardSettings : null,
             Difficulty = RunDifficultySnapshot.Default
         };
@@ -573,11 +705,15 @@ public sealed class TutorialStageDirector : MonoBehaviour
         _isReloadingAct = true;
         _currentAct = null;
         _currentLevel = null;
+        _classicPhaseTwoPrepared = false;
 
         try
         {
             if (!EnsureActLoaded(step.act))
                 return;
+
+            if (step.act == TutorialAct.ClassicPhaseTwo)
+                PrepareClassicPhaseTwoInPlace();
 
             HandZone.SetCardsLocked(step.lockCards);
             ApplySpawnState(step);
@@ -718,5 +854,21 @@ public sealed class TutorialStageDirector : MonoBehaviour
     private static void HidePromptPanel()
     {
         PostSystem.Instance?.Send("期望隐藏面板", TutorialUIIds.Prompt);
+    }
+
+    private void EnsureSettleStyles()
+    {
+        _settleLabelStyle ??= new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = 26,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = new Color(1f, 0.95f, 0.72f, 1f) }
+        };
+
+        _settleShadowStyle ??= new GUIStyle(_settleLabelStyle)
+        {
+            normal = { textColor = new Color(0f, 0f, 0f, 0.72f) }
+        };
     }
 }

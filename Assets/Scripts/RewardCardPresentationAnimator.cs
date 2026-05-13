@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
@@ -106,6 +107,95 @@ public sealed class RewardCardPresentationAnimator : MonoBehaviour
 
             anyPlayed = true;
         }
+
+        return anyPlayed;
+    }
+
+    public bool TryPlayTransfer(IReadOnlyList<CardSO> cards, RectTransform fromAnchor, RectTransform toAnchor, Action onComplete = null)
+    {
+        if (cards == null || cards.Count == 0)
+            return false;
+
+        if (!ValidatePlayRequest(cards[0], 1))
+            return false;
+
+        Vector2 fallbackStart = ViewportToLocal(new Vector2(0.88f, 0.08f));
+        Vector2 fallbackTarget = ViewportToLocal(fallbackTargetViewportPosition);
+        Vector2 start = fromAnchor != null ? WorldToRootLocal(fromAnchor.position, fallbackStart) : fallbackStart;
+        Vector2 target = toAnchor != null ? WorldToRootLocal(toAnchor.position, fallbackTarget) : fallbackTarget;
+        bool anyPlayed = false;
+        int pending = 0;
+        bool completionInvoked = false;
+
+        for (int i = 0; i < cards.Count; i++)
+        {
+            var card = cards[i];
+            if (card == null)
+                continue;
+
+            var viewObject = Instantiate(cardPrefab, presentationRoot);
+            if (viewObject == null)
+            {
+                LogError($"Transfer instantiate returned null. card={GetCardId(card)}");
+                continue;
+            }
+
+            if (!viewObject.TryGetComponent<CardView>(out var view))
+            {
+                LogError($"Transfer card prefab has no CardView component. prefab={cardPrefab.name}, card={GetCardId(card)}");
+                Destroy(viewObject);
+                continue;
+            }
+
+            _spawnedViews.Add(view);
+            view.transform.SetAsLastSibling();
+            view.gameObject.SetActive(true);
+            view.SetLayoutSizes(cardBaseSize, cardHoverSize);
+            view.Bind(card, null);
+            view.SetInteractable(false);
+            view.SetHoverState(false, 0f, ease);
+
+            float offset = Mathf.Clamp(i, 0, 8) * 7f;
+            Vector2 localStart = start + new Vector2(offset, offset * 0.35f);
+            Vector2 localTarget = target + new Vector2(offset * 0.25f, offset * 0.1f);
+            view.Snap(localStart, 0.72f, 0f);
+
+            float delay = i * 0.08f;
+            float duration = Mathf.Max(0.08f, flyDuration * 0.55f);
+            pending++;
+            DOVirtual.DelayedCall(delay, () =>
+            {
+                if (view != null)
+                {
+                    view.TweenTo(localTarget, 0.72f, 0f, duration, ease, () =>
+                    {
+                        _spawnedViews.Remove(view);
+                        if (view != null)
+                            Destroy(view.gameObject);
+
+                        pending--;
+                        if (pending <= 0 && !completionInvoked)
+                        {
+                            completionInvoked = true;
+                            onComplete?.Invoke();
+                        }
+                    });
+                    return;
+                }
+
+                pending--;
+                if (pending <= 0 && !completionInvoked)
+                {
+                    completionInvoked = true;
+                    onComplete?.Invoke();
+                }
+            });
+
+            anyPlayed = true;
+        }
+
+        if (!anyPlayed && !completionInvoked)
+            onComplete?.Invoke();
 
         return anyPlayed;
     }

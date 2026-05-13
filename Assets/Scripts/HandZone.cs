@@ -105,6 +105,7 @@ public class HandZone : MonoBehaviour
     private float _cachedHoverLift;
     private static int _stageBlockingPointerInputFrame = -1;
     private bool _hasPilePanelAnimators;
+    private bool _isRecyclingDiscardToDraw;
 
     public CardHandState State => handState;
 
@@ -252,6 +253,7 @@ public class HandZone : MonoBehaviour
         ClearRuntimeCards();
         _drawPile.Clear();
         _discardPile.Clear();
+        _isRecyclingDiscardToDraw = false;
         ApplyRunStartHandSettings();
 
         var cards = deck.GetCards();
@@ -302,7 +304,7 @@ public class HandZone : MonoBehaviour
         int drawn = 0;
         for (int i = 0; i < count && _hand.Count < handState.MaxHandCount; i++)
         {
-            if (!EnsureDrawPileHasCards())
+            if (!EnsureDrawPileHasCardsForDraw())
                 break;
 
             var card = PopTopDrawCard();
@@ -392,6 +394,64 @@ public class HandZone : MonoBehaviour
     public int HandCount => _hand.Count;
     public int DrawPileCount => _drawPile.Count;
     public int DiscardPileCount => _discardPile.Count;
+
+    public HandZoneSnapshot CaptureSnapshot()
+    {
+        var snapshot = new HandZoneSnapshot
+        {
+            Initialized = _initialized,
+            ObservedHandStateRevision = _observedHandStateRevision
+        };
+
+        for (int i = 0; i < _drawPile.Count; i++)
+            snapshot.DrawPile.Add(_drawPile[i]);
+
+        for (int i = 0; i < _discardPile.Count; i++)
+            snapshot.DiscardPile.Add(_discardPile[i]);
+
+        for (int i = 0; i < _hand.Count; i++)
+        {
+            if (_hand[i] != null)
+                snapshot.Hand.Add(_hand[i].Card);
+        }
+
+        return snapshot;
+    }
+
+    public void RestoreSnapshot(HandZoneSnapshot snapshot)
+    {
+        if (snapshot == null)
+            return;
+
+        ClearRuntimeCards();
+        _drawPile.Clear();
+        _discardPile.Clear();
+
+        if (snapshot.DrawPile != null)
+            _drawPile.AddRange(snapshot.DrawPile);
+
+        if (snapshot.DiscardPile != null)
+            _discardPile.AddRange(snapshot.DiscardPile);
+
+        _initialized = snapshot.Initialized;
+        _observedHandStateRevision = snapshot.ObservedHandStateRevision;
+        IsAnyCardInteractionActive = false;
+        IsAnyCardAiming = false;
+        _isRecyclingDiscardToDraw = false;
+
+        if (snapshot.Hand != null)
+        {
+            for (int i = 0; i < snapshot.Hand.Count; i++)
+            {
+                if (snapshot.Hand[i] != null)
+                    CreateHandCard(snapshot.Hand[i], false);
+            }
+        }
+
+        ApplyCardInteractableState();
+        RelayoutHand(false);
+        RefreshCounters();
+    }
 
     private bool CanAutoBuildNow()
     {
@@ -1177,19 +1237,54 @@ public class HandZone : MonoBehaviour
         return new Vector2(rect.xMax - cardSize.x * 0.5f - 60f, rect.yMin + cardSize.y * 0.5f + 60f);
     }
 
-    private bool EnsureDrawPileHasCards()
+    private bool EnsureDrawPileHasCardsForDraw()
     {
         if (_drawPile.Count > 0)
             return true;
 
-        if (_discardPile.Count == 0)
+        if (_hand.Count > 0 || _discardPile.Count == 0 || _isRecyclingDiscardToDraw)
             return false;
 
-        _drawPile.AddRange(_discardPile);
-        _discardPile.Clear();
-        Shuffle(_drawPile);
+        StartDiscardToDrawPileRecycle();
+        return false;
+    }
+
+    private void StartDiscardToDrawPileRecycle()
+    {
+        if (_isRecyclingDiscardToDraw || _discardPile.Count == 0)
+            return;
+
+        _isRecyclingDiscardToDraw = true;
+        var recycledCards = new List<CardSO>(_discardPile);
+        var animator = RewardCardPresentationAnimator.ActiveInstance != null
+            ? RewardCardPresentationAnimator.ActiveInstance
+            : FindObjectOfType<RewardCardPresentationAnimator>(true);
+
+        bool animationStarted = animator != null &&
+                                animator.TryPlayTransfer(recycledCards, discardPileAnchor, drawPileAnchor, CompleteDiscardToDrawPileRecycle);
+        if (!animationStarted)
+        {
+            Debug.LogWarning($"[HandZone] Discard-to-draw animation skipped or failed. count={recycledCards.Count}");
+            CompleteDiscardToDrawPileRecycle();
+        }
+    }
+
+    private void CompleteDiscardToDrawPileRecycle()
+    {
+        if (!_isRecyclingDiscardToDraw)
+            return;
+
+        _isRecyclingDiscardToDraw = false;
+        if (_drawPile.Count == 0 && _hand.Count == 0 && _discardPile.Count > 0)
+        {
+            _drawPile.AddRange(_discardPile);
+            _discardPile.Clear();
+            Shuffle(_drawPile);
+        }
+
         RefreshCounters();
-        return _drawPile.Count > 0;
+        if (handState.AutoRefill)
+            RefillHandToTarget(true);
     }
 
     private CardSO PopTopDrawCard()
@@ -1226,6 +1321,7 @@ public class HandZone : MonoBehaviour
         _pendingCardIndex = -1;
         _hasAssistSelection = false;
         _assistCard = null;
+        _isRecyclingDiscardToDraw = false;
         IsAnyCardAiming = false;
         ClearCardReleaseOverlay();
 

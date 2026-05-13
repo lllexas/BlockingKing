@@ -5,6 +5,8 @@ using UnityEngine;
 
 public sealed class RunRoundHudPanelAnimator : SpaceUIAnimator
 {
+    private const int MaxStatusMessageLength = 24;
+
     [Header("HUD UI")]
     [SerializeField] private TextMeshProUGUI roundText;
     [SerializeField] private TextMeshProUGUI hpText;
@@ -51,7 +53,7 @@ public sealed class RunRoundHudPanelAnimator : SpaceUIAnimator
 
         var inventory = GraphHub.Instance?.GetFacade<RunInventoryFacade>();
         SetText(goldText, inventory != null ? $"金币 {inventory.Gold}" : "金币 0");
-        SetText(statusText, request.StatusMessage);
+        SetText(statusText, ShouldShowStatusMessage(controller) ? CompactStatusMessage(request.StatusMessage) : string.Empty);
     }
 
     protected override void CloseAction()
@@ -70,5 +72,26 @@ public sealed class RunRoundHudPanelAnimator : SpaceUIAnimator
     {
         if (text != null)
             text.text = value ?? string.Empty;
+    }
+
+    private static bool ShouldShowStatusMessage(RunRoundController controller)
+    {
+        if (controller == null)
+            return true;
+
+        return controller.State != RunRoundState.CombatSettlement &&
+               controller.State != RunRoundState.PostCombatOffer;
+    }
+
+    private static string CompactStatusMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return string.Empty;
+
+        message = message.Replace("\r", " ").Replace("\n", " ").Trim();
+        if (message.Length <= MaxStatusMessageLength)
+            return message;
+
+        return message.Substring(0, MaxStatusMessageLength) + "...";
     }
 }

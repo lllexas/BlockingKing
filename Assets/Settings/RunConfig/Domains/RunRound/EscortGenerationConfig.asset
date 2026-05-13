@@ -51,15 +51,15 @@ MonoBehaviour:
   - enabled: 1
     roundIndex: 1
     label: 
-    manhattanDistanceRange: {x: 30, y: 45}
+    manhattanDistanceRange: {x: 20, y: 25}
     targetAngleRange: {x: 30, y: 60}
-    cityCountRange: {x: 1, y: 2}
-    enemyCountRange: {x: 1, y: 2}
+    cityCountRange: {x: 1, y: 1}
+    enemyCountRange: {x: 2, y: 3}
     maxFinalRewardBoxes: -1
   - enabled: 1
     roundIndex: 2
     label: 
-    manhattanDistanceRange: {x: 45, y: 60}
+    manhattanDistanceRange: {x: 30, y: 45}
     targetAngleRange: {x: 30, y: 60}
     cityCountRange: {x: 2, y: 4}
     enemyCountRange: {x: 2, y: 3}
@@ -67,7 +67,7 @@ MonoBehaviour:
   - enabled: 1
     roundIndex: 3
     label: 
-    manhattanDistanceRange: {x: 60, y: 80}
+    manhattanDistanceRange: {x: 50, y: 70}
     targetAngleRange: {x: 30, y: 60}
     cityCountRange: {x: 3, y: 6}
     enemyCountRange: {x: 3, y: 5}
@@ -75,7 +75,7 @@ MonoBehaviour:
   - enabled: 1
     roundIndex: 4
     label: 
-    manhattanDistanceRange: {x: 80, y: 100}
+    manhattanDistanceRange: {x: 70, y: 100}
     targetAngleRange: {x: 30, y: 60}
     cityCountRange: {x: 6, y: 10}
     enemyCountRange: {x: 5, y: 8}

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -34,6 +35,7 @@ public sealed class LevelPlayRequest
     public TileMappingConfig Config;
     public LevelPlayMode Mode = LevelPlayMode.Classic;
     public int StepLimit = 30;
+    public int TargetEnemySpawnIntervalOverride = -1;
     public RunDifficultySnapshot Difficulty = RunDifficultySnapshot.Default;
     public RunRewardConfigSO RewardSettings;
 
@@ -86,6 +88,7 @@ public class LevelPlayer : MonoBehaviour
     private const int DefaultTargetTagID = 3;
     private const int DefaultTargetCoreTagID = 7;
     private const int DefaultTargetEnemyTagID = 8;
+    private const int DefaultTargetEnemySpawnInterval = 8;
 
     [Header("关卡数据")]
     [SerializeField, Tooltip("直接拖入 LevelData SO（QuickPlaySession 激活时会覆盖它）")]
@@ -151,6 +154,7 @@ public class LevelPlayer : MonoBehaviour
     private int _remainingSteps = -1;
     private RunDifficultySnapshot _activeDifficulty = RunDifficultySnapshot.Default;
     private RunRewardConfigSO _activeRewardSettings;
+    private int _activeTargetEnemySpawnIntervalOverride = -1;
     private LevelSettlementSummary _settlementSummary = new();
     private GUIStyle _stepLimitStyle;
     private GUIStyle _stepLimitShadowStyle;
@@ -165,6 +169,9 @@ public class LevelPlayer : MonoBehaviour
     private GUIStyle _settlementTitleStyle;
     private GUIStyle _settlementBodyStyle;
     private GUIStyle _settlementPanelStyle;
+    private GUIStyle _edgeBoxHintStyle;
+    private GUIStyle _edgeBoxHintShadowStyle;
+    private GUIStyle _edgeBoxHintPanelStyle;
     private readonly HashSet<Vector2Int> _targetCells = new();
     private readonly HashSet<Vector2Int> _coreTargetCells = new();
     private EventBusSystem _registeredEventBus;
@@ -229,6 +236,8 @@ public class LevelPlayer : MonoBehaviour
 
         if (_playRule is ClassicPlayRule classicRule)
             classicRule.DrawGUI(this);
+
+        DrawEdgeBoxHint();
     }
 
     public bool PlayLevel(LevelData level)
@@ -346,6 +355,7 @@ public class LevelPlayer : MonoBehaviour
         _playMode = request != null ? request.Mode : defaultPlayMode;
         _activeDifficulty = ResolveDifficulty(request);
         _activeRewardSettings = ResolveRewardSettings(request);
+        _activeTargetEnemySpawnIntervalOverride = request != null ? request.TargetEnemySpawnIntervalOverride : -1;
         _settlementSummary = new LevelSettlementSummary();
         _playRule = CreatePlayRule(_playMode);
         _isPlaying = true;
@@ -364,6 +374,7 @@ public class LevelPlayer : MonoBehaviour
         TickSystem.OnTick -= HandleTick;
         TickSystem.OnTick += HandleTick;
         RegisterStageEventBus();
+        LevelUndoSystem.Instance?.BeginLevel();
 
         if (_playRule.ShouldStartSpawningOnBegin)
         {
@@ -391,6 +402,7 @@ public class LevelPlayer : MonoBehaviour
         UnregisterStageEventBus();
         _playRule?.End(this);
         SpawnSystem.Instance?.StopSpawning();
+        LevelUndoSystem.Instance?.EndLevel();
         var flow = GameFlowController.Instance;
         HandZone.SetCardsLocked(flow == null || !flow.IsInLevel);
         _playRule = null;
@@ -401,6 +413,7 @@ public class LevelPlayer : MonoBehaviour
         _settlementBody = null;
         _activeDifficulty = RunDifficultySnapshot.Default;
         _activeRewardSettings = null;
+        _activeTargetEnemySpawnIntervalOverride = -1;
     }
 
     public void SettleTutorial(LevelPlayResult result, string reason)
@@ -657,6 +670,134 @@ public class LevelPlayer : MonoBehaviour
     internal void SetRemainingSteps(int value)
     {
         _remainingSteps = value;
+    }
+
+    public LevelPlayerUndoSnapshot CaptureUndoSnapshot()
+    {
+        var snapshot = new LevelPlayerUndoSnapshot
+        {
+            IsPlaying = _isPlaying,
+            IsSettled = _isSettled,
+            IsStageInputLocked = _isStageInputLocked,
+            LastResult = _lastResult,
+            RemainingSteps = _remainingSteps,
+            SettlementTitle = _settlementTitle,
+            SettlementBody = _settlementBody,
+            SuccessfulBoxCount = _settlementSummary != null ? _settlementSummary.SuccessfulBoxCount : 0
+        };
+
+        if (_settlementSummary?.RewardLines != null)
+        {
+            for (int i = 0; i < _settlementSummary.RewardLines.Count; i++)
+            {
+                var line = _settlementSummary.RewardLines[i];
+                if (line == null)
+                    continue;
+
+                snapshot.RewardLines.Add(new LevelSettlementRewardLine
+                {
+                    Label = line.Label,
+                    Gold = line.Gold,
+                    IsHeader = line.IsHeader
+                });
+            }
+        }
+
+        return snapshot;
+    }
+
+    public void RestoreUndoSnapshot(LevelPlayerUndoSnapshot snapshot)
+    {
+        if (snapshot == null)
+            return;
+
+        if (_settlementRoutine != null)
+        {
+            StopCoroutine(_settlementRoutine);
+            _settlementRoutine = null;
+        }
+
+        _isPlaying = snapshot.IsPlaying;
+        _isSettled = snapshot.IsSettled;
+        _isStageInputLocked = snapshot.IsStageInputLocked;
+        _lastResult = snapshot.LastResult;
+        _remainingSteps = snapshot.RemainingSteps;
+        _settlementTitle = snapshot.SettlementTitle;
+        _settlementBody = snapshot.SettlementBody;
+        _isCompletingSettlement = false;
+
+        _settlementSummary = new LevelSettlementSummary
+        {
+            SuccessfulBoxCount = snapshot.SuccessfulBoxCount
+        };
+
+        if (snapshot.RewardLines != null)
+        {
+            for (int i = 0; i < snapshot.RewardLines.Count; i++)
+            {
+                var line = snapshot.RewardLines[i];
+                if (line == null)
+                    continue;
+
+                _settlementSummary.RewardLines.Add(new LevelSettlementRewardLine
+                {
+                    Label = line.Label,
+                    Gold = line.Gold,
+                    IsHeader = line.IsHeader
+                });
+            }
+        }
+    }
+
+    internal void PlayTutorialVictoryPause(string reason, Action onComplete)
+    {
+        PlayShortOnGuiPause("Victory", "战斗完成", reason, true, onComplete);
+    }
+
+    internal void PlayPreparePause(string reason, Action onComplete)
+    {
+        PlayShortOnGuiPause("Ready", "预备", reason, true, onComplete);
+    }
+
+    private void PlayShortOnGuiPause(string title, string body, string reason, bool stopSpawning, Action onComplete)
+    {
+        if (!_isPlaying || _isSettled || _isCompletingSettlement)
+        {
+            onComplete?.Invoke();
+            return;
+        }
+
+        if (_settlementRoutine != null)
+        {
+            StopCoroutine(_settlementRoutine);
+            _settlementRoutine = null;
+        }
+
+        _isStageInputLocked = true;
+        HandZone.SetCardsLocked(true);
+        HandZone.TryCancelActivePendingCard();
+        if (stopSpawning)
+            SpawnSystem.Instance?.StopSpawning();
+
+        _settlementTitle = string.IsNullOrWhiteSpace(title) ? "Ready" : title;
+        _settlementBody = string.IsNullOrWhiteSpace(body) ? string.Empty : body;
+        _settlementRoutine = StartCoroutine(CompleteShortOnGuiPause(reason, onComplete));
+    }
+
+    private IEnumerator CompleteShortOnGuiPause(string reason, Action onComplete)
+    {
+        float beatDuration = BeatTiming.GetBeatDuration();
+        float waitSeconds = Mathf.Max(0.05f, beatDuration) * SuccessSettleBeatCount;
+        float endTime = Time.time + waitSeconds;
+        while (Time.time < endTime)
+            yield return null;
+
+        _settlementRoutine = null;
+        _settlementTitle = null;
+        _settlementBody = null;
+        _isStageInputLocked = false;
+        Debug.Log($"[LevelPlayer] Short OnGUI pause completed: {reason}");
+        onComplete?.Invoke();
     }
 
     internal void SettleLevel(LevelPlayResult result, string reason)
@@ -1183,6 +1324,7 @@ public class LevelPlayer : MonoBehaviour
         EnsureRuntimeSystem<EnemyIntentOverlaySystem>();
         EnsureRuntimeSystem<StageBeatAudioSystem>();
         EnsureRuntimeSystem<UserInputReader>();
+        EnsureRuntimeSystem<LevelUndoSystem>();
         drawSystem.SetWallMaterial(_materialInstance);
 
         entitySystem.Initialize(maxEntityCount, _level.width, _level.height);
@@ -1671,7 +1813,11 @@ public class LevelPlayer : MonoBehaviour
         ref var props = ref entitySystem.entities.propertyComponents[index];
 
         EntityBP bp = _config != null ? _config.GetTagEntityBP(tagId) : null;
-        int fallbackInterval = bp != null && bp.spawnInterval > 0 ? bp.spawnInterval : 3;
+        int fallbackInterval = bp != null && bp.spawnInterval > 0
+            ? bp.spawnInterval
+            : _activeTargetEnemySpawnIntervalOverride > 0
+                ? _activeTargetEnemySpawnIntervalOverride
+                : DefaultTargetEnemySpawnInterval;
         Vector2Int spawnPosition = entitySystem.entities.coreComponents[index].Position;
         var spawnSystem = SpawnSystem.Instance ?? GetComponent<SpawnSystem>();
         props.SpawnInterval = spawnSystem != null
@@ -1764,6 +1910,72 @@ public class LevelPlayer : MonoBehaviour
             else if (tag.tagID == targetCoreTagID)
                 _coreTargetCells.Add(new Vector2Int(tag.x, tag.y));
         }
+    }
+
+    private void DrawEdgeBoxHint()
+    {
+        if (!HasAttackRecoverableEdgeBox())
+            return;
+
+        EnsureEdgeBoxHintStyles();
+
+        const string text = "箱子卡在边缘？使用冲撞卡牌攻击箱子，把它弹回场内。";
+        float width = Mathf.Min(720f, Screen.width - 32f);
+        float height = 52f;
+        var rect = new Rect((Screen.width - width) * 0.5f, 92f, width, height);
+        var shadowRect = new Rect(rect.x + 2f, rect.y + 2f, rect.width, rect.height);
+        GUI.Box(rect, GUIContent.none, _edgeBoxHintPanelStyle);
+        GUI.Label(shadowRect, text, _edgeBoxHintShadowStyle);
+        GUI.Label(rect, text, _edgeBoxHintStyle);
+    }
+
+    private bool HasAttackRecoverableEdgeBox()
+    {
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+            return false;
+
+        var entities = entitySystem.entities;
+        for (int i = 0; i < entities.entityCount; i++)
+        {
+            if (entities.coreComponents[i].EntityType != EntityType.Box)
+                continue;
+
+            var handle = entitySystem.GetHandleFromId(entities.coreComponents[i].Id);
+            if (!entitySystem.IsValid(handle))
+                continue;
+
+            if (BoxDisplacementUtility.CanBounceEdgeBox(entitySystem, handle))
+                return true;
+        }
+
+        return false;
+    }
+
+    private void EnsureEdgeBoxHintStyles()
+    {
+        if (_edgeBoxHintStyle != null && _edgeBoxHintShadowStyle != null && _edgeBoxHintPanelStyle != null)
+            return;
+
+        _edgeBoxHintStyle = new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = 22,
+            fontStyle = FontStyle.Bold,
+            richText = false
+        };
+        _edgeBoxHintStyle.normal.textColor = new Color(1f, 0.92f, 0.45f, 1f);
+
+        _edgeBoxHintShadowStyle = new GUIStyle(_edgeBoxHintStyle);
+        _edgeBoxHintShadowStyle.normal.textColor = new Color(0f, 0f, 0f, 0.85f);
+
+        var panelTexture = new Texture2D(1, 1);
+        panelTexture.SetPixel(0, 0, new Color(0f, 0f, 0f, 0.58f));
+        panelTexture.Apply();
+        _edgeBoxHintPanelStyle = new GUIStyle(GUI.skin.box)
+        {
+            normal = { background = panelTexture }
+        };
     }
 
     private int ResolveTagID(string tagName, int fallback)
@@ -1918,7 +2130,7 @@ public class LevelPlayer : MonoBehaviour
             int newBoxes = player.CountBoxesOnTargetsExcluding(_phaseOneSettledBoxIds);
             int preview = player.PreviewClassicPhaseTwoGold(newBoxes);
             int enemyCount = player.CountEnemiesAlive();
-            string combatText = $"经典阶段二  新箱子: {newBoxes}  预期金币: {preview}  怪物: {enemyCount}  魔化目标: {_convertedTargetCount}";
+            string combatText = $"经典阶段二  新箱子: {newBoxes}  预期金币: {preview}  怪物: {enemyCount}";
             float combatWidth = Mathf.Min(640f, Screen.width - 32f);
             var combatRect = new Rect((Screen.width - combatWidth) * 0.5f, 18f, combatWidth, 42f);
             var combatShadowRect = new Rect(combatRect.x + 2f, combatRect.y + 2f, combatRect.width, combatRect.height);
@@ -2019,12 +2231,16 @@ public class LevelPlayer : MonoBehaviour
             player.CollectBoxIdsOnTargets(_phaseOneSettledBoxIds);
             _phaseOneGold = player.AwardClassicPhaseOneGold(_phaseOneBoxCount);
             _convertedTargetCount = player.ConvertUnoccupiedClassicTargetsToEnemyTargets();
-            _phase = Phase.CombatUnlocked;
-            HandZone.SetCardsLocked(false);
-            SpawnSystem.Instance?.StartSpawning();
 
             Debug.Log($"[LevelPlayer] Classic phase one settled: boxes={_phaseOneBoxCount}, gold={_phaseOneGold}, convertedTargets={_convertedTargetCount}");
-            player._playRule.Evaluate(player);
+            player.PlayPreparePause("classic phase one settled", () =>
+            {
+                _phase = Phase.CombatUnlocked;
+                LevelUndoSystem.Instance?.ClearHistory("classic phase boundary");
+                HandZone.SetCardsLocked(false);
+                SpawnSystem.Instance?.StartSpawning();
+                player._playRule.Evaluate(player);
+            });
         }
 
     }

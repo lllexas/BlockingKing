@@ -19,21 +19,21 @@ MonoBehaviour:
   rows:
   - roundIndex: 1
     label: 
-    spawnInterval: 10
+    spawnInterval: 15
     initialDelay: 10
-    jitter: 1
+    jitter: 4
   - roundIndex: 2
     label: 
-    spawnInterval: 9
-    initialDelay: 9
-    jitter: 1
+    spawnInterval: 11
+    initialDelay: 8
+    jitter: 3
   - roundIndex: 3
     label: 
     spawnInterval: 8
-    initialDelay: 9
-    jitter: 1
+    initialDelay: 6
+    jitter: 2
   - roundIndex: 4
     label: 
-    spawnInterval: 7
-    initialDelay: 7
+    spawnInterval: 6
+    initialDelay: 4
     jitter: 1

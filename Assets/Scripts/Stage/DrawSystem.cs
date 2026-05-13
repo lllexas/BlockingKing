@@ -110,6 +110,7 @@ public class DrawSystem : MonoBehaviour
     [SerializeField] private Color groundTextColor = new(0.95f, 0.96f, 0.9f, 1f);
     [SerializeField, Range(0f, 0.5f)] private float groundTextOutlineWidth = 0.16f;
     [SerializeField] private Color groundTextOutlineColor = new(0.03f, 0.035f, 0.04f, 0.95f);
+    [SerializeField, Min(0f)] private float groundTextBoundsPadding = 0.24f;
 
     private readonly Matrix4x4[] _playerMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _boxMatrices = new Matrix4x4[BatchSize];
@@ -202,6 +203,29 @@ public class DrawSystem : MonoBehaviour
     public float RoundTripBeatDuration => beatDuration * 2f;
     public float RoundTripBeatBpm => beatDuration > 0f ? 60f / (beatDuration * 2f) : 0f;
 
+    public void ClearPresentationState()
+    {
+        _nextBeatStartTime = 0f;
+        _activeIntentStartTime = 0f;
+        _activeIntentEndTime = 0f;
+        _hasIntentContext = false;
+        _hasBatchContext = false;
+        _hasActiveIntentSlot = false;
+        _presentationBatches.Clear();
+        _deathVisuals.Clear();
+
+        var entitySystem = EntitySystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+            return;
+
+        var entities = entitySystem.entities;
+        if (entities.visualMotionComponents != null)
+            System.Array.Clear(entities.visualMotionComponents, 0, entities.visualMotionComponents.Length);
+
+        if (entities.visualImpulseComponents != null)
+            System.Array.Clear(entities.visualImpulseComponents, 0, entities.visualImpulseComponents.Length);
+    }
+
     public void SetGroundText(string id, string text, Vector2 centerXZ, Vector2 rectSize)
     {
         SetGroundText(id, text, centerXZ, rectSize, groundTextColor);
@@ -225,7 +249,7 @@ public class DrawSystem : MonoBehaviour
 
         float safeWidth = Mathf.Max(0.01f, rectSize.x) * cellSize;
         float safeHeight = Mathf.Max(0.01f, rectSize.y) * cellSize;
-        groundText.SetRectSize(new Vector2(safeWidth, safeHeight));
+        groundText.SetRectSize(new Vector2(safeWidth, safeHeight), groundTextBoundsPadding * cellSize);
 
         groundText.Root.transform.position = new Vector3(centerXZ.x * cellSize, groundTextHeight * cellSize, centerXZ.y * cellSize);
         groundText.Root.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
@@ -1046,7 +1070,8 @@ public class DrawSystem : MonoBehaviour
         text.outlineWidth = groundTextOutlineWidth;
         text.outlineColor = groundTextOutlineColor;
         text.enableWordWrapping = true;
-        text.overflowMode = TextOverflowModes.Truncate;
+        text.extraPadding = true;
+        text.overflowMode = TextOverflowModes.Overflow;
         text.text = string.Empty;
 
         RectTransform rectTransform = text.rectTransform;
@@ -1940,27 +1965,28 @@ public class DrawSystem : MonoBehaviour
             _occluded.color = color;
         }
 
-        public void SetRectSize(Vector2 size)
+        public void SetRectSize(Vector2 size, float boundsPadding)
         {
             _visible.rectTransform.sizeDelta = size;
             _occluded.rectTransform.sizeDelta = size;
-            ExpandBoundsToCurrentRect();
+            ExpandBoundsToCurrentRect(boundsPadding);
         }
 
-        private void ExpandBoundsToCurrentRect()
+        private void ExpandBoundsToCurrentRect(float padding = 0f)
         {
-            ExpandBoundsToRect(_visible, _visible.rectTransform.sizeDelta);
-            ExpandBoundsToRect(_occluded, _occluded.rectTransform.sizeDelta);
+            ExpandBoundsToRect(_visible, _visible.rectTransform.sizeDelta, padding);
+            ExpandBoundsToRect(_occluded, _occluded.rectTransform.sizeDelta, padding);
         }
 
-        private static void ExpandBoundsToRect(TextMeshPro text, Vector2 size)
+        private static void ExpandBoundsToRect(TextMeshPro text, Vector2 size, float padding)
         {
             if (text == null)
                 return;
 
             text.ForceMeshUpdate();
-            float width = Mathf.Max(0.01f, size.x);
-            float height = Mathf.Max(0.01f, size.y);
+            float safePadding = Mathf.Max(0f, padding);
+            float width = Mathf.Max(0.01f, size.x + safePadding * 2f);
+            float height = Mathf.Max(0.01f, size.y + safePadding * 2f);
             float depth = Mathf.Max(width, height, 1f);
             text.mesh.bounds = new Bounds(Vector3.zero, new Vector3(width, height, depth));
         }
