@@ -41,6 +41,9 @@ public sealed class RunRoundOnGUIFrontend : MonoBehaviour
             case RunRoundState.PostCombatOffer:
                 DrawPostCombatOffer(controller);
                 break;
+            case RunRoundState.CombatSettlement:
+                DrawCombatSettlement(controller);
+                break;
             case RunRoundState.Event:
                 DrawEvent(controller);
                 break;
@@ -127,6 +130,32 @@ public sealed class RunRoundOnGUIFrontend : MonoBehaviour
         GUILayout.EndHorizontal();
     }
 
+    private void DrawCombatSettlement(RunRoundController controller)
+    {
+        var settlement = controller.CurrentCombatSettlement;
+        GUILayout.Label("战斗结算", _titleStyle);
+        GUILayout.Space(12f);
+        if (settlement != null)
+        {
+            string modeName = settlement.Mode == RunMainStageMode.Escort ? "Escort" : "Classic";
+            string levelName = string.IsNullOrWhiteSpace(settlement.LevelName) ? "未知关卡" : settlement.LevelName;
+            GUILayout.Label($"{modeName} · {levelName}", _bodyStyle);
+            GUILayout.Space(8f);
+            GUILayout.Label($"成功归位箱子 x{settlement.SuccessfulBoxCount}", _titleStyle);
+            GUILayout.Space(8f);
+            DrawSettlementRewardLines(settlement);
+            GUILayout.Space(8f);
+            GUILayout.Label($"总计获得 {FormatDelta(settlement.GoldDelta)} 金币  |  当前金币 {settlement.GoldAfter}", _bodyStyle);
+            GUILayout.Label(settlement.MaxHp > 0 ? $"HP {settlement.Hp}/{settlement.MaxHp}" : "HP -", _bodyStyle);
+            if (!string.IsNullOrWhiteSpace(settlement.Message))
+                GUILayout.Label(settlement.Message, _bodyStyle);
+        }
+
+        GUILayout.FlexibleSpace();
+        if (GUILayout.Button("继续", _buttonStyle, GUILayout.Height(58f)))
+            controller.ConfirmCombatSettlement();
+    }
+
     private void DrawEvent(RunRoundController controller)
     {
         GUILayout.Label("不期而遇", _titleStyle);
@@ -175,6 +204,32 @@ public sealed class RunRoundOnGUIFrontend : MonoBehaviour
     {
         var status = GraphHub.Instance?.GetFacade<RunPlayerStatusFacade>();
         return status != null ? $"{status.CurrentHp}/{status.MaxHp}" : "-";
+    }
+
+    private static string FormatDelta(int value)
+    {
+        return value >= 0 ? $"+{value}" : value.ToString();
+    }
+
+    private void DrawSettlementRewardLines(RunCombatSettlement settlement)
+    {
+        if (settlement == null || settlement.RewardLines.Count == 0)
+        {
+            GUILayout.Label("无金币奖励", _bodyStyle);
+            return;
+        }
+
+        for (int i = 0; i < settlement.RewardLines.Count; i++)
+        {
+            var line = settlement.RewardLines[i];
+            if (line == null)
+                continue;
+
+            string text = line.IsHeader
+                ? $"{line.Label}:"
+                : $"{line.Label}  ->  {FormatDelta(line.Gold)} 金币";
+            GUILayout.Label(text, _bodyStyle);
+        }
     }
 
     private void EnsureStyles()

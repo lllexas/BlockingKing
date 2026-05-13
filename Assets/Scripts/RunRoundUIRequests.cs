@@ -9,7 +9,10 @@ public static class RunRoundUIIds
     public const string SkipChoice = "RunRoundSkipChoice";
     public const string ShopChoice = "RunRoundShopChoice";
     public const string EventChoice = "RunRoundEventChoice";
+    public const string CombatSettlement = "RunCombatSettlement";
     public const string Result = "RunResult";
+    public const string DeckPanel = "RunDeckPanel";
+    public const string ShopPanel = "RunShopPanel";
 }
 
 public sealed class RunRoundBackdropUIRequest : IRoutedRequest
@@ -65,4 +68,21 @@ public sealed class RunResultUIRequest : IRoutedRequest
     public RunRoundController Controller;
     public bool Victory;
     public string Message;
+}
+
+public sealed class RunCombatSettlementUIRequest : IRoutedRequest
+{
+    public string uiid => RunRoundUIIds.CombatSettlement;
+    public RunRoundController Controller;
+    public RunCombatSettlement Settlement;
+}
+
+public sealed class RunDeckPanelUIRequest : IRoutedRequest
+{
+    public string uiid => RunRoundUIIds.DeckPanel;
+}
+
+public sealed class RunShopPanelUIRequest : IRoutedRequest
+{
+    public string uiid => RunRoundUIIds.ShopPanel;
 }

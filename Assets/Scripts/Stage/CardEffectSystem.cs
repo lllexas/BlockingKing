@@ -85,7 +85,7 @@ public class CardEffectSystem : MonoBehaviour
             "rook.charge" => PreviewLineCharge(actor, target.Direction, DirectionMask.Orthogonal, watchedCell),
             "bishop.charge" => PreviewLineCharge(actor, target.Direction, DirectionMask.Diagonal, watchedCell),
             "queen.charge" => PreviewLineCharge(actor, target.Direction, DirectionMask.EightWay, watchedCell),
-            "soldier.charge" => PreviewStepAttack(actor, target.Direction, DirectionMask.Orthogonal, watchedCell),
+            "soldier.charge" => PreviewStepAttack(actor, target.Direction, DirectionMask.Diagonal, watchedCell),
             "knight.stomp" => PreviewTargetCellAttack(target.TargetCell, watchedCell),
             "cannon.charge" => PreviewCannonCharge(actor, target.Direction, watchedCell),
             "king.stomp" => PreviewKingStomp(actor, watchedCell),
@@ -393,7 +393,7 @@ public class CardEffectSystem : MonoBehaviour
         if (entitySystem == null || !entitySystem.IsInitialized || !entitySystem.IsValid(actor))
             return false;
 
-        if (!IsDirectionAllowed(direction, DirectionMask.Orthogonal))
+        if (!IsDirectionAllowed(direction, DirectionMask.Diagonal))
             return false;
 
         int actorIndex = entitySystem.GetIndex(actor);

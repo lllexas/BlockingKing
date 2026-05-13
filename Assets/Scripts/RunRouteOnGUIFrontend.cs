@@ -36,11 +36,20 @@ public class RunRouteOnGUIFrontend : MonoBehaviour
 
     public void OpenDeck()
     {
+        if (RunDeckPanelAnimator.Instance != null)
+        {
+            PostSystem.Instance?.Send("期望显示面板", new RunDeckPanelUIRequest());
+            return;
+        }
+
         _showingDeck = true;
     }
 
     public void CloseDeck()
     {
+        if (RunDeckPanelAnimator.Instance != null)
+            PostSystem.Instance?.Send("期望隐藏面板", new RunDeckPanelUIRequest());
+
         _showingDeck = false;
     }
 

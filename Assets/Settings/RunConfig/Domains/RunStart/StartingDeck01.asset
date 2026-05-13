@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cards:
   - card: {fileID: 11400000, guid: 9d5f1bb0a33f4c9fac4d84fbd7f35002, type: 2}
-    count: 1
+    count: 2
   - card: {fileID: 11400000, guid: 2ce0f5c8f3df4d97a4e12a80d672b001, type: 2}
-    count: 1
+    count: 2
   - card: {fileID: 11400000, guid: 4f986839244149d2b29180f93f8d6004, type: 2}
-    count: 6
+    count: 4

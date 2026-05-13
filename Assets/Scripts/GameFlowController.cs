@@ -6,7 +6,9 @@ public enum GameFlowMode
 {
     DirectLevel,
     RouteMap,
-    RoundFlow
+    RoundFlow,
+    Tutorial,
+    LevelEdit
 }
 
 public enum RouteMapStartupMode
@@ -26,6 +28,8 @@ public class GameFlowController : MonoBehaviour
     [SerializeField] private RunStartSettings runStartSettings;
     [SerializeField] private bool ensureRouteOnGUI = true;
     [SerializeField] private RouteMapStartupMode routeMapStartupMode = RouteMapStartupMode.AutoStart;
+    [Header("Tutorial")]
+    [SerializeField] private bool ensureTutorialDirector = true;
 
     public GameFlowMode Mode => mode;
     public bool ShouldLevelPlayerAutoBuild => mode == GameFlowMode.DirectLevel;
@@ -62,12 +66,22 @@ public class GameFlowController : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
-        EnsureFacades();
-        EnsureBgmSystems();
+
+        if (mode != GameFlowMode.LevelEdit)
+        {
+            EnsureFacades();
+            EnsureBgmSystems();
+        }
     }
 
     private void Start()
     {
+        if (mode == GameFlowMode.LevelEdit)
+        {
+            StartLevelEdit();
+            return;
+        }
+
         if (routeMapStartupMode == RouteMapStartupMode.MainMenuRound)
         {
             ShowMainMenuRound(true);
@@ -90,6 +104,10 @@ public class GameFlowController : MonoBehaviour
 
         if (mode == GameFlowMode.RoundFlow)
             InitializeRoundFlow();
+
+        if (mode == GameFlowMode.Tutorial)
+            StartTutorialLevel();
+
     }
 
     private void Update()
@@ -220,8 +238,75 @@ public class GameFlowController : MonoBehaviour
             InitializeRouteMap();
         else if (mode == GameFlowMode.RoundFlow)
             InitializeRoundFlow();
+        else if (mode == GameFlowMode.Tutorial)
+            StartTutorialLevel();
+        else if (mode == GameFlowMode.LevelEdit)
+            StartLevelEdit();
 
         _isStartingRun = false;
+    }
+
+    public void StartLevelEdit()
+    {
+#if UNITY_EDITOR
+        mode = GameFlowMode.LevelEdit;
+        IsMainMenuVisible = false;
+        IsInLevel = false;
+        HideMainMenu();
+        HideRunUiPanels();
+        HideBgmRecord();
+        SetRouteVisible(false);
+        HandZone.SetCardsLocked(true);
+
+        var levelPlayer = LevelPlayer.ActiveInstance != null
+            ? LevelPlayer.ActiveInstance
+            : FindObjectOfType<LevelPlayer>();
+
+        if (levelPlayer == null)
+        {
+            Debug.LogError("[GameFlowController] LevelEdit mode requires a LevelPlayer in the scene.");
+            return;
+        }
+
+        var controller = levelPlayer.GetComponent<Level3DEditorController>();
+        if (controller == null)
+            controller = levelPlayer.gameObject.AddComponent<Level3DEditorController>();
+
+        if (!levelPlayer.LoadConfiguredLevel())
+        {
+            Debug.LogError("[GameFlowController] LevelEdit mode requires LevelPlayer.levelData.");
+            return;
+        }
+
+        controller.Configure(levelPlayer, levelPlayer.CurrentLevel, levelPlayer.CurrentConfig);
+        Debug.Log($"[GameFlowController] LevelEdit started: {levelPlayer.CurrentLevel.name}");
+#else
+        Debug.LogWarning("[GameFlowController] LevelEdit mode is editor-only.");
+#endif
+    }
+
+    public void StartTutorialLevel()
+    {
+        EnsureFacades();
+        ApplyRunStartSettings();
+        HideMainMenu();
+        HideRunUiPanels();
+        SetRouteVisible(false);
+        IsMainMenuVisible = false;
+        mode = GameFlowMode.Tutorial;
+
+        var director = FindObjectOfType<TutorialStageDirector>();
+        if (ensureTutorialDirector && director == null)
+            director = gameObject.AddComponent<TutorialStageDirector>();
+
+        if (director == null)
+        {
+            Debug.LogError("[GameFlowController] Tutorial mode requires a TutorialStageDirector.");
+            ExitLevel();
+            return;
+        }
+
+        director.StartTutorial();
     }
 
     public void StartRoundRunFromMainMenu()
@@ -378,6 +463,12 @@ public class GameFlowController : MonoBehaviour
         _observedStageRunVersion = stageFacade?.LoadedStageRunVersion ?? 0;
     }
 
+    public void OnTutorialLevelSettled(LevelPlayResult result)
+    {
+        ExitLevel();
+        Debug.Log($"[GameFlowController] Tutorial settled: {result}");
+    }
+
     public void EnterLevel()
     {
         IsInLevel = true;
@@ -519,10 +610,17 @@ public class GameFlowController : MonoBehaviour
         HideRunRoundPart(RunRoundUIIds.SkipChoice);
         HideRunRoundPart(RunRoundUIIds.ShopChoice);
         HideRunRoundPart(RunRoundUIIds.EventChoice);
+        HideRunRoundPart(RunRoundUIIds.CombatSettlement);
         HideRunRoundPart(RunRoundUIIds.Result);
         HideSettingsPanel();
+        HideBgmRecord();
         HideHandPilePanel(HandPileUIIds.DrawPile);
         HideHandPilePanel(HandPileUIIds.DiscardPile);
+    }
+
+    private static void HideBgmRecord()
+    {
+        PostSystem.Instance?.Send("期望隐藏面板", new BgmRecordUIRequest(BgmRecordUIIds.RecordButton));
     }
 
     private static void HideRunRoundPart(string uiid)

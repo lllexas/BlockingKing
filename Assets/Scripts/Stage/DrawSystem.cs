@@ -1206,9 +1206,6 @@ public class DrawSystem : MonoBehaviour
             height * cellSize,
             startTime,
             endTime));
-
-        if (_nextBeatStartTime < endTime)
-            _nextBeatStartTime = endTime;
     }
 
     private float ResolveDeathArcHeight(int currentHealth)

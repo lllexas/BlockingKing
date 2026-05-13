@@ -52,7 +52,14 @@ public class CardDeckFacade : PackFacadeBase
             database.cards.Add(CreateEntry(instance));
         }
 
-        return SaveDatabase(database);
+        bool saved = SaveDatabase(database);
+        if (saved)
+        {
+            bool presentationPlayed = CardRewardPresentationHelper.TryPlayAddToDeck(card, count);
+            Debug.Log($"[CardDeckFacade] Added card to deck: card={card.cardId}, count={count}, presentationPlayed={presentationPlayed}");
+        }
+
+        return saved;
     }
 
     public bool AddCard(string cardId, int count = 1)
@@ -62,16 +69,25 @@ public class CardDeckFacade : PackFacadeBase
 
         EnsureDeckPack();
         var database = LoadDatabase();
+        CardSO presentationCard = null;
         for (int i = 0; i < count; i++)
         {
             var instance = CardResources.CreateInstanceFromTemplate(cardId);
             if (instance == null)
                 return false;
 
+            presentationCard ??= instance;
             database.cards.Add(CreateEntry(instance));
         }
 
-        return SaveDatabase(database);
+        bool saved = SaveDatabase(database);
+        if (saved && presentationCard != null)
+        {
+            bool presentationPlayed = CardRewardPresentationHelper.TryPlayAddToDeck(presentationCard, count);
+            Debug.Log($"[CardDeckFacade] Added card to deck by id: cardId={cardId}, count={count}, presentationPlayed={presentationPlayed}");
+        }
+
+        return saved;
     }
 
     public bool RemoveCard(string instanceId)

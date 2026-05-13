@@ -46,8 +46,8 @@ public sealed class EscortGenerationConfigSO : TableBaseSO
     [MinValue(0)] public int floorTileID = 2;
 
     [Title("Fixed Escort Zones")]
-    [MinValue(3)] public int fixedZoneSize = 5;
-    [MinValue(0)] public int fixedZoneInnerInset = 1;
+    [MinValue(3)] public int fixedZoneSize = 3;
+    [MinValue(0)] public int fixedZoneInnerInset = 0;
     public Vector2Int startZoneCenter = new(3, 3);
     public Vector2Int playerStartPosition = new(2, 2);
 
@@ -61,8 +61,9 @@ public sealed class EscortGenerationConfigSO : TableBaseSO
     public Vector2Int cityPerpendicularJitter = new(-3, 3);
     public Vector2Int cityAlongJitter = new(-2, 2);
     [MinValue(0)] public int routeBoundsPadding = 0;
-    [Tooltip("After cities are placed, carve one-tile-wide Manhattan corridors between adjacent city anchors.")]
+    [Tooltip("After cities are placed, carve Manhattan corridors between adjacent city anchors.")]
     public bool connectCityCorridors = true;
+    [MinValue(1)] public int cityCorridorWidth = 3;
 
     [Title("Enemy Layout")]
     [MinValue(0)] public int enemyCoreExclusionDistance = 5;
@@ -161,6 +162,7 @@ public sealed class EscortGenerationConfigSO : TableBaseSO
             CityAlongJitterMax = Mathf.Max(cityAlongJitter.x, cityAlongJitter.y),
             RouteBoundsPadding = Mathf.Max(0, routeBoundsPadding),
             ConnectCityCorridors = connectCityCorridors,
+            CityCorridorWidth = Mathf.Max(1, cityCorridorWidth),
 
             EnemyCoreExclusionDistance = Mathf.Max(0, enemyCoreExclusionDistance),
             EnemyMapEdgeMargin = Mathf.Max(0, enemyMapEdgeMargin),

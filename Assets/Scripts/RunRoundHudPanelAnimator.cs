@@ -12,12 +12,14 @@ public sealed class RunRoundHudPanelAnimator : SpaceUIAnimator
     [SerializeField] private TextMeshProUGUI statusText;
 
     protected override string UIID => RunRoundUIIds.Hud;
+    private RunRoundHudUIRequest _lastRequest;
+    private bool _visible;
 
     protected override void Awake()
     {
         base.Awake();
         期望显示面板 += OnShowPanel;
-        期望隐藏面板 += _ => this.FadeOutIfVisible();
+        期望隐藏面板 += _ => HideHud();
     }
 
     private void OnShowPanel(object data)
@@ -25,8 +27,17 @@ public sealed class RunRoundHudPanelAnimator : SpaceUIAnimator
         if (data is not RunRoundHudUIRequest request)
             return;
 
+        _lastRequest = request;
+        _visible = true;
         Refresh(request);
         this.FadeInIfHidden();
+    }
+
+    protected override void Update()
+    {
+        base.Update();
+        if (_visible && _lastRequest != null)
+            Refresh(_lastRequest);
     }
 
     private void Refresh(RunRoundHudUIRequest request)
@@ -45,6 +56,13 @@ public sealed class RunRoundHudPanelAnimator : SpaceUIAnimator
 
     protected override void CloseAction()
     {
+        _visible = false;
+        this.FadeOutIfVisible();
+    }
+
+    private void HideHud()
+    {
+        _visible = false;
         this.FadeOutIfVisible();
     }
 

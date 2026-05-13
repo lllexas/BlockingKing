@@ -68,8 +68,8 @@ public sealed class EscortLevelGenerationConstraints
     public int MaxFinalRewardBoxes = int.MaxValue;
 
     public int CityMargin = 2;
-    public int FixedZoneSize = 5;
-    public int FixedZoneInnerInset = 1;
+    public int FixedZoneSize = 3;
+    public int FixedZoneInnerInset = 0;
     public Vector2Int StartZoneCenter = new(3, 3);
     public Vector2Int PlayerStartPosition = new(2, 2);
 
@@ -91,6 +91,7 @@ public sealed class EscortLevelGenerationConstraints
     public int CityAlongJitterMax = 2;
     public int RouteBoundsPadding = 0;
     public bool ConnectCityCorridors = true;
+    public int CityCorridorWidth = 3;
 
     public int EnemyCoreExclusionDistance = 5;
     public int EnemyMapEdgeMargin = 1;
@@ -619,24 +620,34 @@ public static class EscortLevelGenerator
         int dy = Math.Sign(to.y - from.y);
         var pos = from;
 
-        CarveCorridorCell(level, pos, constraints);
+        CarveCorridorCell(level, pos, dx, dy, constraints);
         while (pos != to)
         {
             pos += new Vector2Int(dx, dy);
-            CarveCorridorCell(level, pos, constraints);
+            CarveCorridorCell(level, pos, dx, dy, constraints);
         }
     }
 
     private static void CarveCorridorCell(
         LevelData level,
         Vector2Int pos,
+        int dx,
+        int dy,
         EscortLevelGenerationConstraints constraints)
     {
-        if (pos.x < 0 || pos.y < 0 || pos.x >= level.width || pos.y >= level.height)
-            return;
+        int width = Mathf.Max(1, constraints.CityCorridorWidth);
+        int radius = width / 2;
+        Vector2Int side = dx != 0 ? Vector2Int.up : Vector2Int.right;
 
-        if (level.GetTile(pos.x, pos.y) == constraints.WallTileID)
-            level.SetTile(pos.x, pos.y, constraints.FloorTileID);
+        for (int offset = -radius; offset <= radius; offset++)
+        {
+            var carved = pos + side * offset;
+            if (carved.x < 0 || carved.y < 0 || carved.x >= level.width || carved.y >= level.height)
+                continue;
+
+            if (level.GetTile(carved.x, carved.y) == constraints.WallTileID)
+                level.SetTile(carved.x, carved.y, constraints.FloorTileID);
+        }
     }
 
     private static void WriteFixedEscortZone(

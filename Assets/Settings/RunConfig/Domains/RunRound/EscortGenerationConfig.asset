@@ -25,8 +25,8 @@ MonoBehaviour:
   targetEnemyTagID: 8
   wallTileID: 1
   floorTileID: 2
-  fixedZoneSize: 5
-  fixedZoneInnerInset: 1
+  fixedZoneSize: 3
+  fixedZoneInnerInset: 0
   startZoneCenter: {x: 3, y: 3}
   playerStartPosition: {x: 2, y: 2}
   cityMargin: 2
@@ -38,6 +38,8 @@ MonoBehaviour:
   cityPerpendicularJitter: {x: -3, y: 3}
   cityAlongJitter: {x: -2, y: 2}
   routeBoundsPadding: 0
+  connectCityCorridors: 1
+  cityCorridorWidth: 3
   enemyCoreExclusionDistance: 5
   enemyMapEdgeMargin: 1
   enemyWallPocketNeighborThreshold: 2

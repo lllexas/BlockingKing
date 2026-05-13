@@ -21,6 +21,9 @@ public sealed class BgmRecordOnGUIFrontend : MonoBehaviour
         if (GameFlowController.Instance != null && GameFlowController.Instance.IsMainMenuVisible)
             return;
 
+        if (GameFlowController.Instance != null && GameFlowController.Instance.Mode == GameFlowMode.LevelEdit)
+            return;
+
         if (RunSettingsPanelAnimator.Instance != null && RunSettingsPanelAnimator.Instance.IsSettingsVisible)
             return;
 

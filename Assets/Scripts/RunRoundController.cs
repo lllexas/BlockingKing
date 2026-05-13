@@ -8,6 +8,7 @@ public enum RunRoundState
     Inactive,
     RoundOffer,
     InCombat,
+    CombatSettlement,
     PostCombatOffer,
     Shop,
     Event,
@@ -48,6 +49,31 @@ public sealed class RunPostCombatOffer
     public string EventTitle;
 }
 
+public sealed class RunCombatSettlement
+{
+    public int RoundIndex;
+    public int RoundCount;
+    public int EncounterCycleIndex;
+    public int EncounterCyclesPerRound;
+    public RunMainStageMode Mode;
+    public string LevelName;
+    public int GoldBefore;
+    public int GoldAfter;
+    public int GoldDelta;
+    public int SuccessfulBoxCount;
+    public readonly List<RunCombatSettlementRewardLine> RewardLines = new();
+    public int Hp;
+    public int MaxHp;
+    public string Message;
+}
+
+public sealed class RunCombatSettlementRewardLine
+{
+    public string Label;
+    public int Gold;
+    public bool IsHeader;
+}
+
 [DefaultExecutionOrder(105)]
 public sealed class RunRoundController : MonoBehaviour
 {
@@ -59,6 +85,7 @@ public sealed class RunRoundController : MonoBehaviour
     public RunRoundState State { get; private set; } = RunRoundState.Inactive;
     public RunRoundOffer CurrentOffer { get; private set; }
     public RunPostCombatOffer CurrentPostCombatOffer { get; private set; }
+    public RunCombatSettlement CurrentCombatSettlement { get; private set; }
     public RunMainStageMode LastCompletedMode { get; private set; } = RunMainStageMode.None;
     public RunMainStageMode ActiveMode { get; private set; } = RunMainStageMode.None;
     public int RoundIndex { get; private set; }
@@ -74,6 +101,7 @@ public sealed class RunRoundController : MonoBehaviour
     private LevelData _activeCombatLevel;
     private bool _activeCombatLevelIsRuntime;
     private ShopSO _runtimePostCombatShop;
+    private int _combatStartGold;
 
     public void StartRun(RunConfigSO runConfig, RunRoundConfigSO config)
     {
@@ -87,6 +115,7 @@ public sealed class RunRoundController : MonoBehaviour
         ActiveMode = RunMainStageMode.None;
         StatusMessage = null;
         EventMessage = null;
+        CurrentCombatSettlement = null;
         ClearCurrentPostCombatOffer();
         ClearCurrentRoundOffer();
         BuildNextOffer();
@@ -149,12 +178,35 @@ public sealed class RunRoundController : MonoBehaviour
         if (alternated && CurrentOffer != null && CurrentOffer.AlternateBonusGold > 0)
             AddGold(CurrentOffer.AlternateBonusGold, "alternate classic escort bonus");
 
+        var completedMode = ActiveMode;
+        var completedLevel = _activeCombatLevel;
+        var completedPlayer = LevelPlayer.ActiveInstance;
         LastCompletedMode = ActiveMode;
         ActiveMode = RunMainStageMode.None;
         StatusMessage = alternated
             ? $"交替完成，获得 {CurrentOffer.AlternateBonusGold} 金币。"
             : "战斗完成。";
+        CurrentCombatSettlement = BuildCombatSettlement(completedMode, completedLevel, completedPlayer, StatusMessage);
+        if (alternated && CurrentOffer != null && CurrentOffer.AlternateBonusGold > 0)
+        {
+            CurrentCombatSettlement.RewardLines.Add(new RunCombatSettlementRewardLine
+            {
+                Label = "交替完成奖励",
+                Gold = CurrentOffer.AlternateBonusGold
+            });
+        }
+
         BuildPostCombatOffer();
+        State = RunRoundState.CombatSettlement;
+        BroadcastCurrentState();
+    }
+
+    public void ConfirmCombatSettlement()
+    {
+        if (State != RunRoundState.CombatSettlement)
+            return;
+
+        CurrentCombatSettlement = null;
         State = RunRoundState.PostCombatOffer;
         BroadcastCurrentState();
     }
@@ -184,9 +236,14 @@ public sealed class RunRoundController : MonoBehaviour
 
         State = RunRoundState.Shop;
         StatusMessage = "进入商店。";
-        HideRoundChoicePanels();
-        ShowBackdrop();
+        RunRoundUIStateRegistry.Apply(this);
         ShowBgmRecord();
+        if (RunShopPanelAnimator.Instance != null)
+        {
+            RunShopPanelAnimator.Instance.OpenDirect(CurrentPostCombatOffer.Shop, OnShopClosed);
+            return;
+        }
+
         var shopFrontend = FindObjectOfType<RunShopOnGUIFrontend>();
         if (shopFrontend == null)
             shopFrontend = gameObject.AddComponent<RunShopOnGUIFrontend>();
@@ -225,8 +282,7 @@ public sealed class RunRoundController : MonoBehaviour
                 StatusMessage = string.IsNullOrWhiteSpace(CurrentPostCombatOffer.EventTitle)
                     ? "不期而遇。"
                     : CurrentPostCombatOffer.EventTitle;
-                HideRoundChoicePanels();
-                ShowBackdrop();
+                RunRoundUIStateRegistry.Apply(this);
                 ShowBgmRecord();
                 GameFlowController.Instance?.OnRoundEventStageStarted();
                 return;
@@ -277,10 +333,11 @@ public sealed class RunRoundController : MonoBehaviour
         ActiveMode = mode;
         _activeCombatLevel = level;
         _activeCombatLevelIsRuntime = mode == RunMainStageMode.Escort && CurrentOffer != null && CurrentOffer.EscortLevelIsRuntime;
+        _combatStartGold = GetGold();
         SetCameraFlowPaused(false);
         ClearUnselectedRoundOffer(mode);
         State = RunRoundState.InCombat;
-        HideRoundPanels();
+        RunRoundUIStateRegistry.Apply(this);
         GameFlowController.Instance?.EnterLevel();
         ShowBgmRecord();
 
@@ -516,139 +573,40 @@ public sealed class RunRoundController : MonoBehaviour
 
     private void BroadcastCurrentState()
     {
-        HideRoundPanels();
+        RunRoundUIStateRegistry.Apply(this);
         ShowBgmRecord();
 
         switch (State)
         {
             case RunRoundState.RoundOffer:
                 SetCameraFlowPaused(true);
-                ShowBackdrop();
-                ShowHud();
-                PostSystem.Instance?.Send("期望显示面板", new RunRoundClassicChoiceUIRequest
-                {
-                    Controller = this,
-                    Title = "Classic",
-                    Body = CurrentOffer?.ClassicLevel != null ? CurrentOffer.ClassicLevel.name : "未生成",
-                    Footer = CurrentOffer != null && CurrentOffer.ClassicWouldAlternate
-                        ? $"+{CurrentOffer.AlternateBonusGold} 交替奖励"
-                        : "常规奖励",
-                    Interactable = CurrentOffer?.ClassicLevel != null
-                });
-                PostSystem.Instance?.Send("期望显示面板", new RunRoundEscortChoiceUIRequest
-                {
-                    Controller = this,
-                    Title = "Escort",
-                    Body = CurrentOffer?.EscortLevel != null ? CurrentOffer.EscortLevel.name : "未生成",
-                    Footer = CurrentOffer != null && CurrentOffer.EscortWouldAlternate
-                        ? $"+{CurrentOffer.AlternateBonusGold} 交替奖励"
-                        : "常规奖励",
-                    Interactable = CurrentOffer?.EscortLevel != null
-                });
-                PostSystem.Instance?.Send("期望显示面板", new RunRoundSkipChoiceUIRequest
-                {
-                    Controller = this,
-                    Title = "放弃本轮",
-                    Body = CurrentOffer != null && !string.IsNullOrWhiteSpace(CurrentOffer.SkipRewardLabel)
-                        ? CurrentOffer.SkipRewardLabel
-                        : "无奖励",
-                    Footer = "跳过主战斗",
-                    Interactable = true
-                });
+                break;
+
+            case RunRoundState.CombatSettlement:
+                SetCameraFlowPaused(true);
                 break;
 
             case RunRoundState.PostCombatOffer:
                 SetCameraFlowPaused(true);
-                ShowBackdrop();
-                ShowHud();
-                PostSystem.Instance?.Send("期望显示面板", new RunRoundShopChoiceUIRequest
-                {
-                    Controller = this,
-                    Title = "商店",
-                    Body = CurrentPostCombatOffer?.Shop != null ? CurrentPostCombatOffer.Shop.title : "未配置商店",
-                    Footer = "购买卡牌或道具",
-                    Interactable = CurrentPostCombatOffer?.Shop != null
-                });
-                PostSystem.Instance?.Send("期望显示面板", new RunRoundEventChoiceUIRequest
-                {
-                    Controller = this,
-                    Title = "不期而遇",
-                    Body = !string.IsNullOrWhiteSpace(CurrentPostCombatOffer?.EventTitle)
-                        ? CurrentPostCombatOffer.EventTitle
-                        : "即时事件",
-                    Footer = CurrentPostCombatOffer?.EventPack != null ? "运行事件" : "获得事件奖励",
-                    Interactable = true
-                });
                 break;
 
             case RunRoundState.Event:
                 SetCameraFlowPaused(true);
-                ShowBackdrop();
-                ShowHud();
                 break;
 
             case RunRoundState.Defeat:
                 SetCameraFlowPaused(true);
-                ShowBackdrop();
-                PostSystem.Instance?.Send("期望显示面板", new RunResultUIRequest
-                {
-                    Controller = this,
-                    Victory = false,
-                    Message = StatusMessage
-                });
                 break;
 
             case RunRoundState.RunComplete:
                 SetCameraFlowPaused(true);
-                ShowBackdrop();
-                PostSystem.Instance?.Send("期望显示面板", new RunResultUIRequest
-                {
-                    Controller = this,
-                    Victory = true,
-                    Message = StatusMessage ?? "本轮流程已结束。"
-                });
                 break;
         }
-    }
-
-    private void ShowHud()
-    {
-        PostSystem.Instance?.Send("期望显示面板", new RunRoundHudUIRequest
-        {
-            Controller = this,
-            StatusMessage = StatusMessage
-        });
-    }
-
-    private static void ShowBackdrop()
-    {
-        PostSystem.Instance?.Send("期望显示面板", new RunRoundBackdropUIRequest());
     }
 
     private static void ShowBgmRecord()
     {
         PostSystem.Instance?.Send("期望显示面板", new BgmRecordUIRequest(BgmRecordUIIds.RecordButton));
-    }
-
-    private static void HideRoundPanels()
-    {
-        PostSystem.Instance?.Send("期望隐藏所有面板", null);
-    }
-
-    private static void HideRoundChoicePanels()
-    {
-        HideRoundPanel(RunRoundUIIds.Hud);
-        HideRoundPanel(RunRoundUIIds.ClassicChoice);
-        HideRoundPanel(RunRoundUIIds.EscortChoice);
-        HideRoundPanel(RunRoundUIIds.SkipChoice);
-        HideRoundPanel(RunRoundUIIds.ShopChoice);
-        HideRoundPanel(RunRoundUIIds.EventChoice);
-        HideRoundPanel(RunRoundUIIds.Result);
-    }
-
-    private static void HideRoundPanel(string uiid)
-    {
-        PostSystem.Instance?.Send("期望隐藏面板", uiid);
     }
 
     private static void SetCameraFlowPaused(bool paused)
@@ -670,6 +628,54 @@ public sealed class RunRoundController : MonoBehaviour
 
         inventory?.AddGold(amount);
         Debug.Log($"[RunRoundController] Gold awarded: amount={amount}, reason={reason}");
+    }
+
+    private RunCombatSettlement BuildCombatSettlement(RunMainStageMode completedMode, LevelData completedLevel, LevelPlayer completedPlayer, string message)
+    {
+        int goldAfter = GetGold();
+        var status = GraphHub.Instance?.GetFacade<RunPlayerStatusFacade>();
+        var summary = completedPlayer != null ? completedPlayer.LastSettlementSummary : null;
+
+        var settlement = new RunCombatSettlement
+        {
+            RoundIndex = RoundIndex,
+            RoundCount = RoundCount,
+            EncounterCycleIndex = EncounterCycleIndex,
+            EncounterCyclesPerRound = EncounterCyclesPerRound,
+            Mode = completedMode,
+            LevelName = completedLevel != null ? completedLevel.name : null,
+            GoldBefore = _combatStartGold,
+            GoldAfter = goldAfter,
+            GoldDelta = goldAfter - _combatStartGold,
+            SuccessfulBoxCount = summary != null ? summary.SuccessfulBoxCount : 0,
+            Hp = status != null ? status.CurrentHp : 0,
+            MaxHp = status != null ? status.MaxHp : 0,
+            Message = message
+        };
+
+        if (summary != null)
+        {
+            for (int i = 0; i < summary.RewardLines.Count; i++)
+            {
+                var line = summary.RewardLines[i];
+                if (line == null)
+                    continue;
+
+                settlement.RewardLines.Add(new RunCombatSettlementRewardLine
+                {
+                    Label = line.Label,
+                    Gold = line.Gold,
+                    IsHeader = line.IsHeader
+                });
+            }
+        }
+
+        return settlement;
+    }
+
+    private static int GetGold()
+    {
+        return GraphHub.Instance?.GetFacade<RunInventoryFacade>()?.Gold ?? 0;
     }
 
     private RewardSO RollSkipReward()
@@ -730,7 +736,6 @@ public sealed class RunRoundController : MonoBehaviour
                 continue;
 
             grantedAny |= deck.AddCard(entry.card, Mathf.Max(1, entry.count));
-            CardRewardPresentationHelper.TryPlayAddToDeck(entry.card, Mathf.Max(1, entry.count));
         }
 
         return grantedAny;

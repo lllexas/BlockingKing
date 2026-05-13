@@ -16,4 +16,4 @@ MonoBehaviour:
   heightRange: {x: 4, y: 15}
   areaRange: {x: 1, y: 2500}
   wallRateRange: {x: 0, y: 1}
-  effectiveBoxRange: {x: 1, y: 3}
+  effectiveBoxRange: {x: 2, y: 2}

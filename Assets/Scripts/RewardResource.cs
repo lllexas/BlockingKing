@@ -82,7 +82,6 @@ public static class RewardResource
                 return HandleResult.Error;
             }
 
-            CardRewardPresentationHelper.TryPlayAddToDeck(entry.card, count);
         }
 
         return HandleResult.Push;

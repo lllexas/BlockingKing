@@ -11,6 +11,8 @@ public class HandZone : MonoBehaviour
     private const string CardReleaseRangeOverlayId = "card_release_range";
     private const string CardReleaseHoverOverlayId = "card_release_hover";
     private const string CardReleaseInvalidOverlayId = "card_release_invalid";
+    private const string CardAssistReleaseRangeOverlayId = "card_assist_release_range";
+    private const string CardAssistDamagePreviewOverlayId = "card_assist_damage_preview";
 
     [Header("References")]
     [SerializeField] private Canvas rootCanvas;
@@ -56,6 +58,7 @@ public class HandZone : MonoBehaviour
     [SerializeField] private Color cardReleaseRangeColor = new Color(0.2f, 0.75f, 1f, 0.28f);
     [SerializeField] private Color cardReleaseHoverColor = new Color(0.35f, 1f, 0.55f, 0.58f);
     [SerializeField] private Color cardReleaseInvalidColor = new Color(1f, 0.1f, 0.05f, 0.48f);
+    [SerializeField] private Color cardAssistDamagePreviewColor = new Color(1f, 0.42f, 0.12f, 0.58f);
     [SerializeField] private float cardReleaseOverlayHeight = 0.012f;
 
     public event Action<CardSO> CardPlayed;
@@ -70,6 +73,7 @@ public class HandZone : MonoBehaviour
     private readonly List<CardView> _hand = new List<CardView>();
     private readonly List<Vector2Int> _cardReleaseCells = new List<Vector2Int>();
     private readonly List<Vector2Int> _cardReleaseHoverCells = new List<Vector2Int>();
+    private readonly List<Vector2Int> _cardAssistDamagePreviewCells = new List<Vector2Int>();
     private readonly List<Vector2Int> _assistCandidateCells = new List<Vector2Int>();
     private readonly List<AssistCandidate> _assistCandidates = new List<AssistCandidate>();
 
@@ -99,7 +103,6 @@ public class HandZone : MonoBehaviour
     private float _cachedMaxFanAngle;
     private float _cachedFanArcDepth;
     private float _cachedHoverLift;
-    private RectTransform _rewardPresentationLayer;
     private static int _stageBlockingPointerInputFrame = -1;
     private bool _hasPilePanelAnimators;
 
@@ -390,51 +393,6 @@ public class HandZone : MonoBehaviour
     public int DrawPileCount => _drawPile.Count;
     public int DiscardPileCount => _discardPile.Count;
 
-    public bool PlayRewardCardIntoDeck(CardSO card, int count = 1)
-    {
-        if (card == null || count <= 0)
-            return false;
-
-        var rewardLayer = ResolveRewardPresentationLayer();
-        if (cardPrefab == null || rewardLayer == null)
-            return false;
-
-        var deck = EnsureDeckFacade();
-        if (deck == null)
-            return false;
-
-        bool anyPlayed = false;
-        for (int i = 0; i < count; i++)
-        {
-            rewardLayer.SetAsLastSibling();
-
-            var view = Instantiate(cardPrefab, rewardLayer);
-            view.transform.SetAsLastSibling();
-            view.SetLayoutSizes(cardSize, hoverCardSize);
-            view.Bind(card, null);
-            view.SetInteractable(false);
-            view.SetHoverState(false, hoverTweenDuration, hoverEase);
-            view.Snap(GetRewardPresentationStartPosition(rewardLayer), 1.0f, 0f);
-
-            var target = GetAnchorLocalPosition(drawPileAnchor, rewardLayer, DefaultDrawFallback(rewardLayer));
-            view.TweenTo(GetRewardPresentationHoldPosition(rewardLayer), 1.0f, 0f, 1.0f, cardEase, () =>
-            {
-                if (view == null)
-                    return;
-
-                view.TweenTo(target, 0.82f, 0f, 1.0f, cardEase, () =>
-                {
-                    if (view != null)
-                        Destroy(view.gameObject);
-                });
-            });
-
-            anyPlayed = true;
-        }
-
-        return anyPlayed;
-    }
-
     private bool CanAutoBuildNow()
     {
         if (!requireLevelForAutoBuild)
@@ -598,6 +556,7 @@ public class HandZone : MonoBehaviour
         _assistCard = candidate.View;
         _assistReleaseTarget = candidate.Target;
         ChangeInteractionState(CardInteractionState.Hovered, candidate.View);
+        BuildAssistReleaseOverlay(candidate.View, candidate.Target);
     }
 
     private bool BuildAssistCandidates(Vector2Int watchedCell)
@@ -640,6 +599,7 @@ public class HandZone : MonoBehaviour
         _assistReleaseTarget = default;
         _assistCandidateIndex = -1;
         _assistCandidates.Clear();
+        ClearAssistReleaseOverlay();
 
         if (restoreCard && _interactionState == CardInteractionState.Hovered && _stateCard == card)
             ChangeInteractionState(CardInteractionState.Idle, null);
@@ -1211,51 +1171,6 @@ public class HandZone : MonoBehaviour
         return new Vector2(rect.xMin + cardSize.x * 0.5f + 60f, rect.yMin + cardSize.y * 0.5f + 60f);
     }
 
-    private Vector2 DefaultDrawFallback(RectTransform layer)
-    {
-        Rect rect = layer != null ? layer.rect : new Rect(0f, 0f, Screen.width, Screen.height);
-        return new Vector2(rect.xMin + cardSize.x * 0.5f + 60f, rect.yMin + cardSize.y * 0.5f + 60f);
-    }
-
-    private Vector2 GetRewardPresentationStartPosition(RectTransform layer)
-    {
-        Rect rect = layer != null ? layer.rect : new Rect(0f, 0f, Screen.width, Screen.height);
-        return new Vector2((rect.xMin + rect.xMax) * 0.5f, (rect.yMin + rect.yMax) * 0.5f);
-    }
-
-    private Vector2 GetRewardPresentationHoldPosition(RectTransform layer)
-    {
-        Rect rect = layer != null ? layer.rect : new Rect(0f, 0f, Screen.width, Screen.height);
-        return new Vector2((rect.xMin + rect.xMax) * 0.5f, (rect.yMin + rect.yMax) * 0.5f + 24f);
-    }
-
-    private RectTransform ResolveRewardPresentationLayer()
-    {
-        if (_rewardPresentationLayer != null)
-            return _rewardPresentationLayer;
-
-        RectTransform parent = null;
-        if (rootCanvas != null)
-            parent = rootCanvas.transform as RectTransform;
-
-        if (parent == null)
-            parent = cardLayer;
-
-        if (parent == null)
-            return null;
-
-        var layerObject = new GameObject("RewardCardPresentationLayer", typeof(RectTransform));
-        _rewardPresentationLayer = layerObject.GetComponent<RectTransform>();
-        _rewardPresentationLayer.SetParent(parent, false);
-        _rewardPresentationLayer.anchorMin = Vector2.zero;
-        _rewardPresentationLayer.anchorMax = Vector2.one;
-        _rewardPresentationLayer.offsetMin = Vector2.zero;
-        _rewardPresentationLayer.offsetMax = Vector2.zero;
-        _rewardPresentationLayer.pivot = new Vector2(0.5f, 0.5f);
-        _rewardPresentationLayer.SetAsLastSibling();
-        return _rewardPresentationLayer;
-    }
-
     private Vector2 DefaultDiscardFallback()
     {
         Rect rect = cardLayer != null ? cardLayer.rect : new Rect(0f, 0f, Screen.width, Screen.height);
@@ -1458,6 +1373,61 @@ public class HandZone : MonoBehaviour
             10);
     }
 
+    private void BuildAssistReleaseOverlay(CardView view, CardReleaseTarget target)
+    {
+        ClearAssistReleaseOverlay();
+
+        var overlay = GridOverlayDrawSystem.Instance;
+        if (overlay == null || view == null || view.Card == null)
+            return;
+
+        if (!TryResolvePlayer(out var playerHandle))
+            return;
+
+        CardReleaseRuleRegistry.CollectCandidates(view.Card, playerHandle, _cardReleaseCells);
+        overlay.SetOverlay(
+            CardAssistReleaseRangeOverlayId,
+            _cardReleaseCells,
+            GridOverlayStyle.SolidTint,
+            cardReleaseRangeColor,
+            cardReleaseOverlayHeight,
+            10);
+
+        BuildAssistDamagePreviewCells(playerHandle, view.Card, target);
+        if (_cardAssistDamagePreviewCells.Count == 0)
+            return;
+
+        overlay.SetOverlay(
+            CardAssistDamagePreviewOverlayId,
+            _cardAssistDamagePreviewCells,
+            GridOverlayStyle.SoftGlow,
+            cardAssistDamagePreviewColor,
+            cardReleaseOverlayHeight,
+            13);
+    }
+
+    private void BuildAssistDamagePreviewCells(EntityHandle playerHandle, CardSO card, CardReleaseTarget target)
+    {
+        _cardAssistDamagePreviewCells.Clear();
+
+        var entitySystem = EntitySystem.Instance;
+        var cardEffectSystem = CardEffectSystem.Instance;
+        if (entitySystem == null || !entitySystem.IsInitialized || cardEffectSystem == null || card == null)
+            return;
+
+        int width = entitySystem.entities.mapWidth;
+        int height = entitySystem.entities.mapHeight;
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                var cell = new Vector2Int(x, y);
+                if (cardEffectSystem.TryPreviewDamageCell(playerHandle, card, target, cell))
+                    _cardAssistDamagePreviewCells.Add(cell);
+            }
+        }
+    }
+
     private void UpdateCardReleaseHoverOverlay()
     {
         var overlay = GridOverlayDrawSystem.Instance;
@@ -1530,6 +1500,19 @@ public class HandZone : MonoBehaviour
         overlay.RemoveOverlay(CardReleaseInvalidOverlayId);
         _cardReleaseCells.Clear();
         _cardReleaseHoverCells.Clear();
+    }
+
+    private void ClearAssistReleaseOverlay()
+    {
+        var overlay = GridOverlayDrawSystem.Instance;
+        if (overlay != null)
+        {
+            overlay.RemoveOverlay(CardAssistReleaseRangeOverlayId);
+            overlay.RemoveOverlay(CardAssistDamagePreviewOverlayId);
+        }
+
+        _cardReleaseCells.Clear();
+        _cardAssistDamagePreviewCells.Clear();
     }
 
     private bool TryGetMouseGridPosition(out Vector2Int gridPosition)

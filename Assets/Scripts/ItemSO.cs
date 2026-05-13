@@ -8,6 +8,7 @@ public sealed class ItemSO : ScriptableObject
     public string itemId;
     public string itemType;
     public string displayName;
+    public Sprite icon;
 
     [TextArea(2, 5)]
     public string description;

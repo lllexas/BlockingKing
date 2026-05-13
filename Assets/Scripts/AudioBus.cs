@@ -23,8 +23,10 @@ public class AudioBus : MonoBehaviour
     private AudioSource _musicSourceB;
     private AudioSource _activeMusicSource;
     private Coroutine _musicFadeRoutine;
-    private float _activeMusicVolumeScale = 1f;
-    private float _activeMusicVolumeOffsetScale = 1f;
+    private float _musicSourceVolumeScale;
+    private float _musicSourceBVolumeScale;
+    private float _musicSourceVolumeOffsetScale = 1f;
+    private float _musicSourceBVolumeOffsetScale = 1f;
     private readonly List<AudioSource> _sfxSources = new();
     private int _nextSfxSourceIndex;
 
@@ -88,7 +90,7 @@ public class AudioBus : MonoBehaviour
 
     public void SetActiveMusicVolumeOffset(float decibels)
     {
-        _activeMusicVolumeOffsetScale = DecibelsToLinear(decibels);
+        SetMusicVolumeOffsetScale(_activeMusicSource, DecibelsToLinear(decibels));
         ApplyVolumes();
     }
 
@@ -122,7 +124,7 @@ public class AudioBus : MonoBehaviour
         float volumeOffsetScale = DecibelsToLinear(volumeOffsetDb);
         if (_activeMusicSource.clip == clip && _activeMusicSource.isPlaying)
         {
-            _activeMusicVolumeOffsetScale = volumeOffsetScale;
+            SetMusicVolumeOffsetScale(_activeMusicSource, volumeOffsetScale);
             ApplyVolumes();
             return;
         }
@@ -141,16 +143,20 @@ public class AudioBus : MonoBehaviour
             return;
 
         if (_musicFadeRoutine != null)
+        {
             StopCoroutine(_musicFadeRoutine);
+            _musicFadeRoutine = null;
+        }
 
         if (fadeDuration <= 0f || !_activeMusicSource.isPlaying)
         {
             StopSource(_activeMusicSource);
-            _activeMusicVolumeScale = 0f;
+            SetMusicVolumeScale(_activeMusicSource, 0f);
             ApplyVolumes();
             return;
         }
 
+        StopInactiveMusicSources(_activeMusicSource);
         _musicFadeRoutine = StartCoroutine(FadeOutMusic(fadeDuration));
     }
 
@@ -223,10 +229,10 @@ public class AudioBus : MonoBehaviour
     private void ApplyVolumes()
     {
         if (_musicSource != null)
-            _musicSource.volume = GetMusicOutputVolume() * GetMusicVolumeScale(_musicSource);
+            _musicSource.volume = GetMusicOutputVolume(_musicSource);
 
         if (_musicSourceB != null)
-            _musicSourceB.volume = GetMusicOutputVolume() * GetMusicVolumeScale(_musicSourceB);
+            _musicSourceB.volume = GetMusicOutputVolume(_musicSourceB);
 
         for (int i = 0; i < _sfxSources.Count; i++)
         {
@@ -235,9 +241,9 @@ public class AudioBus : MonoBehaviour
         }
     }
 
-    private float GetMusicOutputVolume()
+    private float GetMusicOutputVolume(AudioSource source)
     {
-        return masterVolume * musicVolume * _activeMusicVolumeOffsetScale;
+        return masterVolume * musicVolume * GetMusicVolumeOffsetScale(source) * GetMusicVolumeScale(source);
     }
 
     private float GetSfxOutputVolume()
@@ -248,23 +254,27 @@ public class AudioBus : MonoBehaviour
     private void ReplaceMusic(AudioClip clip, bool loop, float fadeDuration, float volumeOffsetScale)
     {
         if (_musicFadeRoutine != null)
+        {
             StopCoroutine(_musicFadeRoutine);
+            _musicFadeRoutine = null;
+        }
 
         var source = _activeMusicSource ?? _musicSource;
         if (source == null)
             return;
+
+        StopInactiveMusicSources(source);
 
         if (fadeDuration <= 0f || !source.isPlaying)
         {
             StopSource(source);
             source.clip = clip;
             source.loop = loop;
-            _activeMusicVolumeOffsetScale = volumeOffsetScale;
-            source.volume = GetMusicOutputVolume();
-            source.Play();
             _activeMusicSource = source;
-            _activeMusicVolumeScale = 1f;
+            SetMusicVolumeOffsetScale(source, volumeOffsetScale);
+            SetMusicVolumeScale(source, 1f);
             ApplyVolumes();
+            source.Play();
             return;
         }
 
@@ -273,38 +283,38 @@ public class AudioBus : MonoBehaviour
 
     private System.Collections.IEnumerator ReplaceMusicRoutine(AudioSource source, AudioClip clip, bool loop, float duration, float volumeOffsetScale)
     {
+        var target = GetInactiveMusicSource(source);
+        if (target == null)
+        {
+            _musicFadeRoutine = null;
+            yield break;
+        }
+
+        StopSource(target);
+        target.clip = clip;
+        target.loop = loop;
+        SetMusicVolumeOffsetScale(target, volumeOffsetScale);
+        SetMusicVolumeScale(target, 0f);
+        ApplyVolumes();
+        target.Play();
+        _activeMusicSource = target;
+
+        float sourceStartScale = GetMusicVolumeScale(source);
+        float targetStartScale = GetMusicVolumeScale(target);
         float elapsed = 0f;
         while (elapsed < duration)
         {
             elapsed += Time.unscaledDeltaTime;
             float t = Mathf.Clamp01(elapsed / duration);
-            SetMusicVolumeScale(source, 1f - t);
+            SetMusicVolumeScale(source, Mathf.Lerp(sourceStartScale, 0f, t));
+            SetMusicVolumeScale(target, Mathf.Lerp(targetStartScale, 1f, t));
             ApplyVolumes();
             yield return null;
         }
 
         StopSource(source);
         SetMusicVolumeScale(source, 0f);
-        ApplyVolumes();
-
-        source.clip = clip;
-        source.loop = loop;
-        _activeMusicVolumeOffsetScale = volumeOffsetScale;
-        source.volume = 0f;
-        source.Play();
-        _activeMusicSource = source;
-
-        elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.unscaledDeltaTime;
-            float t = Mathf.Clamp01(elapsed / duration);
-            SetMusicVolumeScale(source, t);
-            ApplyVolumes();
-            yield return null;
-        }
-
-        SetMusicVolumeScale(source, 1f);
+        SetMusicVolumeScale(target, 1f);
         ApplyVolumes();
         _musicFadeRoutine = null;
     }
@@ -332,17 +342,62 @@ public class AudioBus : MonoBehaviour
 
     private float GetMusicVolumeScale(AudioSource source)
     {
-        if (source == _activeMusicSource)
-            return _activeMusicVolumeScale;
-
+        if (source == _musicSource)
+            return _musicSourceVolumeScale;
+        if (source == _musicSourceB)
+            return _musicSourceBVolumeScale;
         return 0f;
     }
 
     private void SetMusicVolumeScale(AudioSource source, float value)
     {
         value = Mathf.Clamp01(value);
-        if (source == _activeMusicSource)
-            _activeMusicVolumeScale = value;
+        if (source == _musicSource)
+            _musicSourceVolumeScale = value;
+        else if (source == _musicSourceB)
+            _musicSourceBVolumeScale = value;
+    }
+
+    private float GetMusicVolumeOffsetScale(AudioSource source)
+    {
+        if (source == _musicSource)
+            return _musicSourceVolumeOffsetScale;
+        if (source == _musicSourceB)
+            return _musicSourceBVolumeOffsetScale;
+        return 1f;
+    }
+
+    private void SetMusicVolumeOffsetScale(AudioSource source, float value)
+    {
+        value = Mathf.Max(0f, value);
+        if (source == _musicSource)
+            _musicSourceVolumeOffsetScale = value;
+        else if (source == _musicSourceB)
+            _musicSourceBVolumeOffsetScale = value;
+    }
+
+    private AudioSource GetInactiveMusicSource(AudioSource activeSource)
+    {
+        if (activeSource == _musicSource && _musicSourceB != null)
+            return _musicSourceB;
+        if (activeSource == _musicSourceB && _musicSource != null)
+            return _musicSource;
+        return _musicSourceB != null && _musicSourceB != activeSource ? _musicSourceB : _musicSource;
+    }
+
+    private void StopInactiveMusicSources(AudioSource except)
+    {
+        if (_musicSource != null && _musicSource != except)
+        {
+            StopSource(_musicSource);
+            SetMusicVolumeScale(_musicSource, 0f);
+        }
+
+        if (_musicSourceB != null && _musicSourceB != except)
+        {
+            StopSource(_musicSourceB);
+            SetMusicVolumeScale(_musicSourceB, 0f);
+        }
     }
 
     private static void StopSource(AudioSource source)

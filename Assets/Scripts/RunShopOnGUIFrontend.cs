@@ -52,6 +52,9 @@ public class RunShopOnGUIFrontend : MonoBehaviour
 
     private void OnShopExecute(object payload)
     {
+        if (RunShopPanelAnimator.Instance != null)
+            return;
+
         ShowShop(payload as ShopPayload);
     }
 
@@ -72,6 +75,12 @@ public class RunShopOnGUIFrontend : MonoBehaviour
         if (shop == null)
             return;
 
+        if (RunShopPanelAnimator.Instance != null)
+        {
+            RunShopPanelAnimator.Instance.OpenDirect(shop, closeCallback);
+            return;
+        }
+
         _currentShop = null;
         _directShop = shop;
         _directCloseCallback = closeCallback;
@@ -81,6 +90,9 @@ public class RunShopOnGUIFrontend : MonoBehaviour
 
     private void OnGUI()
     {
+        if (RunShopPanelAnimator.Instance != null)
+            return;
+
         var payload = _currentShop;
         var shop = _directShop != null ? _directShop : payload?.Shop;
         if (shop == null)

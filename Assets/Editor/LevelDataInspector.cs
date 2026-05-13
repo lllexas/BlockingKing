@@ -116,10 +116,14 @@ public class LevelDataInspector : OdinEditor
 
         // ────── 操作按钮 ──────
         EditorGUILayout.LabelField("编辑器操作", EditorStyles.boldLabel);
+        Draw3DEditorRuntimeControls();
 
         EditorGUILayout.BeginHorizontal();
         if (GUILayout.Button("Tilemap 编辑", GUILayout.Height(30)))
             OpenTilemapEditor();
+
+        if (GUILayout.Button("3D 编辑", GUILayout.Height(30)))
+            Open3DEditor();
 
         GUI.backgroundColor = new Color(0.3f, 0.7f, 0.3f);
         if (GUILayout.Button("快速播放", GUILayout.Height(30)))
@@ -188,6 +192,36 @@ public class LevelDataInspector : OdinEditor
                     DrawTileInRect(cr, tagTile, 0.7f);
             }
         }
+    }
+
+    private void Draw3DEditorRuntimeControls()
+    {
+        if (!EditorApplication.isPlaying)
+            return;
+
+        var controller = Object.FindObjectOfType<Level3DEditorController>();
+        if (controller == null || controller.SourceLevel != _data)
+            return;
+
+        EditorGUILayout.HelpBox(
+            controller.HasUnsavedChanges ? "3D 编辑中：有未保存修改" : "3D 编辑中：没有未保存修改",
+            controller.HasUnsavedChanges ? MessageType.Warning : MessageType.Info);
+
+        EditorGUILayout.BeginHorizontal();
+        GUI.backgroundColor = new Color(0.3f, 0.75f, 0.35f);
+        if (GUILayout.Button("保存 3D 修改", GUILayout.Height(30)))
+            controller.SaveChanges();
+
+        GUI.backgroundColor = new Color(0.85f, 0.55f, 0.25f);
+        if (GUILayout.Button("放弃 3D 修改", GUILayout.Height(30)))
+            controller.DiscardChanges();
+
+        GUI.backgroundColor = new Color(0.75f, 0.3f, 0.3f);
+        if (GUILayout.Button("退出 3D 编辑", GUILayout.Height(30)))
+            controller.ExitEditor();
+
+        GUI.backgroundColor = Color.white;
+        EditorGUILayout.EndHorizontal();
     }
 
     private static void DrawTileInRect(Rect r, TileBase tile, float alpha = 1f)
@@ -337,6 +371,12 @@ public class LevelDataInspector : OdinEditor
 
     private const string PREFS_ORIGIN_PATH = "QuickPlay_OriginPath";
     private const string PREFS_ORIGIN_SETUP = "QuickPlay_OriginSetup";
+    private const string LEVEL_EDIT_PREFS_FLOW_SCENE = "LevelEdit_GameFlowScene";
+    private const string LEVEL_EDIT_PREFS_FLOW_PATH = "LevelEdit_GameFlowTransformPath";
+    private const string LEVEL_EDIT_PREFS_FLOW_MODE = "LevelEdit_GameFlowOriginalMode";
+    private const string LEVEL_EDIT_PREFS_PLAYER_SCENE = "LevelEdit_LevelPlayerScene";
+    private const string LEVEL_EDIT_PREFS_PLAYER_PATH = "LevelEdit_LevelPlayerTransformPath";
+    private const string LEVEL_EDIT_PREFS_PLAYER_LEVEL = "LevelEdit_LevelPlayerOriginalLevel";
 
     private void QuickPlay()
     {
@@ -405,6 +445,48 @@ public class LevelDataInspector : OdinEditor
         EditorApplication.EnterPlaymode();
     }
 
+    private void Open3DEditor()
+    {
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+
+        SaveActiveTilemapEditorIfNeeded();
+        EnsureEditableLevelData();
+
+        var gameFlow = Object.FindObjectOfType<GameFlowController>();
+        var levelPlayer = Object.FindObjectOfType<LevelPlayer>();
+        if (gameFlow == null || levelPlayer == null)
+        {
+            EditorUtility.DisplayDialog("错误", "当前场景需要已有 GameFlowController 和 LevelPlayer。", "确定");
+            return;
+        }
+
+        var serializedFlow = new SerializedObject(gameFlow);
+        var modeProperty = serializedFlow.FindProperty("mode");
+        EditorPrefs.SetString(LEVEL_EDIT_PREFS_FLOW_SCENE, gameFlow.gameObject.scene.path ?? string.Empty);
+        EditorPrefs.SetString(LEVEL_EDIT_PREFS_FLOW_PATH, GetTransformIndexPath(gameFlow.transform));
+        EditorPrefs.SetInt(LEVEL_EDIT_PREFS_FLOW_MODE, modeProperty.enumValueIndex);
+        modeProperty.enumValueIndex = (int)GameFlowMode.LevelEdit;
+        serializedFlow.ApplyModifiedProperties();
+
+        var serializedPlayer = new SerializedObject(levelPlayer);
+        var levelDataProperty = serializedPlayer.FindProperty("levelData");
+        var originalLevel = levelDataProperty.objectReferenceValue as LevelData;
+        EditorPrefs.SetString(LEVEL_EDIT_PREFS_PLAYER_SCENE, levelPlayer.gameObject.scene.path ?? string.Empty);
+        EditorPrefs.SetString(LEVEL_EDIT_PREFS_PLAYER_PATH, GetTransformIndexPath(levelPlayer.transform));
+        EditorPrefs.SetString(LEVEL_EDIT_PREFS_PLAYER_LEVEL, originalLevel != null
+            ? AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(originalLevel))
+            : string.Empty);
+        levelDataProperty.objectReferenceValue = _data;
+        serializedPlayer.ApplyModifiedProperties();
+
+        EditorUtility.SetDirty(gameFlow);
+        EditorUtility.SetDirty(levelPlayer);
+        EditorSceneManager.MarkSceneDirty(gameFlow.gameObject.scene);
+
+        Debug.Log($"[LevelEdit] 当前场景切换为编辑模式，target={_data.name} → EnterPlaymode()");
+        EditorApplication.EnterPlaymode();
+    }
+
     private void SaveActiveTilemapEditorIfNeeded()
     {
         if (!LevelTilemapSessionBridge.TryGetSession(out var session))
@@ -447,6 +529,7 @@ public class LevelDataInspector : OdinEditor
         private static void OnStateChanged(PlayModeStateChange state)
         {
             bool isQuickPlay = EditorPrefs.HasKey(PREFS_ORIGIN_PATH);
+            bool isLevelEdit = EditorPrefs.HasKey(LEVEL_EDIT_PREFS_FLOW_PATH);
 
             switch (state)
             {
@@ -461,11 +544,128 @@ public class LevelDataInspector : OdinEditor
                     break;
 
                 case PlayModeStateChange.EnteredEditMode:
+                    if (isLevelEdit)
+                        RestoreLevelEditFlowMode();
                     if (isQuickPlay)
                         RestoreQuickPlayOrigin();
                     break;
             }
         }
+    }
+
+    private static void RestoreLevelEditFlowMode()
+    {
+        string flowScenePath = EditorPrefs.GetString(LEVEL_EDIT_PREFS_FLOW_SCENE, null);
+        string flowTransformPath = EditorPrefs.GetString(LEVEL_EDIT_PREFS_FLOW_PATH, null);
+        int originalMode = EditorPrefs.GetInt(LEVEL_EDIT_PREFS_FLOW_MODE, (int)GameFlowMode.DirectLevel);
+        string playerScenePath = EditorPrefs.GetString(LEVEL_EDIT_PREFS_PLAYER_SCENE, null);
+        string playerTransformPath = EditorPrefs.GetString(LEVEL_EDIT_PREFS_PLAYER_PATH, null);
+        string originalLevelGuid = EditorPrefs.GetString(LEVEL_EDIT_PREFS_PLAYER_LEVEL, string.Empty);
+
+        EditorPrefs.DeleteKey(LEVEL_EDIT_PREFS_FLOW_SCENE);
+        EditorPrefs.DeleteKey(LEVEL_EDIT_PREFS_FLOW_PATH);
+        EditorPrefs.DeleteKey(LEVEL_EDIT_PREFS_FLOW_MODE);
+        EditorPrefs.DeleteKey(LEVEL_EDIT_PREFS_PLAYER_SCENE);
+        EditorPrefs.DeleteKey(LEVEL_EDIT_PREFS_PLAYER_PATH);
+        EditorPrefs.DeleteKey(LEVEL_EDIT_PREFS_PLAYER_LEVEL);
+
+        var gameFlow = ResolveComponentInScene<GameFlowController>(flowScenePath, flowTransformPath)
+                       ?? Object.FindObjectOfType<GameFlowController>();
+        if (gameFlow == null)
+        {
+            Debug.LogWarning("[LevelEdit] 无法恢复 GameFlow mode：对象不存在");
+            return;
+        }
+
+        var serializedFlow = new SerializedObject(gameFlow);
+        serializedFlow.FindProperty("mode").enumValueIndex = originalMode;
+        serializedFlow.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(gameFlow);
+        EditorSceneManager.MarkSceneDirty(gameFlow.gameObject.scene);
+
+        var levelPlayer = ResolveComponentInScene<LevelPlayer>(playerScenePath, playerTransformPath)
+                          ?? Object.FindObjectOfType<LevelPlayer>();
+        if (levelPlayer != null)
+        {
+            var serializedPlayer = new SerializedObject(levelPlayer);
+            var levelProperty = serializedPlayer.FindProperty("levelData");
+            levelProperty.objectReferenceValue = LoadLevelDataByGuid(originalLevelGuid);
+            serializedPlayer.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(levelPlayer);
+            EditorSceneManager.MarkSceneDirty(levelPlayer.gameObject.scene);
+        }
+
+        Debug.Log($"[LevelEdit] 已恢复 GameFlow mode={(GameFlowMode)originalMode}");
+    }
+
+    private static string GetTransformIndexPath(Transform transform)
+    {
+        if (transform == null)
+            return string.Empty;
+
+        var indices = new System.Collections.Generic.List<int>();
+        Transform current = transform;
+        while (current != null)
+        {
+            indices.Add(current.GetSiblingIndex());
+            current = current.parent;
+        }
+
+        indices.Reverse();
+        return string.Join("/", indices);
+    }
+
+    private static T ResolveComponentInScene<T>(string scenePath, string transformIndexPath)
+        where T : Component
+    {
+        if (string.IsNullOrEmpty(transformIndexPath))
+            return null;
+
+        Scene scene = default;
+        for (int i = 0; i < SceneManager.sceneCount; i++)
+        {
+            var candidate = SceneManager.GetSceneAt(i);
+            if (!candidate.IsValid() || !candidate.isLoaded)
+                continue;
+
+            if (string.IsNullOrEmpty(scenePath) || candidate.path == scenePath)
+            {
+                scene = candidate;
+                break;
+            }
+        }
+
+        if (!scene.IsValid())
+            return null;
+
+        string[] parts = transformIndexPath.Split('/');
+        if (parts.Length == 0 || !int.TryParse(parts[0], out int rootIndex))
+            return null;
+
+        var roots = scene.GetRootGameObjects();
+        if (rootIndex < 0 || rootIndex >= roots.Length)
+            return null;
+
+        Transform current = roots[rootIndex].transform;
+        for (int i = 1; i < parts.Length; i++)
+        {
+            if (!int.TryParse(parts[i], out int childIndex))
+                return null;
+            if (childIndex < 0 || childIndex >= current.childCount)
+                return null;
+            current = current.GetChild(childIndex);
+        }
+
+        return current.GetComponent<T>() ?? current.GetComponentInChildren<T>(true);
+    }
+
+    private static LevelData LoadLevelDataByGuid(string guid)
+    {
+        if (string.IsNullOrEmpty(guid))
+            return null;
+
+        string path = AssetDatabase.GUIDToAssetPath(guid);
+        return string.IsNullOrEmpty(path) ? null : AssetDatabase.LoadAssetAtPath<LevelData>(path);
     }
 
     private static void RestoreQuickPlayOrigin()

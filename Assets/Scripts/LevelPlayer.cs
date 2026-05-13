@@ -7,7 +7,8 @@ public enum LevelPlayMode
 {
     Classic,
     StepLimit,
-    Escort
+    Escort,
+    Tutorial
 }
 
 public enum LevelDataSource
@@ -43,6 +44,31 @@ public sealed class LevelPlayRequest
 
     public int RouteLayer;
     public int RouteLayerCount = 1;
+}
+
+public sealed class LevelSettlementRewardLine
+{
+    public string Label;
+    public int Gold;
+    public bool IsHeader;
+}
+
+public sealed class LevelSettlementSummary
+{
+    public int SuccessfulBoxCount;
+    public readonly List<LevelSettlementRewardLine> RewardLines = new();
+
+    public int TotalGold
+    {
+        get
+        {
+            int total = 0;
+            for (int i = 0; i < RewardLines.Count; i++)
+                total += RewardLines[i] != null ? RewardLines[i].Gold : 0;
+
+            return total;
+        }
+    }
 }
 
 /// <summary>
@@ -124,6 +150,7 @@ public class LevelPlayer : MonoBehaviour
     private int _remainingSteps = -1;
     private RunDifficultySnapshot _activeDifficulty = RunDifficultySnapshot.Default;
     private RunRewardConfigSO _activeRewardSettings;
+    private LevelSettlementSummary _settlementSummary = new();
     private GUIStyle _stepLimitStyle;
     private GUIStyle _stepLimitShadowStyle;
     private GUIStyle _classicPhaseStyle;
@@ -146,6 +173,7 @@ public class LevelPlayer : MonoBehaviour
     public LevelDataSource CurrentLevelSource => _levelSource;
     public LevelPlayMode PlayMode => _playMode;
     public LevelPlayResult LastResult => _lastResult;
+    public LevelSettlementSummary LastSettlementSummary => _settlementSummary;
     public int RemainingSteps => _remainingSteps;
     public bool IsPlaying => _isPlaying;
     public bool IsStageInputLocked => _isStageInputLocked;
@@ -275,6 +303,9 @@ public class LevelPlayer : MonoBehaviour
 
     public bool LoadConfiguredLevel()
     {
+        if (GameFlowController.Instance != null && GameFlowController.Instance.Mode == GameFlowMode.LevelEdit)
+            return LoadLevel(levelData, tileConfig, LevelDataSource.Inspector);
+
         var session = Resources.Load<QuickPlaySession>("QuickPlaySession");
         if (session != null && session.active && session.targetLevel != null)
         {
@@ -314,6 +345,7 @@ public class LevelPlayer : MonoBehaviour
         _playMode = request != null ? request.Mode : defaultPlayMode;
         _activeDifficulty = ResolveDifficulty(request);
         _activeRewardSettings = ResolveRewardSettings(request);
+        _settlementSummary = new LevelSettlementSummary();
         _playRule = CreatePlayRule(_playMode);
         _isPlaying = true;
         _isSettled = false;
@@ -368,6 +400,17 @@ public class LevelPlayer : MonoBehaviour
         _settlementBody = null;
         _activeDifficulty = RunDifficultySnapshot.Default;
         _activeRewardSettings = null;
+    }
+
+    public void SettleTutorial(LevelPlayResult result, string reason)
+    {
+        if (_playMode != LevelPlayMode.Tutorial)
+        {
+            Debug.LogWarning($"[LevelPlayer] Ignored tutorial settlement outside Tutorial mode: result={result}, reason={reason}");
+            return;
+        }
+
+        SettleLevel(result, string.IsNullOrWhiteSpace(reason) ? "tutorial settled" : reason);
     }
 
     [Button("Rebuild World", ButtonSizes.Medium), HorizontalGroup("Buttons")]
@@ -661,10 +704,13 @@ public class LevelPlayer : MonoBehaviour
         Debug.Log($"[LevelPlayer] Level settled: result={result}, reason={reason}");
 
         var stageFacade = NekoGraph.GraphHub.Instance?.GetFacade<RunStageFacade>();
-        if (stageFacade != null && stageFacade.HasWaitingStage())
+        if (_playMode != LevelPlayMode.Tutorial && stageFacade != null && stageFacade.HasWaitingStage())
             stageFacade.ResumeWaitingStage(result == LevelPlayResult.Success ? 0 : 1);
 
-        GameFlowController.Instance?.OnRouteClassicLevelSettled(result);
+        if (_playMode == LevelPlayMode.Tutorial)
+            GameFlowController.Instance?.OnTutorialLevelSettled(result);
+        else
+            GameFlowController.Instance?.OnRouteClassicLevelSettled(result);
     }
 
     private void DrawSettlementOverlay()
@@ -806,6 +852,7 @@ public class LevelPlayer : MonoBehaviour
             : RunRewardConfigSO.CalculateArithmeticSequence(count, classicPhaseOneFirstBoxGold, classicPhaseOneBoxGoldStep);
 
         AwardGold(amount, "classic phase one boxes");
+        RecordBoxSequenceRewards("阶段一", count, ClassicPhaseOneFirstBoxGold, ClassicPhaseOneBoxGoldStep);
         return amount;
     }
 
@@ -816,6 +863,7 @@ public class LevelPlayer : MonoBehaviour
             : RunRewardConfigSO.CalculateArithmeticSequence(count, classicPhaseTwoFirstBoxGold, classicPhaseTwoBoxGoldStep);
 
         AwardGold(amount, "classic phase two boxes");
+        RecordBoxSequenceRewards("阶段二", count, ClassicPhaseTwoFirstBoxGold, ClassicPhaseTwoBoxGoldStep);
         return amount;
     }
 
@@ -874,9 +922,14 @@ public class LevelPlayer : MonoBehaviour
     internal void AwardEscortCompletionRewards()
     {
         int rewardBoxCount = CountNonCoreBoxesOnTargets();
-        int rewardBoxGold = Mathf.Max(0, rewardBoxCount) * GetEscortRewardBoxGold();
+        int escortRewardBoxGold = GetEscortRewardBoxGold();
+        int rewardBoxGold = Mathf.Max(0, rewardBoxCount) * escortRewardBoxGold;
         AwardGold(rewardBoxGold, "escort reward boxes on targets");
-        AwardGold(GetEscortCompletionGold(), "escort completion");
+        RecordFlatBoxRewards("护送奖励箱", rewardBoxCount, escortRewardBoxGold);
+
+        int completionGold = GetEscortCompletionGold();
+        AwardGold(completionGold, "escort completion");
+        RecordSettlementReward("护送完成", completionGold);
 
         var rewardPool = GetEscortCompletionRewardPool();
         if (rewardPool == null || !rewardPool.TryRollReward(null, out var reward) || reward == null)
@@ -886,6 +939,75 @@ public class LevelPlayer : MonoBehaviour
             return;
 
         RewardResource.ExecuteReward(reward);
+    }
+
+    private void RecordBoxSequenceRewards(string header, int count, int firstAmount, int stepAmount)
+    {
+        int safeCount = Mathf.Max(0, count);
+        if (safeCount <= 0)
+            return;
+
+        RecordSettlementHeader(header);
+        for (int i = 0; i < safeCount; i++)
+        {
+            int gold = ScaleSettlementGold(firstAmount + i * stepAmount);
+            RecordSettlementReward($"箱子{i + 1}", gold);
+        }
+
+        AddSuccessfulBoxes(safeCount);
+    }
+
+    private void RecordFlatBoxRewards(string header, int count, int goldPerBox)
+    {
+        int safeCount = Mathf.Max(0, count);
+        if (safeCount <= 0)
+            return;
+
+        RecordSettlementHeader(header);
+        for (int i = 0; i < safeCount; i++)
+            RecordSettlementReward($"箱子{i + 1}", Mathf.Max(0, goldPerBox));
+
+        AddSuccessfulBoxes(safeCount);
+    }
+
+    private void RecordSettlementHeader(string label)
+    {
+        _settlementSummary ??= new LevelSettlementSummary();
+        _settlementSummary.RewardLines.Add(new LevelSettlementRewardLine
+        {
+            Label = label,
+            IsHeader = true
+        });
+    }
+
+    private void RecordSettlementReward(string label, int gold)
+    {
+        if (gold <= 0)
+            return;
+
+        _settlementSummary ??= new LevelSettlementSummary();
+        _settlementSummary.RewardLines.Add(new LevelSettlementRewardLine
+        {
+            Label = label,
+            Gold = Mathf.Max(0, gold)
+        });
+    }
+
+    private void AddSuccessfulBoxes(int count)
+    {
+        _settlementSummary ??= new LevelSettlementSummary();
+        _settlementSummary.SuccessfulBoxCount += Mathf.Max(0, count);
+    }
+
+    private int ScaleSettlementGold(int amount)
+    {
+        if (amount <= 0)
+            return 0;
+
+        float multiplier = _activeDifficulty.RewardMultiplier > 0f
+            ? _activeDifficulty.RewardMultiplier
+            : 1f;
+        return Mathf.Max(0, Mathf.RoundToInt(amount * multiplier));
     }
 
     internal int ConvertUnoccupiedClassicTargetsToEnemyTargets()
@@ -1307,6 +1429,7 @@ public class LevelPlayer : MonoBehaviour
         {
             LevelPlayMode.StepLimit => new StepLimitPlayRule(),
             LevelPlayMode.Escort => new EscortPlayRule(),
+            LevelPlayMode.Tutorial => new TutorialPlayRule(),
             _ => new ClassicPlayRule()
         };
     }
@@ -1981,6 +2104,31 @@ public class LevelPlayer : MonoBehaviour
 
             if (!player.IsAnyCoreBoxAlive())
                 player.SettleLevel(LevelPlayResult.Failure, "core box destroyed");
+        }
+    }
+
+    private sealed class TutorialPlayRule : ILevelPlayRule
+    {
+        public bool ShouldStartSpawningOnBegin => false;
+
+        public void Begin(LevelPlayer player, LevelPlayRequest request)
+        {
+            player.SetRemainingSteps(-1);
+            HandZone.SetCardsLocked(false);
+        }
+
+        public void OnTick(LevelPlayer player)
+        {
+        }
+
+        public void End(LevelPlayer player)
+        {
+        }
+
+        public void Evaluate(LevelPlayer player)
+        {
+            if (!player.IsPlayerAlive())
+                player.SettleLevel(LevelPlayResult.Failure, "tutorial player destroyed");
         }
     }
 }
