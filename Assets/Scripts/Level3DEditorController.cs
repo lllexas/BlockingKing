@@ -17,6 +17,7 @@ public sealed class Level3DEditorController : MonoBehaviour
     private const float FilterHeight = 116f;
     private const float FooterHeight = 36f;
     private const float SectionGap = 8f;
+    private const int MinEditCanvasSize = 64;
 
     private readonly List<Brush> _brushes = new();
     private readonly List<Brush> _visibleBrushes = new();
@@ -32,6 +33,7 @@ public sealed class Level3DEditorController : MonoBehaviour
     private Vector2Int _hoverCell;
     private bool _hasHover;
     private bool _dirty;
+    private bool _cameraFocusedOnEntry;
     private BrushCategory _category = BrushCategory.All;
     private string _search = string.Empty;
     private Vector2 _paletteScroll;
@@ -50,10 +52,15 @@ public sealed class Level3DEditorController : MonoBehaviour
         _config = config;
         _config?.RebuildCache();
 
-        _draft = CloneLevelData(source);
+        _draft = CreateEditCanvas(source);
         BuildBrushes();
         DisableRuntimeInput();
         RebuildPreview();
+        if (!_cameraFocusedOnEntry)
+        {
+            FocusCameraOnContent();
+            _cameraFocusedOnEntry = true;
+        }
     }
 
     public LevelData SourceLevel => _source;
@@ -154,7 +161,8 @@ public sealed class Level3DEditorController : MonoBehaviour
         string dirtyText = _dirty ? "modified" : "saved";
         string brushText = _brushes.Count > 0 ? _brushes[Mathf.Clamp(_brushIndex, 0, _brushes.Count - 1)].Label : "<none>";
         int entityCount = EntitySystem.Instance != null && EntitySystem.Instance.entities != null ? EntitySystem.Instance.entities.entityCount : 0;
-        return $"{levelName}   {_draft.width}x{_draft.height}   ECS {entityCount}   {cellText}\n{dirtyText}   brush: {brushText}";
+        string boundsText = TryGetContentBounds(_draft, out var bounds) ? $"{bounds.width}x{bounds.height}" : "empty";
+        return $"{levelName}   canvas {_draft.width}x{_draft.height}   content {boundsText}   ECS {entityCount}   {cellText}\n{dirtyText}   brush: {brushText}";
     }
 
     private void DrawPaletteFilters(float height)
@@ -415,6 +423,30 @@ public sealed class Level3DEditorController : MonoBehaviour
         Camera.main?.GetComponent<CameraController>()?.SetFlowPaused(false);
     }
 
+    private void FocusCameraOnContent()
+    {
+        var cameraController = Camera.main != null ? Camera.main.GetComponent<CameraController>() : null;
+        if (cameraController == null || _draft == null)
+            return;
+
+        if (TryGetContentBounds(_draft, out var bounds))
+        {
+            float cellSize = _player != null ? _player.cellSize : 1f;
+            Vector2 center = new(
+                (bounds.xMin + bounds.xMax + 1) * 0.5f * cellSize,
+                (bounds.yMin + bounds.yMax + 1) * 0.5f * cellSize);
+            Vector2 size = new(bounds.width * cellSize, bounds.height * cellSize);
+            cameraController.SetWorldBounds(center, size);
+            cameraController.FocusOn(center);
+            return;
+        }
+
+        float fallbackCellSize = _player != null ? _player.cellSize : 1f;
+        Vector2 fallbackCenter = new(_draft.width * 0.5f * fallbackCellSize, _draft.height * 0.5f * fallbackCellSize);
+        cameraController.SetWorldBounds(fallbackCenter, new Vector2(_draft.width * fallbackCellSize, _draft.height * fallbackCellSize));
+        cameraController.FocusOn(fallbackCenter);
+    }
+
     private void PushUndo()
     {
         _undoStack.Push(Capture(_draft));
@@ -448,9 +480,7 @@ public sealed class Level3DEditorController : MonoBehaviour
         if (_source == null || _draft == null)
             return;
 
-        _source.levelName = _draft.levelName;
-        _source.SetFromMap2D(_draft.GetMap2D());
-        _source.tags = CloneTags(_draft.tags);
+        WriteCroppedDraftToSource();
         EditorUtility.SetDirty(_source);
         AssetDatabase.SaveAssets();
         _dirty = false;
@@ -462,7 +492,7 @@ public sealed class Level3DEditorController : MonoBehaviour
         if (_source == null)
             return;
 
-        _draft = CloneLevelData(_source);
+        _draft = CreateEditCanvas(_source);
         _undoStack.Clear();
         _redoStack.Clear();
         _dirty = false;
@@ -582,6 +612,173 @@ public sealed class Level3DEditorController : MonoBehaviour
         return clone;
     }
 
+    private static LevelData CreateEditCanvas(LevelData source)
+    {
+        var canvas = ScriptableObject.CreateInstance<LevelData>();
+        if (source == null)
+        {
+            canvas.levelName = "Draft";
+            canvas.width = MinEditCanvasSize;
+            canvas.height = MinEditCanvasSize;
+            canvas.tiles = new int[canvas.width * canvas.height];
+            canvas.tags = new List<LevelTagEntry>();
+            return canvas;
+        }
+
+        int sourceWidth = Mathf.Max(1, source.width);
+        int sourceHeight = Mathf.Max(1, source.height);
+        int width = Mathf.Max(MinEditCanvasSize, NextPowerOfTwoAtLeast(sourceWidth * 3));
+        int height = Mathf.Max(MinEditCanvasSize, NextPowerOfTwoAtLeast(sourceHeight * 3));
+        int offsetX = Mathf.Max(0, (width - sourceWidth) / 2);
+        int offsetY = Mathf.Max(0, (height - sourceHeight) / 2);
+
+        canvas.levelName = source.levelName;
+        canvas.width = width;
+        canvas.height = height;
+        canvas.tiles = new int[width * height];
+        canvas.tags = new List<LevelTagEntry>();
+
+        source.EnsureInitialized(sourceWidth, sourceHeight);
+        for (int y = 0; y < sourceHeight; y++)
+        {
+            for (int x = 0; x < sourceWidth; x++)
+                canvas.SetTile(x + offsetX, y + offsetY, source.GetTile(x, y));
+        }
+
+        if (source.tags != null)
+        {
+            foreach (var tag in source.tags)
+            {
+                if (tag == null)
+                    continue;
+                canvas.tags.Add(new LevelTagEntry
+                {
+                    tagID = tag.tagID,
+                    x = tag.x + offsetX,
+                    y = tag.y + offsetY
+                });
+            }
+        }
+
+        return canvas;
+    }
+
+    private void WriteCroppedDraftToSource()
+    {
+        if (_source == null || _draft == null)
+            return;
+
+        if (!TryGetContentBounds(_draft, out var bounds))
+        {
+            _source.levelName = _draft.levelName;
+            _source.width = 1;
+            _source.height = 1;
+            _source.tiles = new int[1];
+            _source.tags = new List<LevelTagEntry>();
+            return;
+        }
+
+        int[] croppedTiles = new int[bounds.width * bounds.height];
+        for (int y = 0; y < bounds.height; y++)
+        {
+            for (int x = 0; x < bounds.width; x++)
+                croppedTiles[y * bounds.width + x] = _draft.GetTile(bounds.xMin + x, bounds.yMin + y);
+        }
+
+        var croppedTags = new List<LevelTagEntry>();
+        if (_draft.tags != null)
+        {
+            foreach (var tag in _draft.tags)
+            {
+                if (tag == null)
+                    continue;
+                if (!bounds.Contains(tag.x, tag.y))
+                    continue;
+                croppedTags.Add(new LevelTagEntry
+                {
+                    tagID = tag.tagID,
+                    x = tag.x - bounds.xMin,
+                    y = tag.y - bounds.yMin
+                });
+            }
+        }
+
+        _source.levelName = _draft.levelName;
+        _source.width = bounds.width;
+        _source.height = bounds.height;
+        _source.tiles = croppedTiles;
+        _source.tags = croppedTags;
+    }
+
+    private static bool TryGetContentBounds(LevelData level, out IntBounds bounds)
+    {
+        bounds = default;
+        if (level == null)
+            return false;
+
+        bool hasContent = false;
+        int minX = int.MaxValue;
+        int minY = int.MaxValue;
+        int maxX = int.MinValue;
+        int maxY = int.MinValue;
+
+        if (level.tiles != null)
+        {
+            for (int y = 0; y < level.height; y++)
+            {
+                for (int x = 0; x < level.width; x++)
+                {
+                    if (level.GetTile(x, y) == 0)
+                        continue;
+                    IncludePoint(x, y, ref hasContent, ref minX, ref minY, ref maxX, ref maxY);
+                }
+            }
+        }
+
+        if (level.tags != null)
+        {
+            foreach (var tag in level.tags)
+            {
+                if (tag == null)
+                    continue;
+                if (tag.x < 0 || tag.x >= level.width || tag.y < 0 || tag.y >= level.height)
+                    continue;
+                IncludePoint(tag.x, tag.y, ref hasContent, ref minX, ref minY, ref maxX, ref maxY);
+            }
+        }
+
+        if (!hasContent)
+            return false;
+
+        bounds = new IntBounds(minX, minY, maxX, maxY);
+        return true;
+    }
+
+    private static void IncludePoint(
+        int x,
+        int y,
+        ref bool hasContent,
+        ref int minX,
+        ref int minY,
+        ref int maxX,
+        ref int maxY)
+    {
+        hasContent = true;
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+    }
+
+    private static int NextPowerOfTwoAtLeast(int value)
+    {
+        int result = 1;
+        int target = Mathf.Max(1, value);
+        while (result < target)
+            result <<= 1;
+        return result;
+    }
+
     private static List<LevelTagEntry> CloneTags(List<LevelTagEntry> source)
     {
         var result = new List<LevelTagEntry>();
@@ -698,6 +895,29 @@ public sealed class Level3DEditorController : MonoBehaviour
         public int Height;
         public int[] Tiles;
         public List<LevelTagEntry> Tags;
+    }
+
+    private readonly struct IntBounds
+    {
+        public readonly int xMin;
+        public readonly int yMin;
+        public readonly int xMax;
+        public readonly int yMax;
+        public int width => xMax - xMin + 1;
+        public int height => yMax - yMin + 1;
+
+        public IntBounds(int xMin, int yMin, int xMax, int yMax)
+        {
+            this.xMin = xMin;
+            this.yMin = yMin;
+            this.xMax = xMax;
+            this.yMax = yMax;
+        }
+
+        public bool Contains(int x, int y)
+        {
+            return x >= xMin && x <= xMax && y >= yMin && y <= yMax;
+        }
     }
 }
 #endif

@@ -8,7 +8,8 @@ public enum LevelPlayMode
     Classic,
     StepLimit,
     Escort,
-    Tutorial
+    Tutorial,
+    DirectorControlled
 }
 
 public enum LevelDataSource
@@ -404,7 +405,7 @@ public class LevelPlayer : MonoBehaviour
 
     public void SettleTutorial(LevelPlayResult result, string reason)
     {
-        if (_playMode != LevelPlayMode.Tutorial)
+        if (_playMode != LevelPlayMode.Tutorial && _playMode != LevelPlayMode.DirectorControlled)
         {
             Debug.LogWarning($"[LevelPlayer] Ignored tutorial settlement outside Tutorial mode: result={result}, reason={reason}");
             return;
@@ -704,10 +705,15 @@ public class LevelPlayer : MonoBehaviour
         Debug.Log($"[LevelPlayer] Level settled: result={result}, reason={reason}");
 
         var stageFacade = NekoGraph.GraphHub.Instance?.GetFacade<RunStageFacade>();
-        if (_playMode != LevelPlayMode.Tutorial && stageFacade != null && stageFacade.HasWaitingStage())
+        if (_playMode != LevelPlayMode.Tutorial &&
+            _playMode != LevelPlayMode.DirectorControlled &&
+            stageFacade != null &&
+            stageFacade.HasWaitingStage())
+        {
             stageFacade.ResumeWaitingStage(result == LevelPlayResult.Success ? 0 : 1);
+        }
 
-        if (_playMode == LevelPlayMode.Tutorial)
+        if (_playMode == LevelPlayMode.Tutorial || _playMode == LevelPlayMode.DirectorControlled)
             GameFlowController.Instance?.OnTutorialLevelSettled(result);
         else
             GameFlowController.Instance?.OnRouteClassicLevelSettled(result);
@@ -836,7 +842,7 @@ public class LevelPlayer : MonoBehaviour
         }
     }
 
-    private bool IsPlayerAlive()
+    internal bool IsPlayerAlive()
     {
         var entitySystem = EntitySystem.Instance;
         if (entitySystem == null || !entitySystem.IsInitialized || !TryFindPlayerIndex(entitySystem, out int playerIndex))
@@ -1429,6 +1435,7 @@ public class LevelPlayer : MonoBehaviour
         {
             LevelPlayMode.StepLimit => new StepLimitPlayRule(),
             LevelPlayMode.Escort => new EscortPlayRule(),
+            LevelPlayMode.DirectorControlled => new DirectorControlledPlayRule(),
             LevelPlayMode.Tutorial => new TutorialPlayRule(),
             _ => new ClassicPlayRule()
         };
@@ -2129,6 +2136,29 @@ public class LevelPlayer : MonoBehaviour
         {
             if (!player.IsPlayerAlive())
                 player.SettleLevel(LevelPlayResult.Failure, "tutorial player destroyed");
+        }
+    }
+
+    private sealed class DirectorControlledPlayRule : ILevelPlayRule
+    {
+        public bool ShouldStartSpawningOnBegin => false;
+
+        public void Begin(LevelPlayer player, LevelPlayRequest request)
+        {
+            player.SetRemainingSteps(-1);
+            HandZone.SetCardsLocked(false);
+        }
+
+        public void OnTick(LevelPlayer player)
+        {
+        }
+
+        public void End(LevelPlayer player)
+        {
+        }
+
+        public void Evaluate(LevelPlayer player)
+        {
         }
     }
 }

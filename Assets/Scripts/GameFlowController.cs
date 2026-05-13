@@ -320,6 +320,25 @@ public class GameFlowController : MonoBehaviour
         StartRun(runConfig, GameFlowMode.RoundFlow);
     }
 
+    public void StartTutorialFromMainMenu()
+    {
+        if (_isStartingRun)
+            return;
+
+        _isStartingRun = true;
+        mode = GameFlowMode.Tutorial;
+        IsMainMenuVisible = false;
+
+        HideMainMenu();
+        HideRunUiPanels();
+        SetRouteVisible(false);
+        HandZone.SetCardsLocked(true);
+        PlayRunBgm();
+
+        StartTutorialLevel();
+        _isStartingRun = false;
+    }
+
     public void ShowMainMenuRound(bool instant = false)
     {
         EnsureFacades();
@@ -333,6 +352,7 @@ public class GameFlowController : MonoBehaviour
         ShowMainMenuPart(MainMenuUIIds.Backdrop, instant);
         ShowMainMenuPart(MainMenuUIIds.Title, instant);
         ShowMainMenuPart(MainMenuUIIds.Start, instant);
+        ShowMainMenuPart(MainMenuUIIds.Tutorial, instant);
         ShowMainMenuPart(MainMenuUIIds.Settings, instant);
         ShowMainMenuPart(MainMenuUIIds.Quit, instant);
     }
@@ -597,6 +617,7 @@ public class GameFlowController : MonoBehaviour
         HideMainMenuPart(MainMenuUIIds.Backdrop);
         HideMainMenuPart(MainMenuUIIds.Title);
         HideMainMenuPart(MainMenuUIIds.Start);
+        HideMainMenuPart(MainMenuUIIds.Tutorial);
         HideMainMenuPart(MainMenuUIIds.Settings);
         HideMainMenuPart(MainMenuUIIds.Quit);
     }

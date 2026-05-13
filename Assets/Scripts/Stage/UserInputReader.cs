@@ -28,6 +28,7 @@ public class UserInputReader : MonoBehaviour
     private EntityHandle _playerHandle = EntityHandle.None;
     private Vector2Int _bufferedMoveDirection;
     private float _bufferedMoveExpireTime;
+    private bool _bufferedMoveWaitsForInputReady;
     private PathMoveMode _pathMoveMode;
     private readonly Queue<Vector2Int> _pathMoveDirections = new();
     private readonly Queue<Vector2Int> _leftPathHoverDirections = new();
@@ -197,14 +198,21 @@ public class UserInputReader : MonoBehaviour
         if (_bufferedMoveDirection == Vector2Int.zero)
             return;
 
-        if (Time.time > _bufferedMoveExpireTime)
+        if (!_bufferedMoveWaitsForInputReady && Time.time > _bufferedMoveExpireTime)
         {
             ClearBufferedMove();
             return;
         }
 
-        if (IsBeatMotionBusy())
+        if (_bufferedMoveWaitsForInputReady)
+        {
+            if (!CanSubmitBufferedMoveNow())
+                return;
+        }
+        else if (IsBeatMotionBusy())
+        {
             return;
+        }
 
         var direction = _bufferedMoveDirection;
         ClearBufferedMove();
@@ -213,6 +221,9 @@ public class UserInputReader : MonoBehaviour
 
     private bool TryBufferMoveDuringBeatMotion(Vector2Int direction)
     {
+        if (TryBufferMoveForNextPlayerIntent(direction))
+            return true;
+
         var drawSystem = DrawSystem.Instance;
         if (drawSystem == null || !drawSystem.IsBeatMotionBusy)
             return false;
@@ -223,7 +234,44 @@ public class UserInputReader : MonoBehaviour
 
         _bufferedMoveDirection = direction;
         _bufferedMoveExpireTime = busyUntil + 0.05f;
+        _bufferedMoveWaitsForInputReady = false;
         return true;
+    }
+
+    private bool TryBufferMoveForNextPlayerIntent(Vector2Int direction)
+    {
+        var intentSystem = IntentSystem.Instance;
+        if (intentSystem == null || !intentSystem.IsRunning)
+            return false;
+
+        if (intentSystem.IsExecutingPlayerStep && !IsPlayerIntentInPreInputWindow())
+            return true;
+
+        _bufferedMoveDirection = direction;
+        _bufferedMoveExpireTime = 0f;
+        _bufferedMoveWaitsForInputReady = true;
+        return true;
+    }
+
+    private static bool IsPlayerIntentInPreInputWindow()
+    {
+        var drawSystem = DrawSystem.Instance;
+        if (drawSystem == null || !drawSystem.IsBeatMotionBusy)
+            return true;
+
+        float beatDuration = Mathf.Max(0.0001f, drawSystem.BeatDuration);
+        float beatRemaining = drawSystem.BeatMotionBusyUntil - Time.time;
+        return beatRemaining <= beatDuration * 0.5f;
+    }
+
+    private bool CanSubmitBufferedMoveNow()
+    {
+        var intentSystem = IntentSystem.Instance;
+        if (intentSystem != null && intentSystem.IsRunning)
+            return false;
+
+        var drawSystem = DrawSystem.Instance;
+        return drawSystem == null || !drawSystem.IsBeatMotionBusy;
     }
 
     private bool IsBeatMotionBusy()
@@ -239,6 +287,7 @@ public class UserInputReader : MonoBehaviour
     {
         _bufferedMoveDirection = Vector2Int.zero;
         _bufferedMoveExpireTime = 0f;
+        _bufferedMoveWaitsForInputReady = false;
     }
 
     private void ClearPathMove()

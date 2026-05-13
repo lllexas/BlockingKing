@@ -14,6 +14,8 @@ public class DrawSystem : MonoBehaviour
     private const int EnemyVisualKindCount = 7;
     private const float UnitLabelAutoSizeMinFontSize = 0.1f;
     private const float UnitLabelAutoSizeMaxFontSize = 128f;
+    private const float GroundTextAutoSizeMinFontSize = 0.01f;
+    private const float GroundTextAutoSizeMaxFontSize = 128f;
 
     private enum EnemyVisualKind
     {
@@ -103,6 +105,12 @@ public class DrawSystem : MonoBehaviour
     [SerializeField] private float unitLabelTextScale = 1f;
     [SerializeField] private Vector2 unitLabelTextRectSize = new(0.315f, 0.224f);
 
+    [Header("Ground Text")]
+    [SerializeField] private float groundTextHeight = 0.012f;
+    [SerializeField] private Color groundTextColor = new(0.95f, 0.96f, 0.9f, 1f);
+    [SerializeField, Range(0f, 0.5f)] private float groundTextOutlineWidth = 0.16f;
+    [SerializeField] private Color groundTextOutlineColor = new(0.03f, 0.035f, 0.04f, 0.95f);
+
     private readonly Matrix4x4[] _playerMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _boxMatrices = new Matrix4x4[BatchSize];
     private readonly Matrix4x4[] _coreBoxMatrices = new Matrix4x4[BatchSize];
@@ -114,6 +122,7 @@ public class DrawSystem : MonoBehaviour
     private readonly List<StatTextPair> _statTexts = new();
     private readonly List<UnitLabelText> _unitLabelTexts = new();
     private readonly List<DeathVisual> _deathVisuals = new();
+    private readonly Dictionary<string, GroundText> _groundTexts = new();
     private int _playerCount;
     private int _boxCount;
     private int _coreBoxCount;
@@ -149,6 +158,7 @@ public class DrawSystem : MonoBehaviour
     private void OnDestroy()
     {
         UnregisterEventBus();
+        ClearGroundTexts();
 
         if (_runtimeStatsVisibleMaterial != null)
         {
@@ -191,6 +201,59 @@ public class DrawSystem : MonoBehaviour
     public float BeatBpm => beatDuration > 0f ? 60f / beatDuration : 0f;
     public float RoundTripBeatDuration => beatDuration * 2f;
     public float RoundTripBeatBpm => beatDuration > 0f ? 60f / (beatDuration * 2f) : 0f;
+
+    public void SetGroundText(string id, string text, Vector2 centerXZ, Vector2 rectSize)
+    {
+        SetGroundText(id, text, centerXZ, rectSize, groundTextColor);
+    }
+
+    public void SetGroundText(string id, string text, Vector2 centerXZ, Vector2 rectSize, Color color)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+            return;
+
+        if (string.IsNullOrEmpty(text))
+        {
+            RemoveGroundText(id);
+            return;
+        }
+
+        var groundText = GetGroundText(id);
+        groundText.Root.SetActive(true);
+        groundText.SetText(ExpandUnitLabelText(text));
+        groundText.SetColor(color);
+
+        float safeWidth = Mathf.Max(0.01f, rectSize.x) * cellSize;
+        float safeHeight = Mathf.Max(0.01f, rectSize.y) * cellSize;
+        groundText.SetRectSize(new Vector2(safeWidth, safeHeight));
+
+        groundText.Root.transform.position = new Vector3(centerXZ.x * cellSize, groundTextHeight * cellSize, centerXZ.y * cellSize);
+        groundText.Root.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        groundText.Root.transform.localScale = Vector3.one;
+    }
+
+    public bool RemoveGroundText(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id) || !_groundTexts.TryGetValue(id, out var groundText))
+            return false;
+
+        if (groundText.Root != null)
+            Destroy(groundText.Root);
+
+        _groundTexts.Remove(id);
+        return true;
+    }
+
+    public void ClearGroundTexts()
+    {
+        foreach (var pair in _groundTexts)
+        {
+            if (pair.Value.Root != null)
+                Destroy(pair.Value.Root);
+        }
+
+        _groundTexts.Clear();
+    }
 
     public void ConfigureBeatMotion(bool enabled)
     {
@@ -938,6 +1001,57 @@ public class DrawSystem : MonoBehaviour
         RectTransform rectTransform = text.rectTransform;
         rectTransform.pivot = new Vector2(0.5f, 0.5f);
         rectTransform.sizeDelta = unitLabelTextRectSize;
+        return text;
+    }
+
+    private GroundText GetGroundText(string id)
+    {
+        if (_groundTexts.TryGetValue(id, out var groundText))
+            return groundText;
+
+        groundText = CreateGroundText(id);
+        _groundTexts[id] = groundText;
+        return groundText;
+    }
+
+    private GroundText CreateGroundText(string id)
+    {
+        var root = new GameObject($"GroundText_{id}");
+        root.transform.SetParent(transform, false);
+        root.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        root.transform.localScale = Vector3.one;
+
+        var visible = CreateGroundTextMesh(root.transform, "Visible", ResolveStatsVisibleMaterial());
+        var occluded = CreateGroundTextMesh(root.transform, "Occluded", ResolveStatsOccludedMaterial());
+        return new GroundText(root, visible, occluded);
+    }
+
+    private TextMeshPro CreateGroundTextMesh(Transform parent, string name, Material material)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = Vector3.zero;
+        go.transform.localRotation = Quaternion.identity;
+        go.transform.localScale = Vector3.one;
+
+        var text = go.AddComponent<TextMeshPro>();
+        text.font = ResolveWorldTextFont();
+        text.fontSharedMaterial = material;
+        text.alignment = TextAlignmentOptions.Center;
+        text.fontSize = GroundTextAutoSizeMaxFontSize;
+        text.enableAutoSizing = true;
+        text.fontSizeMin = GroundTextAutoSizeMinFontSize;
+        text.fontSizeMax = GroundTextAutoSizeMaxFontSize;
+        text.color = groundTextColor;
+        text.outlineWidth = groundTextOutlineWidth;
+        text.outlineColor = groundTextOutlineColor;
+        text.enableWordWrapping = true;
+        text.overflowMode = TextOverflowModes.Truncate;
+        text.text = string.Empty;
+
+        RectTransform rectTransform = text.rectTransform;
+        rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        rectTransform.sizeDelta = Vector2.one;
         return text;
     }
 
@@ -1797,6 +1911,58 @@ public class DrawSystem : MonoBehaviour
         {
             _visible.color = color;
             _occluded.color = color;
+        }
+    }
+
+    private readonly struct GroundText
+    {
+        public readonly GameObject Root;
+        private readonly TextMeshPro _visible;
+        private readonly TextMeshPro _occluded;
+
+        public GroundText(GameObject root, TextMeshPro visible, TextMeshPro occluded)
+        {
+            Root = root;
+            _visible = visible;
+            _occluded = occluded;
+        }
+
+        public void SetText(string text)
+        {
+            _visible.text = text;
+            _occluded.text = text;
+            ExpandBoundsToCurrentRect();
+        }
+
+        public void SetColor(Color color)
+        {
+            _visible.color = color;
+            _occluded.color = color;
+        }
+
+        public void SetRectSize(Vector2 size)
+        {
+            _visible.rectTransform.sizeDelta = size;
+            _occluded.rectTransform.sizeDelta = size;
+            ExpandBoundsToCurrentRect();
+        }
+
+        private void ExpandBoundsToCurrentRect()
+        {
+            ExpandBoundsToRect(_visible, _visible.rectTransform.sizeDelta);
+            ExpandBoundsToRect(_occluded, _occluded.rectTransform.sizeDelta);
+        }
+
+        private static void ExpandBoundsToRect(TextMeshPro text, Vector2 size)
+        {
+            if (text == null)
+                return;
+
+            text.ForceMeshUpdate();
+            float width = Mathf.Max(0.01f, size.x);
+            float height = Mathf.Max(0.01f, size.y);
+            float depth = Mathf.Max(width, height, 1f);
+            text.mesh.bounds = new Bounds(Vector3.zero, new Vector3(width, height, depth));
         }
     }
 }

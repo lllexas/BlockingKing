@@ -57,14 +57,13 @@ public sealed class CardImpactAnimator : SpaceUIAnimator
     private void OnDisable()
     {
         Unsubscribe();
+        KillTweens();
     }
 
     protected override void OnDestroy()
     {
         Unsubscribe();
-        _impactScaleTween?.Kill();
-        _wobbleTween?.Kill();
-        _aimTween?.Kill();
+        KillTweens();
         base.OnDestroy();
     }
 
@@ -190,10 +189,27 @@ public sealed class CardImpactAnimator : SpaceUIAnimator
         _aimTween?.Kill();
         if (impactTarget != null)
         {
+            if (!isActiveAndEnabled || !gameObject.activeInHierarchy)
+            {
+                impactTarget.localScale = _impactBaseScale;
+                impactTarget.localEulerAngles = _impactBaseEuler;
+                return;
+            }
+
             float duration = BeatSeconds(0.35f);
             impactTarget.DOScale(_impactBaseScale, duration).SetEase(Ease.OutCubic);
             impactTarget.DOLocalRotate(_impactBaseEuler, duration).SetEase(Ease.OutCubic);
         }
+    }
+
+    private void KillTweens()
+    {
+        _impactScaleTween?.Kill();
+        _wobbleTween?.Kill();
+        _aimTween?.Kill();
+        _impactScaleTween = null;
+        _wobbleTween = null;
+        _aimTween = null;
     }
 
     private void PlayYawWobble()

@@ -179,6 +179,14 @@ public class CameraController : MonoBehaviour
         UpdateMovementBounds();
     }
 
+    /// <summary>根据世界坐标中的矩形设置边界。</summary>
+    public void SetWorldBounds(Vector2 centerWorldXZ, Vector2 sizeWorldXZ)
+    {
+        mapCenter = centerWorldXZ;
+        mapSize = new Vector2(Mathf.Max(0.01f, sizeWorldXZ.x), Mathf.Max(0.01f, sizeWorldXZ.y));
+        UpdateMovementBounds();
+    }
+
     /// <summary>强制聚焦到某个 XZ 世界坐标</summary>
     public void FocusOn(Vector2 worldXZ)
     {

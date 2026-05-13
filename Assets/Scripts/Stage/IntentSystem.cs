@@ -79,6 +79,7 @@ public class IntentSystem : MonoBehaviour
     private EnemyBeatKind _spawnBeatKind = EnemyBeatKind.None;
     private EntityHandle _playerIntentActor = EntityHandle.None;
     private Coroutine _runner;
+    private int _runningStepIndex = -1;
     private const int MaxResolutionPasses = 8;
 
     private void Awake()
@@ -95,6 +96,12 @@ public class IntentSystem : MonoBehaviour
     public bool IsRunning => _runner != null;
     public EnemyIntentPresentationMode EnemyPresentationMode => enemyIntentPresentationMode;
     public bool CanAcceptTick => _runner == null;
+    public bool IsExecutingPlayerStep => IsRunningStepValid
+                                         && _executionSteps[_runningStepIndex].IsPlayerIntentStep;
+
+    private bool IsRunningStepValid => _runner != null
+                                       && _runningStepIndex >= 0
+                                       && _runningStepIndex < _executionSteps.Count;
 
     public void ConfigureEnemyIntentPresentation(EnemyIntentPresentationMode mode)
     {
@@ -204,6 +211,8 @@ public class IntentSystem : MonoBehaviour
     {
         for (int i = 0; i < _executionSteps.Count; i++)
         {
+            _runningStepIndex = i;
+
             if (LevelPlayer.IsActiveStageInputLocked)
                 break;
 
@@ -219,6 +228,7 @@ public class IntentSystem : MonoBehaviour
         }
 
         _executionSteps.Clear();
+        _runningStepIndex = -1;
         _runner = null;
         IntentQueueCompleted?.Invoke();
     }
@@ -226,6 +236,7 @@ public class IntentSystem : MonoBehaviour
     private void BuildExecutionSteps(EntitySystem entitySystem)
     {
         _executionSteps.Clear();
+        _runningStepIndex = -1;
         _allInOneBatch.Clear();
         _enemyIntentBatch.Clear();
         _enemyMoveBatch.Clear();
@@ -238,7 +249,7 @@ public class IntentSystem : MonoBehaviour
 
         _playerIntentActor = ResolvePlayerIntentActor(entitySystem);
         if (_playerIntentActor != EntityHandle.None)
-            _executionSteps.Add(IntentExecutionStep.Single(_playerIntentActor));
+            _executionSteps.Add(IntentExecutionStep.Single(_playerIntentActor, true));
 
         int playerStepIndex = _playerIntentActor != EntityHandle.None ? 1 : 0;
         bool hasAnyEnemyContent = false;
@@ -293,7 +304,7 @@ public class IntentSystem : MonoBehaviour
                 continue;
             }
 
-            _executionSteps.Add(IntentExecutionStep.Single(actor));
+            _executionSteps.Add(IntentExecutionStep.Single(actor, false));
         }
 
         if (enemyIntentPresentationMode == EnemyIntentPresentationMode.AllInOneBatch)
@@ -629,13 +640,15 @@ public class IntentSystem : MonoBehaviour
         public readonly EntityHandle Actor;
         public readonly List<EntityHandle> Actors;
         public readonly EnemyBeatKind EnemyBeatKind;
+        public readonly bool IsPlayerIntentStep;
 
-        private IntentExecutionStep(EntityHandle actor)
+        private IntentExecutionStep(EntityHandle actor, bool isPlayerIntentStep)
         {
             IsBatch = false;
             Actor = actor;
             Actors = null;
             EnemyBeatKind = EnemyBeatKind.None;
+            IsPlayerIntentStep = isPlayerIntentStep;
         }
 
         private IntentExecutionStep(List<EntityHandle> actors, EnemyBeatKind enemyBeatKind)
@@ -644,11 +657,12 @@ public class IntentSystem : MonoBehaviour
             Actor = EntityHandle.None;
             Actors = new List<EntityHandle>(actors);
             EnemyBeatKind = enemyBeatKind;
+            IsPlayerIntentStep = false;
         }
 
-        public static IntentExecutionStep Single(EntityHandle actor)
+        public static IntentExecutionStep Single(EntityHandle actor, bool isPlayerIntentStep)
         {
-            return new IntentExecutionStep(actor);
+            return new IntentExecutionStep(actor, isPlayerIntentStep);
         }
 
         public static IntentExecutionStep Batch(List<EntityHandle> actors, EnemyBeatKind enemyBeatKind)
@@ -739,6 +753,7 @@ public class IntentSystem : MonoBehaviour
         _pools.Clear();
         _activeIntentEntities.Clear();
         _executionSteps.Clear();
+        _runningStepIndex = -1;
         _allInOneBatch.Clear();
         _enemyIntentBatch.Clear();
         _enemyMoveBatch.Clear();

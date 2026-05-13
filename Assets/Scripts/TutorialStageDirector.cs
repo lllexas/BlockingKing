@@ -22,6 +22,25 @@ public enum TutorialAct
 }
 
 [System.Serializable]
+public sealed class TutorialGroundHint
+{
+    public string hintId = "hint";
+    [TextArea(1, 3)] public string text;
+    public Vector2 centerXZ = new(-5f, 0f);
+    public Vector2 rectSize = new(4f, 1f);
+    public Color color = new(0.95f, 0.96f, 0.9f, 1f);
+}
+
+public static class TutorialGroundHintLayout
+{
+    public static readonly Vector2 Q2 = new(-3f, 3f);
+    public static readonly Vector2 Q3 = new(-3f, -3f);
+    public static readonly Vector2 Q4 = new(3f, -3f);
+    public static readonly Vector2 Card = new(3.6f, 1.15f);
+    public static readonly Vector2 WideCard = new(4.4f, 1.25f);
+}
+
+[System.Serializable]
 public sealed class TutorialStep
 {
     public string stepId;
@@ -37,66 +56,165 @@ public sealed class TutorialStep
     public bool stopEnemySpawning;
     public bool hidePrompt;
     public bool completeTutorial;
+    public List<TutorialGroundHint> groundHints = new();
 }
 
 [DefaultExecutionOrder(120)]
 public sealed class TutorialStageDirector : MonoBehaviour
 {
     [Header("Levels")]
-    [SerializeField] private TileMappingConfig tileConfig;
     [SerializeField] private LevelData pushLevel;
     [SerializeField] private LevelData breakWallLevel;
     [SerializeField] private LevelData classicLevel;
     [SerializeField] private LevelData rookBishopLevel;
     [SerializeField] private LevelData escortLevel;
 
-    [Header("Flow")]
-    [SerializeField] private bool autoStart;
-    [SerializeField] private bool returnToMainMenuOnComplete;
-    [SerializeField] private List<TutorialStep> steps = new()
+    private static bool AutoStart => false;
+    private static bool ReturnToMainMenuOnComplete => false;
+
+    private readonly List<TutorialStep> _steps = new()
     {
-        new TutorialStep
+        new()
         {
             stepId = "act1_push",
             act = TutorialAct.Push,
             title = "第一幕",
             message = "推过去",
-            lockCards = true
+            lockCards = true,
+            groundHints = new List<TutorialGroundHint>
+            {
+                new TutorialGroundHint
+                {
+                    hintId = "move_wasd",
+                    text = "WASD\n移动 / 推箱",
+                    centerXZ = TutorialGroundHintLayout.Q2,
+                    rectSize = TutorialGroundHintLayout.Card
+                },
+                new TutorialGroundHint
+                {
+                    hintId = "move_right",
+                    text = "右键空地\n自动移动\n避开箱子",
+                    centerXZ = TutorialGroundHintLayout.Q3,
+                    rectSize = TutorialGroundHintLayout.Card
+                },
+                new TutorialGroundHint
+                {
+                    hintId = "move_left",
+                    text = "按住角色格\n左键拖拽\n规划推箱",
+                    centerXZ = TutorialGroundHintLayout.Q4,
+                    rectSize = TutorialGroundHintLayout.Card
+                }
+            }
         },
-        new TutorialStep
+        new()
         {
             stepId = "act2_break_wall",
             act = TutorialAct.BreakWall,
             title = "第二幕",
             message = "这是个死局，在其他的推箱子游戏中，我会建议你重新开始。但在《推王之王》中，你不需要被这些繁文缛节约束。把墙撞开！！！",
-            lockCards = false
+            lockCards = false,
+            groundHints = new List<TutorialGroundHint>
+            {
+                new TutorialGroundHint
+                {
+                    hintId = "card_play",
+                    text = "拖拽出牌\n再选择目标",
+                    centerXZ = TutorialGroundHintLayout.Q2,
+                    rectSize = TutorialGroundHintLayout.Card
+                },
+                new TutorialGroundHint
+                {
+                    hintId = "move_right",
+                    text = "右键空地\n自动移动\n避开箱子",
+                    centerXZ = TutorialGroundHintLayout.Q3,
+                    rectSize = TutorialGroundHintLayout.Card
+                },
+                new TutorialGroundHint
+                {
+                    hintId = "move_left",
+                    text = "按住角色格\n左键拖拽\n规划推箱",
+                    centerXZ = TutorialGroundHintLayout.Q4,
+                    rectSize = TutorialGroundHintLayout.Card
+                }
+            }
         },
-        new TutorialStep
+        new()
         {
             stepId = "act3_classic_phase_one",
             act = TutorialAct.ClassicPhaseOne,
             title = "第三幕",
             message = "这是经典关卡，我暂时收走了你的卡牌，请尝试着把所有箱子推到目标点。如果你发现关卡没法再进行，就点击结算按钮吧。量力而行，不要内耗。",
-            lockCards = true
+            lockCards = true,
+            groundHints = new List<TutorialGroundHint>
+            {
+                new TutorialGroundHint
+                {
+                    hintId = "move_wasd",
+                    text = "WASD\n移动 / 推箱",
+                    centerXZ = TutorialGroundHintLayout.Q2,
+                    rectSize = TutorialGroundHintLayout.Card
+                },
+                new TutorialGroundHint
+                {
+                    hintId = "move_right",
+                    text = "右键空地\n自动移动\n避开箱子",
+                    centerXZ = TutorialGroundHintLayout.Q3,
+                    rectSize = TutorialGroundHintLayout.Card
+                },
+                new TutorialGroundHint
+                {
+                    hintId = "move_left",
+                    text = "按住角色格\n左键拖拽\n规划推箱",
+                    centerXZ = TutorialGroundHintLayout.Q4,
+                    rectSize = TutorialGroundHintLayout.Card
+                }
+            }
         },
-        new TutorialStep
+        new()
         {
             stepId = "act4_classic_phase_two",
             act = TutorialAct.ClassicPhaseTwo,
             title = "第四幕",
             message = "现在，敌人会周期性生成在目标点。卡牌系统已回归，请消灭所有敌人，并把所有箱子推到目标点。",
             lockCards = false,
-            startEnemySpawning = true
+            startEnemySpawning = true,
+            groundHints = new List<TutorialGroundHint>
+            {
+                new TutorialGroundHint
+                {
+                    hintId = "card_play",
+                    text = "拖拽出牌\n再选择目标",
+                    centerXZ = TutorialGroundHintLayout.Q2,
+                    rectSize = TutorialGroundHintLayout.Card
+                },
+                new TutorialGroundHint
+                {
+                    hintId = "overkill",
+                    text = "超杀\n攻击 > 血量\n敌人会飞起来",
+                    centerXZ = TutorialGroundHintLayout.Q3,
+                    rectSize = TutorialGroundHintLayout.WideCard
+                }
+            }
         },
-        new TutorialStep
+        new()
         {
             stepId = "act5_rook_bishop",
             act = TutorialAct.RookBishop,
             title = "第五幕",
             message = "不知道你发现没有，战车卡可以一次把箱子推好远。主教卡也是。你可以试试看。",
-            lockCards = false
+            lockCards = false,
+            groundHints = new List<TutorialGroundHint>
+            {
+                new TutorialGroundHint
+                {
+                    hintId = "card_play",
+                    text = "拖拽出牌\n再选择目标",
+                    centerXZ = TutorialGroundHintLayout.Q2,
+                    rectSize = TutorialGroundHintLayout.Card
+                }
+            }
         },
-        new TutorialStep
+        new()
         {
             stepId = "act6_escort",
             act = TutorialAct.Escort,
@@ -116,13 +234,15 @@ public sealed class TutorialStageDirector : MonoBehaviour
     private string _overrideTitle;
     private string _overrideMessage;
     private bool _overrideHidden;
+    private bool _isReloadingAct;
+    private readonly List<string> _activeGroundHintIds = new();
 
     private void OnEnable()
     {
         TickSystem.OnTick += HandleTick;
         RegisterHandZone();
 
-        if (autoStart)
+        if (AutoStart)
             StartTutorial();
         else
             RefreshPrompt();
@@ -133,6 +253,7 @@ public sealed class TutorialStageDirector : MonoBehaviour
         TickSystem.OnTick -= HandleTick;
         UnregisterHandZone();
         HidePrompt();
+        ClearGroundHints();
     }
 
     private void Update()
@@ -141,6 +262,7 @@ public sealed class TutorialStageDirector : MonoBehaviour
             return;
 
         RegisterHandZone();
+        EvaluateDirectorLevelState();
         EvaluateCurrentStep();
     }
 
@@ -159,13 +281,13 @@ public sealed class TutorialStageDirector : MonoBehaviour
         _ticksInStep = 0;
         ClearPromptOverride();
 
-        if (_stepIndex >= steps.Count)
+        if (_stepIndex >= _steps.Count)
         {
             CompleteTutorial(LevelPlayResult.Success, "tutorial steps completed");
             return;
         }
 
-        ApplyStepState(steps[_stepIndex]);
+        ApplyStepState(_steps[_stepIndex]);
     }
 
     private void ApplyStepState(TutorialStep step)
@@ -178,6 +300,7 @@ public sealed class TutorialStageDirector : MonoBehaviour
 
         HandZone.SetCardsLocked(step != null && step.lockCards);
         ApplySpawnState(step);
+        ApplyGroundHints(step);
         RefreshPrompt();
     }
 
@@ -209,6 +332,48 @@ public sealed class TutorialStageDirector : MonoBehaviour
             RefreshPrompt();
         else
             HidePrompt();
+    }
+
+    public void ShowGroundHint(string hintId, string text, Vector2 centerXZ, Vector2 rectSize)
+    {
+        ShowGroundHint(hintId, text, centerXZ, rectSize, new Color(0.95f, 0.96f, 0.9f, 1f));
+    }
+
+    public void ShowGroundHint(string hintId, string text, Vector2 centerXZ, Vector2 rectSize, Color color)
+    {
+        string resolvedId = ResolveGroundHintId(hintId);
+        if (string.IsNullOrWhiteSpace(resolvedId))
+            return;
+
+        var drawSystem = DrawSystem.Instance;
+        if (drawSystem == null)
+            return;
+
+        drawSystem.SetGroundText(resolvedId, text, centerXZ, rectSize, color);
+        if (!_activeGroundHintIds.Contains(resolvedId))
+            _activeGroundHintIds.Add(resolvedId);
+    }
+
+    public void HideGroundHint(string hintId)
+    {
+        string resolvedId = ResolveGroundHintId(hintId);
+        if (string.IsNullOrWhiteSpace(resolvedId))
+            return;
+
+        DrawSystem.Instance?.RemoveGroundText(resolvedId);
+        _activeGroundHintIds.Remove(resolvedId);
+    }
+
+    public void ClearGroundHints()
+    {
+        var drawSystem = DrawSystem.Instance;
+        if (drawSystem != null)
+        {
+            for (int i = 0; i < _activeGroundHintIds.Count; i++)
+                drawSystem.RemoveGroundText(_activeGroundHintIds[i]);
+        }
+
+        _activeGroundHintIds.Clear();
     }
 
     private void HandleTick()
@@ -265,6 +430,34 @@ public sealed class TutorialStageDirector : MonoBehaviour
         }
     }
 
+    private void EvaluateDirectorLevelState()
+    {
+        if (!IsTutorialActive() || _isReloadingAct)
+            return;
+
+        var step = CurrentStep();
+        var player = LevelPlayer.ActiveInstance;
+        if (step == null || player == null || !player.IsPlaying)
+            return;
+
+        if (!player.IsPlayerAlive())
+        {
+            ReloadCurrentAct();
+            return;
+        }
+
+        if (IsEscortAct(step.act))
+        {
+            if (player.IsAnyCoreBoxOnTarget())
+                AdvanceOrCompleteCurrentStep();
+
+            return;
+        }
+
+        if (player.AreAllBoxesOnTargets())
+            AdvanceOrCompleteCurrentStep();
+    }
+
     private void AdvanceOrCompleteCurrentStep()
     {
         if (CurrentStep()?.completeTutorial == true)
@@ -276,17 +469,18 @@ public sealed class TutorialStageDirector : MonoBehaviour
     private void CompleteTutorial(LevelPlayResult result, string reason)
     {
         HidePrompt();
+        ClearGroundHints();
         HandZone.SetCardsLocked(true);
         SpawnSystem.Instance?.StopSpawning();
         LevelPlayer.ActiveInstance?.SettleTutorial(result, string.IsNullOrWhiteSpace(reason) ? "tutorial completed" : reason);
 
-        if (returnToMainMenuOnComplete)
+        if (ReturnToMainMenuOnComplete)
             GameFlowController.Instance?.ReturnToMainMenuRound();
     }
 
     private TutorialStep CurrentStep()
     {
-        return _stepIndex >= 0 && _stepIndex < steps.Count ? steps[_stepIndex] : null;
+        return _stepIndex >= 0 && _stepIndex < _steps.Count ? _steps[_stepIndex] : null;
     }
 
     private bool ShouldShowPrompt()
@@ -339,20 +533,22 @@ public sealed class TutorialStageDirector : MonoBehaviour
             return false;
         }
 
-        bool sameLevelIsRunning = _currentLevel == level &&
+        bool sameLevelIsRunning = _currentAct.HasValue &&
+                                  _currentAct.Value == act &&
+                                  _currentLevel == level &&
                                   player.CurrentLevel == level &&
-                                  player.PlayMode == LevelPlayMode.Tutorial &&
+                                  player.PlayMode == LevelPlayMode.DirectorControlled &&
                                   player.IsPlaying;
 
-        _currentAct = act;
         if (sameLevelIsRunning)
             return true;
 
+        _currentAct = act;
         var request = new LevelPlayRequest
         {
             Level = level,
-            Config = tileConfig,
-            Mode = LevelPlayMode.Tutorial,
+            Config = null,
+            Mode = LevelPlayMode.DirectorControlled,
             RewardSettings = GameFlowController.Instance != null ? GameFlowController.Instance.RewardSettings : null,
             Difficulty = RunDifficultySnapshot.Default
         };
@@ -366,6 +562,32 @@ public sealed class TutorialStageDirector : MonoBehaviour
 
         _currentLevel = level;
         return true;
+    }
+
+    private void ReloadCurrentAct()
+    {
+        var step = CurrentStep();
+        if (step == null)
+            return;
+
+        _isReloadingAct = true;
+        _currentAct = null;
+        _currentLevel = null;
+
+        try
+        {
+            if (!EnsureActLoaded(step.act))
+                return;
+
+            HandZone.SetCardsLocked(step.lockCards);
+            ApplySpawnState(step);
+            ApplyGroundHints(step);
+            RefreshPrompt();
+        }
+        finally
+        {
+            _isReloadingAct = false;
+        }
     }
 
     private LevelData ResolveActLevel(TutorialAct act)
@@ -394,14 +616,43 @@ public sealed class TutorialStageDirector : MonoBehaviour
         }
     }
 
+    private void ApplyGroundHints(TutorialStep step)
+    {
+        ClearGroundHints();
+        if (step?.groundHints == null)
+            return;
+
+        for (int i = 0; i < step.groundHints.Count; i++)
+        {
+            var hint = step.groundHints[i];
+            if (hint == null || string.IsNullOrWhiteSpace(hint.text))
+                continue;
+
+            ShowGroundHint(hint.hintId, hint.text, hint.centerXZ, hint.rectSize, hint.color);
+        }
+    }
+
+    private static string ResolveGroundHintId(string hintId)
+    {
+        if (string.IsNullOrWhiteSpace(hintId))
+            return null;
+
+        return $"Tutorial.{hintId.Trim()}";
+    }
+
+    private static bool IsEscortAct(TutorialAct act)
+    {
+        return act == TutorialAct.Escort;
+    }
+
     private bool IsTutorialActive()
     {
         return GameFlowController.Instance != null &&
                GameFlowController.Instance.Mode == GameFlowMode.Tutorial &&
                LevelPlayer.ActiveInstance != null &&
-               LevelPlayer.ActiveInstance.PlayMode == LevelPlayMode.Tutorial &&
+               LevelPlayer.ActiveInstance.PlayMode == LevelPlayMode.DirectorControlled &&
                _stepIndex >= 0 &&
-               _stepIndex < steps.Count;
+               _stepIndex < _steps.Count;
     }
 
     private static bool TryGetPlayerCell(out Vector2Int playerCell)
