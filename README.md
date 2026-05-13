@@ -13,11 +13,11 @@ Unity 2022.3 LTS
 当前工程版本：2022.3.57f1c2
 ```
 
-## “产品标准”
+## 项目简介
 
-本项目不是只实现一个推箱子规则原型，而是按“可以被玩家打开、理解、游玩、结束，并能被策划继续生产内容”的标准收束。
+本项目是基于推箱子规则原型扩展的卡牌战棋肉鸽游戏。
 
-当前已经完成的产品闭环：
+当前已经完成的游戏流程：
 
 ```text
 主菜单入口
@@ -31,7 +31,7 @@ Unity 2022.3 LTS
 最终形成一局完整体验
 ```
 
-当前已经完成的生产闭环：
+当前已经完成的生产功能：
 
 ```text
 用 3D 关卡编辑器编辑 LevelData
@@ -176,10 +176,7 @@ Assets/Settings/RunConfig/RunConfig.asset
 
 ```text
 Assets/Scenes/StageScene.unity
-  主运行场景，推荐评审时优先打开
-
-Assets/Scenes/SampleScene.unity
-  备用测试场景
+  主运行场景
 
 Assets/Scenes/TilemapLevelEditor.unity
   早期 Tilemap 编辑相关场景
