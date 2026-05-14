@@ -10420,7 +10420,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0.00012610455}
+  m_AnchoredPosition: {x: 0, y: -0.000004053048}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1021658299
@@ -10580,7 +10580,7 @@ GameObject:
   - component: {fileID: 1075821691}
   - component: {fileID: 1075821693}
   m_Layer: 0
-  m_Name: FlowController
+  m_Name: GameFlowController
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -11974,7 +11974,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 917839194}
   m_Direction: 2
   m_Value: 0
-  m_Size: 1
+  m_Size: 0.9985325
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -18389,9 +18389,6 @@ MonoBehaviour:
   groundTextColor: {r: 0.95, g: 0.96, b: 0.9, a: 1}
   groundTextOutlineWidth: 0.16
   groundTextOutlineColor: {r: 0.03, g: 0.035, b: 0.04, a: 0.95}
-  groundTextShadowColor: {r: 0, g: 0, b: 0, a: 0.72}
-  groundTextShadowOffset: {x: -0.024, y: -0.024}
-  groundTextShadowFringeWidth: 0
   groundTextBoundsPadding: 0.24
 --- !u!114 &2039827890
 MonoBehaviour:
