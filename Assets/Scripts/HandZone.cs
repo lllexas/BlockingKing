@@ -378,6 +378,26 @@ public class HandZone : MonoBehaviour
         if (index < 0)
             return false;
 
+        return TryPlayCardInternal(index, target, true);
+    }
+
+    public bool TryPlayCardAtIndex(int handIndex, CardReleaseTarget target, bool animate)
+    {
+        return TryPlayCardInternal(handIndex, target, animate);
+    }
+
+    private bool TryPlayCardInternal(int index, CardReleaseTarget target, bool animate)
+    {
+        if (CardsLocked || LevelPlayer.IsActiveStageInputLocked)
+            return false;
+
+        if (index < 0 || index >= _hand.Count)
+            return false;
+
+        var view = _hand[index];
+        if (view == null)
+            return false;
+
         var card = view.Card;
         if (card == null)
             return false;
@@ -404,15 +424,19 @@ public class HandZone : MonoBehaviour
         _discardPile.Add(card);
         CardPlayed?.Invoke(card);
 
-        StartDiscardRecycle(view);
+        if (animate)
+            StartDiscardRecycle(view);
+        else
+            Destroy(view.gameObject);
+
         ChangeInteractionState(CardInteractionState.Idle, null);
 
         TickSystem.PushTick();
 
         if (handState.AutoRefill)
-            RefillHandToTarget(true);
+            RefillHandToTarget(animate);
         else
-            RelayoutHand(true);
+            RelayoutHand(animate);
 
         RefreshCounters();
         return true;
@@ -438,6 +462,18 @@ public class HandZone : MonoBehaviour
     public int HandCount => _hand.Count;
     public int DrawPileCount => _drawPile.Count;
     public int DiscardPileCount => _discardPile.Count;
+
+    public int CopyHandCards(List<CardSO> results)
+    {
+        if (results == null)
+            return 0;
+
+        results.Clear();
+        for (int i = 0; i < _hand.Count; i++)
+            results.Add(_hand[i] != null ? _hand[i].Card : null);
+
+        return results.Count;
+    }
 
     public HandZoneSnapshot CaptureSnapshot()
     {

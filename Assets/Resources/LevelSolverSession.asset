@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 673448a395e04239b8645de95a5f6269, type: 3}
+  m_Name: LevelSolverSession
+  m_EditorClassIdentifier: 
+  targetLevel: {fileID: 11400000, guid: 801aca25137737444afd7e4d771a8e09, type: 2}
+  config: {fileID: 11400000, guid: a6504b011fb4543449390f3df07b8d89, type: 2}
+  active: 1
+  startingMaxHp: 30
+  startingHp: 30
+  startingAttack: 3
+  startingBlock: 0
+  victoryCondition: 0
+  maxDepth: 70
+  maxNodes: 2000
+  includeNoop: 1
+  stopOnFirstSolution: 1
+  reportPath: Plan/Active/RuntimeLevelSolverReport.md

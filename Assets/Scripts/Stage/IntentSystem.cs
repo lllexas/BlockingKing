@@ -97,6 +97,7 @@ public class IntentSystem : MonoBehaviour
     public EnemyIntentPresentationMode EnemyPresentationMode => enemyIntentPresentationMode;
     public bool CanAcceptTick => _runner == null;
     public bool CanRestoreLevelUndo => _runner == null;
+    public bool SuppressPresentationWaits { get; private set; }
     public bool IsExecutingPlayerStep => IsRunningStepValid
                                          && _executionSteps[_runningStepIndex].IsPlayerIntentStep;
 
@@ -110,6 +111,11 @@ public class IntentSystem : MonoBehaviour
             Debug.Log($"[IntentSystem] Enemy intent presentation mode changed: {enemyIntentPresentationMode} -> {mode}");
 
         enemyIntentPresentationMode = mode;
+    }
+
+    public void ConfigureSolverExecution(bool enabled)
+    {
+        SuppressPresentationWaits = enabled;
     }
 
     [System.Obsolete("Use ConfigureEnemyIntentPresentation.")]
@@ -639,6 +645,9 @@ public class IntentSystem : MonoBehaviour
 
     private static IEnumerator WaitForPresentation()
     {
+        if (Instance != null && Instance.SuppressPresentationWaits)
+            yield break;
+
         var drawSystem = DrawSystem.Instance;
         while (drawSystem != null && drawSystem.IsBeatMotionBusy)
         {

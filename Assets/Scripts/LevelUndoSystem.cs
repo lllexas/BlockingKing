@@ -11,6 +11,7 @@ public sealed class LevelUndoSystem : MonoBehaviour
     private readonly Stack<LevelUndoSnapshot> _history = new();
     private bool _enabledForLevel;
     private bool _isRestoring;
+    private bool _captureSuppressed;
     private int _paidUndoCount;
     private GUIStyle _labelStyle;
     private GUIStyle _buttonStyle;
@@ -50,7 +51,34 @@ public sealed class LevelUndoSystem : MonoBehaviour
         _history.Clear();
         _enabledForLevel = false;
         _isRestoring = false;
+        _captureSuppressed = false;
         _paidUndoCount = 0;
+    }
+
+    public void SetCaptureSuppressed(bool suppressed)
+    {
+        _captureSuppressed = suppressed;
+    }
+
+    public LevelUndoSnapshot CaptureRuntimeSnapshot(IntentType intentType = IntentType.Noop)
+    {
+        return CaptureSnapshot(intentType);
+    }
+
+    public void RestoreRuntimeSnapshot(LevelUndoSnapshot snapshot)
+    {
+        if (snapshot == null)
+            return;
+
+        _isRestoring = true;
+        try
+        {
+            RestoreSnapshot(snapshot);
+        }
+        finally
+        {
+            _isRestoring = false;
+        }
     }
 
     public void ClearHistory(string reason = null)
@@ -73,7 +101,7 @@ public sealed class LevelUndoSystem : MonoBehaviour
 
     private void CaptureBeforePlayerIntentInternal(IntentType intentType)
     {
-        if (!_enabledForLevel || _isRestoring)
+        if (!_enabledForLevel || _isRestoring || _captureSuppressed)
             return;
 
         if (!CanCapture())
@@ -421,7 +449,7 @@ public sealed class LevelUndoSystem : MonoBehaviour
         return player != null ? player.GetComponent<TerrainDrawSystem>() : Object.FindObjectOfType<TerrainDrawSystem>();
     }
 
-    private sealed class LevelUndoSnapshot
+    public sealed class LevelUndoSnapshot
     {
         public IntentType IntentType;
         public EntitySystemSnapshot EntitySnapshot;

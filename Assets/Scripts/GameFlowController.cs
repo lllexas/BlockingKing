@@ -9,7 +9,8 @@ public enum GameFlowMode
     RoundFlow,
     LinearCampaign,
     Tutorial,
-    LevelEdit
+    LevelEdit,
+    Solver
 }
 
 public enum GameFlowStartupMode
@@ -77,6 +78,10 @@ public class GameFlowController : MonoBehaviour
 
     private void Start()
     {
+        var solverSession = Resources.Load<LevelSolverSession>("LevelSolverSession");
+        if (solverSession != null && solverSession.active)
+            mode = GameFlowMode.Solver;
+
         if (mode == GameFlowMode.LevelEdit)
         {
             StartLevelEdit();
@@ -234,7 +239,29 @@ public class GameFlowController : MonoBehaviour
             case GameFlowMode.LevelEdit:
                 StartLevelEdit();
                 break;
+
+            case GameFlowMode.Solver:
+                StartSolver();
+                break;
         }
+    }
+
+    public void StartSolver()
+    {
+        EnsureFacades();
+        HideMainMenu();
+        HideRunUiPanels();
+        SetRouteVisible(false);
+        IsMainMenuVisible = false;
+        IsInLevel = true;
+        mode = GameFlowMode.Solver;
+        HandZone.SetCardsLocked(false);
+
+        var solver = FindObjectOfType<RuntimeLevelSolver>();
+        if (solver == null)
+            solver = gameObject.AddComponent<RuntimeLevelSolver>();
+
+        solver.StartFromSession(Resources.Load<LevelSolverSession>("LevelSolverSession"));
     }
 
     public void StartModeFromMainMenu(GameFlowMode targetMode)
