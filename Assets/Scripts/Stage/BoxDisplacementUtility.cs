@@ -1,8 +1,33 @@
 using UnityEngine;
 
+public readonly struct BoxPushContext
+{
+    public readonly EntityHandle Pusher;
+    public readonly int Damage;
+    public readonly bool AllowOverrun;
+    public readonly bool AllowBounce;
+    public readonly Vector2Int SourcePosition;
+    public readonly bool HasSourcePosition;
+
+    public BoxPushContext(EntityHandle pusher, int damage, bool allowOverrun, Vector2Int sourcePosition = default, bool hasSourcePosition = false, bool allowBounce = true)
+    {
+        Pusher = pusher;
+        Damage = Mathf.Max(0, damage);
+        AllowOverrun = allowOverrun;
+        AllowBounce = allowBounce;
+        SourcePosition = sourcePosition;
+        HasSourcePosition = hasSourcePosition;
+    }
+}
+
 public static class BoxDisplacementUtility
 {
     public static bool CanPreviewPushOrBounce(EntitySystem entitySystem, Vector2Int boxCell, Vector2Int direction)
+    {
+        return CanPreviewPushOrBounce(entitySystem, boxCell, direction, new BoxPushContext(EntityHandle.None, 0, false));
+    }
+
+    public static bool CanPreviewPushOrBounce(EntitySystem entitySystem, Vector2Int boxCell, Vector2Int direction, BoxPushContext context)
     {
         if (entitySystem == null || !entitySystem.IsInitialized || !entitySystem.IsInsideMap(boxCell))
             return false;
@@ -12,16 +37,23 @@ public static class BoxDisplacementUtility
             return false;
 
         return TryGetPushDestination(entitySystem, boxCell, direction, out _) ||
-               TryGetEdgeBounceDestination(entitySystem, boxCell, out _);
+               CanCrushOverrunTarget(entitySystem, boxCell, direction, context) ||
+               (context.AllowBounce && TryGetEdgeBounceDestination(entitySystem, boxCell, out _));
     }
 
     public static bool TryPushOrBounce(EntitySystem entitySystem, EntityHandle box, Vector2Int direction)
+    {
+        return TryPushOrBounce(entitySystem, box, direction, new BoxPushContext(EntityHandle.None, 0, false));
+    }
+
+    public static bool TryPushOrBounce(EntitySystem entitySystem, EntityHandle box, Vector2Int direction, BoxPushContext context)
     {
         if (!TryGetBoxPosition(entitySystem, box, out var boxPosition))
             return false;
 
         if (TryGetPushDestination(entitySystem, boxPosition, direction, out var destination) ||
-            TryGetEdgeBounceDestination(entitySystem, boxPosition, out destination))
+            TryCrushOverrunTarget(entitySystem, boxPosition, direction, context, out destination) ||
+            (context.AllowBounce && TryGetEdgeBounceDestination(entitySystem, boxPosition, out destination)))
         {
             MoveBox(entitySystem, box, destination);
             return true;
@@ -71,6 +103,78 @@ public static class BoxDisplacementUtility
                entitySystem.IsInsideMap(destination) &&
                !entitySystem.IsWall(destination) &&
                !entitySystem.IsValid(entitySystem.GetOccupant(destination));
+    }
+
+    private static bool CanCrushOverrunTarget(EntitySystem entitySystem, Vector2Int boxPosition, Vector2Int direction, BoxPushContext context)
+    {
+        if (!TryGetOverrunTarget(entitySystem, boxPosition, direction, context, out _, out int targetIndex))
+            return false;
+
+        int currentHealth = CombatStats.GetCurrentHealth(entitySystem.entities.statusComponents[targetIndex]);
+        return context.Damage >= currentHealth;
+    }
+
+    private static bool TryCrushOverrunTarget(EntitySystem entitySystem, Vector2Int boxPosition, Vector2Int direction, BoxPushContext context, out Vector2Int destination)
+    {
+        destination = default;
+        if (!TryGetOverrunTarget(entitySystem, boxPosition, direction, context, out var target, out int targetIndex))
+            return false;
+
+        ref var targetStatus = ref entitySystem.entities.statusComponents[targetIndex];
+        int previousHealth = CombatStats.GetCurrentHealth(targetStatus);
+        if (context.Damage < previousHealth)
+            return false;
+
+        var statusEffects = StatusEffectSystem.Instance;
+        if (statusEffects == null || !statusEffects.TryConsumeStacks(context.Pusher, StatusEffectSystem.OverrunEffectId))
+            return false;
+
+        ref var targetCore = ref entitySystem.entities.coreComponents[targetIndex];
+        Vector2Int targetPosition = targetCore.Position;
+        int sourceTagId = entitySystem.entities.propertyComponents[targetIndex].SourceTagId;
+        Vector2Int sourcePosition = context.HasSourcePosition ? context.SourcePosition : boxPosition;
+
+        targetStatus.DamageTaken = Mathf.Max(0, targetStatus.DamageTaken) + context.Damage;
+        int currentHealth = CombatStats.GetCurrentHealth(targetStatus);
+        EventBusSystem.Instance?.Publish(new StageEvent(
+            StageEventType.EntityDamaged,
+            actor: context.Pusher,
+            entity: target,
+            entityType: targetCore.EntityType,
+            from: targetPosition,
+            to: targetPosition,
+            sourceTagId: sourceTagId,
+            currentHealth: currentHealth,
+            sourcePosition: sourcePosition,
+            hasSourcePosition: sourcePosition != targetPosition));
+
+        entitySystem.DestroyEntity(target, currentHealth, sourcePosition, sourcePosition != targetPosition);
+        destination = targetPosition;
+        Debug.Log($"[BoxDisplacementUtility] Overrun crushed enemy at {targetPosition}, damage={context.Damage}, previousHealth={previousHealth}, remainingStacks={statusEffects.GetStacks(context.Pusher, StatusEffectSystem.OverrunEffectId)}");
+        return true;
+    }
+
+    private static bool TryGetOverrunTarget(EntitySystem entitySystem, Vector2Int boxPosition, Vector2Int direction, BoxPushContext context, out EntityHandle target, out int targetIndex)
+    {
+        target = EntityHandle.None;
+        targetIndex = -1;
+        if (!context.AllowOverrun || context.Damage <= 0 || direction == Vector2Int.zero)
+            return false;
+
+        var statusEffects = StatusEffectSystem.Instance;
+        if (statusEffects == null || !statusEffects.HasStacks(context.Pusher, StatusEffectSystem.OverrunEffectId))
+            return false;
+
+        Vector2Int targetCell = boxPosition + direction;
+        if (!entitySystem.IsInsideMap(targetCell) || entitySystem.IsWall(targetCell))
+            return false;
+
+        target = entitySystem.GetOccupant(targetCell);
+        if (!entitySystem.IsValid(target))
+            return false;
+
+        targetIndex = entitySystem.GetIndex(target);
+        return targetIndex >= 0 && entitySystem.entities.coreComponents[targetIndex].EntityType == EntityType.Enemy;
     }
 
     private static bool TryGetEdgeBounceDestination(EntitySystem entitySystem, Vector2Int boxPosition, out Vector2Int destination)

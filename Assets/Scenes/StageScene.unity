@@ -10422,7 +10422,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0.00031015518}
+  m_AnchoredPosition: {x: 0, y: 0.000009570585}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1021658299
@@ -11991,7 +11991,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 917839194}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.9999965
+  m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -18398,6 +18398,7 @@ MonoBehaviour:
   healthTextColor: {r: 0.35, g: 0.9, b: 0.45, a: 1}
   blockTextColor: {r: 0.25, g: 0.85, b: 1, a: 1}
   countdownTextColor: {r: 0.25, g: 0.65, b: 1, a: 1}
+  effectTextColor: {r: 1, g: 0.78, b: 0.18, a: 1}
   showUnitLabelText: 1
   unitLabelTextHeightPadding: 0.012
   unitLabelTextScale: 1

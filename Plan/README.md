@@ -6,6 +6,7 @@
 
 ## Active
 
+- [EnemyAI 行为步骤管线重构计划](Active/2026-05-15_EnemyAI行为步骤管线重构计划.md)
 - [Playtest 前打磨路线](Active/2026-05-14_Playtest前打磨路线.md)
 - [试玩反馈记录](Active/2026-05-14_试玩反馈记录.md)
 
@@ -38,4 +39,3 @@
 
 - `Archive/2026-05-demo-sprint/`：2026-05 一周 demo 冲刺记录。
 - `Archive/early-design/`：早期设计方案和已经演化的工具/玩法设想。
-

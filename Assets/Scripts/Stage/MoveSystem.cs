@@ -66,14 +66,16 @@ public class MoveSystem : MonoBehaviour
         }
 
         var occupant = entitySystem.GetHandleFromId(occupantId);
-        if (!TryPush(occupant, direction, maxPushChain))
+        int pushDamage = Mathf.Max(1, CombatStats.GetAttack(entities.statusComponents[actorIndex]));
+        var pushContext = new BoxPushContext(actor, pushDamage, true, current, true, false);
+        if (!TryPush(occupant, direction, maxPushChain, pushContext))
             return false;
 
         MoveEntity(actor, next);
         return true;
     }
 
-    private bool TryPush(EntityHandle actor, Vector2Int direction, int remainingPushChain)
+    private bool TryPush(EntityHandle actor, Vector2Int direction, int remainingPushChain, BoxPushContext context)
     {
         if (remainingPushChain <= 0)
             return false;
@@ -99,11 +101,17 @@ public class MoveSystem : MonoBehaviour
         if (!entitySystem.IsInsideMap(next) || entitySystem.IsWall(next))
             return false;
 
+        if (core.EntityType == EntityType.Box &&
+            BoxDisplacementUtility.TryPushOrBounce(entitySystem, actor, direction, context))
+        {
+            return true;
+        }
+
         int occupantId = entitySystem.GetOccupantId(next);
         if (occupantId >= 0)
         {
             var occupant = entitySystem.GetHandleFromId(occupantId);
-            if (!TryPush(occupant, direction, remainingPushChain - 1))
+            if (!TryPush(occupant, direction, remainingPushChain - 1, context))
                 return false;
         }
 

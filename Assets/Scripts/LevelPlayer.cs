@@ -926,6 +926,29 @@ public class LevelPlayer : MonoBehaviour
         status.MaxHealthModifier = 0;
         status.DamageTaken = Mathf.Max(0, maxHp - currentHp);
         ApplyPlayerStatusToCoreBoxes(entitySystem, maxHp, currentHp);
+
+        var statusEffects = StatusEffectSystem.Instance;
+        if (statusEffects == null)
+            return;
+
+        var player = entitySystem.GetHandleFromId(entitySystem.entities.coreComponents[playerIndex].Id);
+        var runEffects = statusFacade.GetEffects();
+        var states = new List<StatusEffectState>();
+        for (int i = 0; i < runEffects.Count; i++)
+        {
+            var effect = runEffects[i];
+            if (effect == null || string.IsNullOrWhiteSpace(effect.effectId) || effect.stacks <= 0)
+                continue;
+
+            states.Add(new StatusEffectState
+            {
+                EffectId = effect.effectId,
+                Stacks = effect.stacks,
+                DurationKind = effect.durationKind
+            });
+        }
+
+        statusEffects.ApplyEntityEffects(player, states);
     }
 
     private void SyncRunPlayerStatusFromPlayerEntity()
@@ -945,6 +968,29 @@ public class LevelPlayer : MonoBehaviour
         statusFacade.SetHp(
             CombatStats.GetCurrentHealth(status),
             CombatStats.GetMaxHealth(status));
+
+        var statusEffects = StatusEffectSystem.Instance;
+        if (statusEffects == null)
+            return;
+
+        var player = entitySystem.GetHandleFromId(entitySystem.entities.coreComponents[playerIndex].Id);
+        var runtimeEffects = statusEffects.CaptureEntityEffects(player, StatusEffectDurationKind.Permanent);
+        var runEffects = new List<RunPlayerStatusFacade.RunStatusEffectRecord>();
+        for (int i = 0; i < runtimeEffects.Count; i++)
+        {
+            var effect = runtimeEffects[i];
+            if (effect == null || string.IsNullOrWhiteSpace(effect.EffectId) || effect.Stacks <= 0)
+                continue;
+
+            runEffects.Add(new RunPlayerStatusFacade.RunStatusEffectRecord
+            {
+                effectId = effect.EffectId,
+                stacks = effect.Stacks,
+                durationKind = effect.DurationKind
+            });
+        }
+
+        statusFacade.SetEffects(runEffects);
     }
 
     private static bool TryFindPlayerIndex(EntitySystem entitySystem, out int index)
@@ -1314,6 +1360,7 @@ public class LevelPlayer : MonoBehaviour
             entitySystem = gameObject.AddComponent<EntitySystem>();
 
         EnsureRuntimeSystem<EventBusSystem>();
+        var statusEffectSystem = EnsureRuntimeSystem<StatusEffectSystem>();
         var intentSystem = EnsureRuntimeSystem<IntentSystem>();
         intentSystem.ConfigureEnemyIntentPresentation(enemyIntentPresentationMode);
         EnsureRuntimeSystem<MoveSystem>();
@@ -1330,6 +1377,7 @@ public class LevelPlayer : MonoBehaviour
         EnsureRuntimeSystem<LevelUndoSystem>();
         drawSystem.SetWallMaterial(_materialInstance);
 
+        statusEffectSystem.Clear();
         entitySystem.Initialize(maxEntityCount, _level.width, _level.height);
         IntentSystem.Instance?.Clear();
         entitySystem.SetTerrain(_level.GetMap2D());

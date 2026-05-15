@@ -380,6 +380,9 @@ public sealed class LevelUndoSystem : MonoBehaviour
         {
             IntentType = intentType,
             EntitySnapshot = entitySystem.CaptureSnapshot(),
+            StatusEffectSnapshot = StatusEffectSystem.Instance != null
+                ? StatusEffectSystem.Instance.CaptureSnapshot()
+                : null,
             HandSnapshot = HandZone.ActiveInstance != null
                 ? HandZone.ActiveInstance.CaptureSnapshot()
                 : null,
@@ -396,6 +399,8 @@ public sealed class LevelUndoSystem : MonoBehaviour
 
         if (snapshot.EntitySnapshot != null)
             EntitySystem.Instance?.RestoreSnapshot(snapshot.EntitySnapshot);
+
+        StatusEffectSystem.Instance?.RestoreSnapshot(snapshot.StatusEffectSnapshot);
 
         DrawSystem.Instance?.ClearPresentationState();
         TerrainDrawSystem terrainDrawSystem = TerrainDrawSystemFromLevelPlayer();
@@ -420,6 +425,7 @@ public sealed class LevelUndoSystem : MonoBehaviour
     {
         public IntentType IntentType;
         public EntitySystemSnapshot EntitySnapshot;
+        public List<StatusEffectState> StatusEffectSnapshot;
         public HandZoneSnapshot HandSnapshot;
         public LevelPlayerUndoSnapshot LevelSnapshot;
     }

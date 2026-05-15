@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using NekoGraph;
 using UnityEngine;
@@ -18,6 +19,7 @@ public class RunPlayerStatusFacade : PackFacadeBase
     public int MaxHp => LoadDatabase().maxHp;
     public int CurrentHp => LoadDatabase().currentHp;
     public bool IsDead => CurrentHp <= 0;
+    public IReadOnlyList<RunStatusEffectRecord> Effects => GetEffects();
 
     public BasePackData EnsureStatusPack()
     {
@@ -54,6 +56,115 @@ public class RunPlayerStatusFacade : PackFacadeBase
             database.maxHp = Mathf.Max(1, maxHp);
 
         database.currentHp = Mathf.Clamp(currentHp, 0, Mathf.Max(1, database.maxHp));
+        return SaveDatabase(database);
+    }
+
+    public List<RunStatusEffectRecord> GetEffects()
+    {
+        var database = LoadDatabase();
+        var results = new List<RunStatusEffectRecord>();
+        if (database.effects == null)
+            return results;
+
+        for (int i = 0; i < database.effects.Count; i++)
+        {
+            var effect = database.effects[i];
+            if (effect == null || string.IsNullOrWhiteSpace(effect.effectId) || effect.stacks <= 0)
+                continue;
+
+            results.Add(new RunStatusEffectRecord
+            {
+                effectId = effect.effectId,
+                stacks = Mathf.Max(0, effect.stacks),
+                durationKind = effect.durationKind
+            });
+        }
+
+        return results;
+    }
+
+    public int GetEffectStacks(string effectId)
+    {
+        if (string.IsNullOrWhiteSpace(effectId))
+            return 0;
+
+        var effects = LoadDatabase().effects;
+        if (effects == null)
+            return 0;
+
+        for (int i = 0; i < effects.Count; i++)
+        {
+            var effect = effects[i];
+            if (effect != null && string.Equals(effect.effectId, effectId, StringComparison.Ordinal))
+                return Mathf.Max(0, effect.stacks);
+        }
+
+        return 0;
+    }
+
+    public bool SetEffects(IEnumerable<RunStatusEffectRecord> effects)
+    {
+        var database = LoadDatabase();
+        database.effects = new List<RunStatusEffectRecord>();
+        if (effects != null)
+        {
+            foreach (var effect in effects)
+            {
+                if (effect == null || string.IsNullOrWhiteSpace(effect.effectId) || effect.stacks <= 0)
+                    continue;
+
+                database.effects.Add(new RunStatusEffectRecord
+                {
+                    effectId = effect.effectId,
+                    stacks = Mathf.Max(0, effect.stacks),
+                    durationKind = effect.durationKind
+                });
+            }
+        }
+
+        return SaveDatabase(database);
+    }
+
+    public bool SetEffectStacks(string effectId, int stacks, StatusEffectDurationKind durationKind = StatusEffectDurationKind.Permanent)
+    {
+        if (string.IsNullOrWhiteSpace(effectId))
+            return false;
+
+        var database = LoadDatabase();
+        database.effects ??= new List<RunStatusEffectRecord>();
+        for (int i = database.effects.Count - 1; i >= 0; i--)
+        {
+            var effect = database.effects[i];
+            if (effect == null || string.IsNullOrWhiteSpace(effect.effectId))
+            {
+                database.effects.RemoveAt(i);
+                continue;
+            }
+
+            if (!string.Equals(effect.effectId, effectId, StringComparison.Ordinal))
+                continue;
+
+            if (stacks <= 0)
+                database.effects.RemoveAt(i);
+            else
+            {
+                effect.stacks = stacks;
+                effect.durationKind = durationKind;
+            }
+
+            return SaveDatabase(database);
+        }
+
+        if (stacks > 0)
+        {
+            database.effects.Add(new RunStatusEffectRecord
+            {
+                effectId = effectId,
+                stacks = stacks,
+                durationKind = durationKind
+            });
+        }
+
         return SaveDatabase(database);
     }
 
@@ -97,6 +208,7 @@ public class RunPlayerStatusFacade : PackFacadeBase
             var database = JsonConvert.DeserializeObject<RunPlayerStatusDatabase>(node.InlineText) ?? new RunPlayerStatusDatabase();
             database.maxHp = Mathf.Max(1, database.maxHp);
             database.currentHp = Mathf.Clamp(database.currentHp, 0, database.maxHp);
+            NormalizeEffects(database);
             return database;
         }
         catch (Exception e)
@@ -116,7 +228,24 @@ public class RunPlayerStatusFacade : PackFacadeBase
         database ??= new RunPlayerStatusDatabase();
         database.maxHp = Mathf.Max(1, database.maxHp);
         database.currentHp = Mathf.Clamp(database.currentHp, 0, database.maxHp);
+        NormalizeEffects(database);
         return analyser.WriteFile(ResolvedPackID, StatusPath, Serialize(database), WriteSubject);
+    }
+
+    private static void NormalizeEffects(RunPlayerStatusDatabase database)
+    {
+        database.effects ??= new List<RunStatusEffectRecord>();
+        for (int i = database.effects.Count - 1; i >= 0; i--)
+        {
+            var effect = database.effects[i];
+            if (effect == null || string.IsNullOrWhiteSpace(effect.effectId) || effect.stacks <= 0)
+            {
+                database.effects.RemoveAt(i);
+                continue;
+            }
+
+            effect.stacks = Mathf.Max(0, effect.stacks);
+        }
     }
 
     private static string Serialize(RunPlayerStatusDatabase database)
@@ -129,5 +258,14 @@ public class RunPlayerStatusFacade : PackFacadeBase
     {
         public int maxHp = 30;
         public int currentHp = 30;
+        public List<RunStatusEffectRecord> effects = new();
+    }
+
+    [Serializable]
+    public sealed class RunStatusEffectRecord
+    {
+        public string effectId;
+        public int stacks;
+        public StatusEffectDurationKind durationKind = StatusEffectDurationKind.Permanent;
     }
 }

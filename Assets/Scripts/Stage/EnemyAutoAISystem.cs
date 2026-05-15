@@ -28,13 +28,9 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
     private readonly HashSet<int> _reservedMoveCells = new();
     private readonly Dictionary<int, int> _coreLocksByCasterId = new();
     private static readonly HashSet<int> LockedCoreBoxIds = new();
-    private int _grenadierTagId = -1;
-    private int _crossbowTagId = -1;
-    private int _artilleryTagId = -1;
-    private int _curseCasterTagId = -1;
     private int _guokuiTagId = -1;
-    private int _ertongTagId = -1;
     private EntityBP _guokuiBP;
+    private readonly EnemyProfileResolver _profileResolver = new();
 
     private enum EnemyActionType
     {
@@ -42,22 +38,6 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
         Move,
         AttackWall,
         AttackOccupant
-    }
-
-    private readonly struct AggroTarget
-    {
-        public readonly EntityHandle Handle;
-        public readonly Vector2Int Position;
-        public readonly EntityType EntityType;
-        public readonly bool IsCoreBox;
-
-        public AggroTarget(EntityHandle handle, Vector2Int position, EntityType entityType, bool isCoreBox)
-        {
-            Handle = handle;
-            Position = position;
-            EntityType = entityType;
-            IsCoreBox = isCoreBox;
-        }
     }
 
     private void Awake()
@@ -81,17 +61,14 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
 
     public void ConfigureSpecialEnemyTags(int grenadierTagId, int crossbowTagId, int artilleryTagId)
     {
-        _grenadierTagId = grenadierTagId;
-        _crossbowTagId = crossbowTagId;
-        _artilleryTagId = artilleryTagId;
+        _profileResolver.ConfigureSpecialEnemyTags(grenadierTagId, crossbowTagId, artilleryTagId);
     }
 
     public void ConfigureAdvancedEnemyTags(int curseCasterTagId, int guokuiTagId, int ertongTagId, EntityBP guokuiBP)
     {
-        _curseCasterTagId = curseCasterTagId;
         _guokuiTagId = guokuiTagId;
-        _ertongTagId = ertongTagId;
         _guokuiBP = guokuiBP;
+        _profileResolver.ConfigureAdvancedEnemyTags(curseCasterTagId, guokuiTagId, ertongTagId);
     }
 
     public static bool IsCoreBoxMovementLocked(EntityHandle coreBox)
@@ -117,7 +94,7 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
         WriteEnemyIntents(entitySystem, intentSystem, aggroTarget);
     }
 
-    private bool TryFindAggroTarget(EntitySystem entitySystem, out AggroTarget target)
+    private bool TryFindAggroTarget(EntitySystem entitySystem, out EnemyAggroTarget target)
     {
         var entities = entitySystem.entities;
         int playerIndex = -1;
@@ -130,7 +107,7 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
             if (core.EntityType != EntityType.Box || !entities.propertyComponents[i].IsCore)
                 continue;
 
-            target = new AggroTarget(
+            target = new EnemyAggroTarget(
                 entitySystem.GetHandleFromId(core.Id),
                 core.Position,
                 core.EntityType,
@@ -141,7 +118,7 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
         if (playerIndex >= 0)
         {
             var player = entities.coreComponents[playerIndex];
-            target = new AggroTarget(
+            target = new EnemyAggroTarget(
                 entitySystem.GetHandleFromId(player.Id),
                 player.Position,
                 player.EntityType,
@@ -243,7 +220,7 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
     private void WriteEnemyIntents(
         EntitySystem entitySystem,
         IntentSystem intentSystem,
-        AggroTarget aggroTarget)
+        EnemyAggroTarget aggroTarget)
     {
         var entities = entitySystem.entities;
         _reservedMoveCells.Clear();
@@ -256,68 +233,177 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
 
             var enemyHandle = entitySystem.GetHandleFromId(core.Id);
             ref var props = ref entities.propertyComponents[i];
-            bool isGrenadier = IsEnemyKind(props, _grenadierTagId, "Grenadier");
-            bool isCrossbow = IsEnemyKind(props, _crossbowTagId, "Crossbow", "Arbalest");
-            bool isArtillery = IsEnemyKind(props, _artilleryTagId, "Artillery", "Cannon");
-            bool isCurseCaster = IsEnemyKind(props, _curseCasterTagId, "Curse", "Caster", "Sorcerer");
-            bool isGuokui = IsEnemyKind(props, _guokuiTagId, "Guokui");
-            bool isErtong = IsEnemyKind(props, _ertongTagId, "Ertong");
-            bool canBreakWalls = !isGrenadier && !isArtillery && !isCurseCaster;
-            int moveDistance = isErtong ? 4 : isGuokui ? 2 : 1;
+            EnemyProfile profile = _profileResolver.Resolve(props, rangedAttackRange);
+            int[] movementField = profile.CanBreakWalls ? _wallBreakDistanceField : _noWallBreakDistanceField;
+            var context = new EnemyDecisionContext(
+                entitySystem,
+                enemyHandle,
+                i,
+                core.Position,
+                props,
+                entities.statusComponents[i],
+                aggroTarget,
+                profile,
+                movementField);
 
-            if (isCurseCaster && aggroTarget.IsCoreBox && TryMaintainCurseLock(entitySystem, core.Id, core.Position, aggroTarget.Position))
-                continue;
+            if (TryRunDecisionPipeline(context, out var decision))
+                CommitDecision(intentSystem, context, decision);
+        }
+    }
 
-            if (AllowAttack &&
-                TryFindBlockingPlayerTarget(entitySystem, core.Position, canBreakWalls ? _wallBreakDistanceField : _noWallBreakDistanceField, out var blockingPlayerPosition) &&
-                TryBuildAttackAgainstTarget(entitySystem, core.Position, props, blockingPlayerPosition, out var blockingPlayerAttackIntent))
+    private bool TryRunDecisionPipeline(in EnemyDecisionContext context, out EnemyDecision decision)
+    {
+        if (TrySpecialBeforeNormal(context, out decision))
+            return true;
+
+        if (AllowAttack && TryAttackBlockingPlayer(context, out decision))
+            return true;
+
+        if (AllowAttack && TryAttackAggroTarget(context, out decision))
+            return true;
+
+        if (AllowAttack && TryMoveToFutureAttackPoint(context, out decision))
+            return true;
+
+        if (TryChaseOrBreakWall(context, out decision))
+            return true;
+
+        decision = default;
+        return false;
+    }
+
+    private bool TrySpecialBeforeNormal(in EnemyDecisionContext context, out EnemyDecision decision)
+    {
+        if (context.Profile.SpecialKind == EnemySpecialKind.CurseLock &&
+            context.AggroTarget.IsCoreBox &&
+            TryMaintainCurseLock(context.EntitySystem, context.EntityId, context.Position, context.AggroTarget.Position))
+        {
+            decision = EnemyDecision.Handled("curse-lock");
+            return true;
+        }
+
+        decision = default;
+        return false;
+    }
+
+    private bool TryAttackBlockingPlayer(in EnemyDecisionContext context, out EnemyDecision decision)
+    {
+        if (TryFindBlockingPlayerTarget(context.EntitySystem, context.Position, context.MovementField, out var blockingPlayerPosition) &&
+            TryBuildAttackDecision(context, blockingPlayerPosition, out decision))
+        {
+            return true;
+        }
+
+        decision = default;
+        return false;
+    }
+
+    private bool TryAttackAggroTarget(in EnemyDecisionContext context, out EnemyDecision decision)
+    {
+        return TryBuildAttackDecision(context, context.AggroTarget.Position, out decision);
+    }
+
+    private bool TryMoveToFutureAttackPoint(in EnemyDecisionContext context, out EnemyDecision decision)
+    {
+        decision = default;
+        if (!context.Profile.UsesFutureAttackStandPoint)
+            return false;
+
+        BuildDistanceField(context.EntitySystem, context.Position, _seekDistanceField, context.Profile.CanBreakWalls);
+        if (!TryFindNearestAttackStandPoint(context.EntitySystem, context.Position, context.Profile, context.AggroTarget.Position, _seekDistanceField, out var standPoint))
+            return false;
+
+        if (standPoint == context.Position)
+            return false;
+
+        Vector2Int direction = GetStepTowardPoint(context.EntitySystem, context.Position, standPoint, _seekDistanceField);
+        if (direction == Vector2Int.zero)
+            return false;
+
+        int distance = Mathf.Max(1, Mathf.Min(context.Profile.MoveDistance, 1));
+        decision = EnemyDecision.Move(
+            direction,
+            distance,
+            context.Position + direction * distance,
+            "move-to-attack-standpoint");
+        return true;
+    }
+
+    private bool TryChaseOrBreakWall(in EnemyDecisionContext context, out EnemyDecision decision)
+    {
+        decision = default;
+        if (!TryGetNextAction(
+                context.EntitySystem,
+                context.EntityId,
+                context.Position,
+                context.MovementField,
+                context.Profile.CanBreakWalls,
+                context.Profile.MoveDistance,
+                out var actionType,
+                out var direction,
+                out var actionDistance))
+        {
+            return false;
+        }
+
+        Vector2Int targetPosition = context.Position + direction;
+        switch (actionType)
+        {
+            case EnemyActionType.AttackWall:
+                if (!TryEnsureWallAttackTarget(context.EntitySystem, targetPosition))
+                    return false;
+
+                decision = EnemyDecision.Attack(EnemyAttackPayload.Single(targetPosition), "attack-wall");
+                return true;
+
+            case EnemyActionType.AttackOccupant:
+                decision = EnemyDecision.Attack(EnemyAttackPayload.Single(targetPosition), "attack-occupant");
+                return true;
+
+            case EnemyActionType.Move:
+                decision = EnemyDecision.Move(
+                    direction,
+                    actionDistance,
+                    context.Position + direction * actionDistance,
+                    "distance-field-move");
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    private void CommitDecision(IntentSystem intentSystem, in EnemyDecisionContext context, in EnemyDecision decision)
+    {
+        switch (decision.Kind)
+        {
+            case EnemyDecisionKind.HandledWithoutIntent:
+                return;
+
+            case EnemyDecisionKind.Attack:
             {
-                intentSystem.SetIntent(enemyHandle, IntentType.Attack, blockingPlayerAttackIntent);
-                continue;
-            }
-
-            if (AllowAttack && TryBuildAttackAgainstTarget(entitySystem, core.Position, props, aggroTarget.Position, out var aggroAttackIntent))
-            {
-                intentSystem.SetIntent(enemyHandle, IntentType.Attack, aggroAttackIntent);
-                continue;
-            }
-
-            if (AllowAttack && TryMoveTowardFutureAttackPoint(entitySystem, core.Position, props, aggroTarget.Position, canBreakWalls, moveDistance, out var futureAttackMoveIntent))
-            {
-                intentSystem.SetIntent(enemyHandle, IntentType.Move, futureAttackMoveIntent);
-                continue;
-            }
-
-            int[] movementField = canBreakWalls ? _wallBreakDistanceField : _noWallBreakDistanceField;
-            if (!TryGetNextAction(entitySystem, core.Id, core.Position, movementField, canBreakWalls, moveDistance, out var actionType, out var direction, out var actionDistance))
-                continue;
-
-            Vector2Int targetPosition = core.Position + direction;
-            if (actionType == EnemyActionType.AttackWall)
-            {
-                if (!TryEnsureWallAttackTarget(entitySystem, targetPosition))
-                    continue;
+                if (decision.AttackPayload.TargetCount <= 0)
+                    return;
 
                 var attackIntent = intentSystem.Request<AttackIntent>();
-                attackIntent.Setup(targetPosition);
-                intentSystem.SetIntent(enemyHandle, IntentType.Attack, attackIntent);
-                continue;
+                attackIntent.Setup(decision.AttackPayload.TargetPositions[0]);
+                attackIntent.DamageMultipliers[0] = decision.AttackPayload.DamageMultipliers[0];
+                for (int i = 1; i < decision.AttackPayload.TargetCount; i++)
+                    attackIntent.AddTarget(decision.AttackPayload.TargetPositions[i], decision.AttackPayload.DamageMultipliers[i]);
+
+                intentSystem.SetIntent(context.Actor, IntentType.Attack, attackIntent);
+                return;
             }
 
-            if (actionType == EnemyActionType.AttackOccupant)
-            {
-                var attackIntent = intentSystem.Request<AttackIntent>();
-                attackIntent.Setup(targetPosition);
-                intentSystem.SetIntent(enemyHandle, IntentType.Attack, attackIntent);
-                continue;
-            }
-
-            if (actionType == EnemyActionType.Move)
+            case EnemyDecisionKind.Move:
             {
                 var moveIntent = intentSystem.Request<MoveIntent>();
-                moveIntent.Setup(direction, actionDistance);
-                intentSystem.SetIntent(enemyHandle, IntentType.Move, moveIntent);
-                _reservedMoveCells.Add(ToMapIndex(entities, core.Position + direction * actionDistance));
+                moveIntent.Setup(decision.MoveDirection, decision.MoveDistance);
+                intentSystem.SetIntent(context.Actor, IntentType.Move, moveIntent);
+                if (decision.HasReservedDestination)
+                    _reservedMoveCells.Add(ToMapIndex(context.EntitySystem.entities, decision.ReservedDestination));
+
+                return;
             }
         }
     }
@@ -360,86 +446,41 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
         return index >= 0 && index < distanceField.Length ? distanceField[index] : -1;
     }
 
-    private bool TryBuildAttackAgainstTarget(
-        EntitySystem entitySystem,
-        Vector2Int enemyPosition,
-        PropertyComponent props,
-        Vector2Int targetPosition,
-        out AttackIntent attackIntent)
+    private bool TryBuildAttackDecision(in EnemyDecisionContext context, Vector2Int targetPosition, out EnemyDecision decision)
     {
-        attackIntent = null;
-
-        if (IsEnemyKind(props, _grenadierTagId, "Grenadier") ||
-            IsEnemyKind(props, _crossbowTagId, "Crossbow", "Arbalest"))
+        decision = default;
+        switch (context.Profile.AttackPattern)
         {
-            if (!IsInCrossRange(enemyPosition, targetPosition, rangedAttackRange))
-                return false;
+            case EnemyAttackPattern.AdjacentSingleCell:
+                if (!IsCrossAdjacent(context.Position, targetPosition))
+                    return false;
 
-            Vector2Int direction = GetCrossDirection(enemyPosition, targetPosition);
-            if (direction == Vector2Int.zero || !HasWallBetween(entitySystem, enemyPosition, targetPosition, direction))
-                return false;
+                decision = EnemyDecision.Attack(EnemyAttackPayload.Single(targetPosition), "adjacent-attack");
+                return true;
 
-            attackIntent = IntentSystem.Instance.Request<AttackIntent>();
-            attackIntent.Setup(targetPosition);
-            return true;
+            case EnemyAttackPattern.LineSingleCellRequiresWall:
+                if (!CanUseLineAttack(context.EntitySystem, context.Position, targetPosition, context.Profile.AttackRange))
+                    return false;
+
+                decision = EnemyDecision.Attack(EnemyAttackPayload.Single(targetPosition), "line-attack");
+                return true;
+
+            case EnemyAttackPattern.LineSquare2x2RequiresWall:
+                if (!TryBuildArtilleryAttackPayload(context.EntitySystem, context.Position, targetPosition, context.Profile.AttackRange, out var payload))
+                    return false;
+
+                decision = EnemyDecision.Attack(payload, "artillery-square-attack");
+                return true;
+
+            default:
+                return false;
         }
-
-        if (IsEnemyKind(props, _artilleryTagId, "Artillery", "Cannon"))
-            return TryBuildArtilleryAttack(entitySystem, enemyPosition, targetPosition, out attackIntent);
-
-        if (IsEnemyKind(props, _curseCasterTagId, "Curse", "Caster", "Sorcerer"))
-            return false;
-
-        if (!IsCrossAdjacent(enemyPosition, targetPosition))
-            return false;
-
-        attackIntent = IntentSystem.Instance.Request<AttackIntent>();
-        attackIntent.Setup(targetPosition);
-        return true;
-
-    }
-
-    private bool TryMoveTowardFutureAttackPoint(
-        EntitySystem entitySystem,
-        Vector2Int enemyPosition,
-        PropertyComponent props,
-        Vector2Int targetPosition,
-        bool allowWallBreak,
-        int moveDistance,
-        out MoveIntent moveIntent)
-    {
-        moveIntent = null;
-
-        if (IsEnemyKind(props, _curseCasterTagId, "Curse", "Caster", "Sorcerer"))
-            return false;
-
-        if (IsEnemyKind(props, _grenadierTagId, "Grenadier") ||
-            IsEnemyKind(props, _crossbowTagId, "Crossbow", "Arbalest") ||
-            IsEnemyKind(props, _artilleryTagId, "Artillery", "Cannon"))
-        {
-            BuildDistanceField(entitySystem, enemyPosition, _seekDistanceField, allowWallBreak);
-            if (!TryFindNearestAttackStandPoint(entitySystem, enemyPosition, props, targetPosition, _seekDistanceField, out var standPoint))
-                return false;
-
-            if (standPoint == enemyPosition)
-                return false;
-
-            Vector2Int direction = GetStepTowardPoint(entitySystem, enemyPosition, standPoint, _seekDistanceField);
-            if (direction == Vector2Int.zero)
-                return false;
-
-            moveIntent = IntentSystem.Instance.Request<MoveIntent>();
-            moveIntent.Setup(direction, Mathf.Max(1, Mathf.Min(moveDistance, 1)));
-            return true;
-        }
-
-        return false;
     }
 
     private bool TryFindNearestAttackStandPoint(
         EntitySystem entitySystem,
         Vector2Int enemyPosition,
-        PropertyComponent props,
+        EnemyProfile profile,
         Vector2Int targetPosition,
         int[] seekDistanceField,
         out Vector2Int standPoint)
@@ -460,7 +501,7 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
                 continue;
 
             Vector2Int pos = FromMapIndex(entities, i);
-            if (!CanAttackFromPosition(entitySystem, pos, props, targetPosition))
+            if (!CanAttackFromPosition(entitySystem, pos, profile, targetPosition))
                 continue;
 
             int score = travel * 100 + ManhattanDistance(pos, targetPosition) * 8;
@@ -476,29 +517,15 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
         return found;
     }
 
-    private bool CanAttackFromPosition(EntitySystem entitySystem, Vector2Int enemyPosition, PropertyComponent props, Vector2Int targetPosition)
+    private bool CanAttackFromPosition(EntitySystem entitySystem, Vector2Int enemyPosition, EnemyProfile profile, Vector2Int targetPosition)
     {
-        if (IsEnemyKind(props, _grenadierTagId, "Grenadier") ||
-            IsEnemyKind(props, _crossbowTagId, "Crossbow", "Arbalest"))
+        return profile.AttackPattern switch
         {
-            Vector2Int direction = GetCrossDirection(enemyPosition, targetPosition);
-            return direction != Vector2Int.zero &&
-                   IsInCrossRange(enemyPosition, targetPosition, 6) &&
-                   HasWallBetween(entitySystem, enemyPosition, targetPosition, direction);
-        }
-
-        if (IsEnemyKind(props, _artilleryTagId, "Artillery", "Cannon"))
-        {
-            Vector2Int direction = GetCrossDirection(enemyPosition, targetPosition);
-            return direction != Vector2Int.zero &&
-                   IsInCrossRange(enemyPosition, targetPosition, 6) &&
-                   HasWallBetween(entitySystem, enemyPosition, targetPosition, direction);
-        }
-
-        if (IsEnemyKind(props, _curseCasterTagId, "Curse", "Caster", "Sorcerer"))
-            return false;
-
-        return IsCrossAdjacent(enemyPosition, targetPosition);
+            EnemyAttackPattern.AdjacentSingleCell => IsCrossAdjacent(enemyPosition, targetPosition),
+            EnemyAttackPattern.LineSingleCellRequiresWall => CanUseLineAttack(entitySystem, enemyPosition, targetPosition, profile.AttackRange),
+            EnemyAttackPattern.LineSquare2x2RequiresWall => CanUseLineAttack(entitySystem, enemyPosition, targetPosition, profile.AttackRange),
+            _ => false
+        };
     }
 
     private Vector2Int GetStepTowardPoint(EntitySystem entitySystem, Vector2Int from, Vector2Int to, int[] distanceField)
@@ -550,7 +577,8 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
             }
 
             int casterIndex = entitySystem.GetIndex(caster);
-            if (casterIndex < 0 || !IsEnemyKind(entitySystem.entities.propertyComponents[casterIndex], _curseCasterTagId, "Curse", "Caster", "Sorcerer"))
+            if (casterIndex < 0 ||
+                _profileResolver.Resolve(entitySystem.entities.propertyComponents[casterIndex], rangedAttackRange).SpecialKind != EnemySpecialKind.CurseLock)
             {
                 staleCasterIds.Add(pair.Key);
                 continue;
@@ -593,8 +621,11 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
         var entities = entitySystem.entities;
         for (int i = entities.entityCount - 1; i >= 0; i--)
         {
-            if (entities.coreComponents[i].EntityType != EntityType.Enemy ||
-                !IsEnemyKind(entities.propertyComponents[i], _ertongTagId, "Ertong"))
+            if (entities.coreComponents[i].EntityType != EntityType.Enemy)
+                continue;
+
+            EnemyProfile profile = _profileResolver.Resolve(entities.propertyComponents[i], rangedAttackRange);
+            if (profile.SpecialKind != EnemySpecialKind.SplitIntoGuokui)
             {
                 continue;
             }
@@ -668,18 +699,15 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
         properties.Attack = CombatStats.GetAttack(status);
     }
 
-    private bool TryBuildArtilleryAttack(
+    private bool TryBuildArtilleryAttackPayload(
         EntitySystem entitySystem,
         Vector2Int enemyPosition,
         Vector2Int corePosition,
-        out AttackIntent attackIntent)
+        int range,
+        out EnemyAttackPayload payload)
     {
-        attackIntent = null;
-        if (!IsInCrossRange(enemyPosition, corePosition, rangedAttackRange))
-            return false;
-
-        Vector2Int direction = GetCrossDirection(enemyPosition, corePosition);
-        if (direction == Vector2Int.zero || !HasWallBetween(entitySystem, enemyPosition, corePosition, direction))
+        payload = default;
+        if (!CanUseLineAttack(entitySystem, enemyPosition, corePosition, range))
             return false;
 
         Vector2Int[] origins =
@@ -694,16 +722,16 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
         for (int i = 0; i < origins.Length; i++)
         {
             Vector2Int origin = origins[(start + i) % origins.Length];
-            if (TryBuildSquareAttack(entitySystem, origin, out attackIntent))
+            if (TryBuildSquareAttackPayload(entitySystem, origin, out payload))
                 return true;
         }
 
         return false;
     }
 
-    private bool TryBuildSquareAttack(EntitySystem entitySystem, Vector2Int origin, out AttackIntent attackIntent)
+    private bool TryBuildSquareAttackPayload(EntitySystem entitySystem, Vector2Int origin, out EnemyAttackPayload payload)
     {
-        attackIntent = null;
+        payload = default;
         Vector2Int[] cells =
         {
             origin,
@@ -718,12 +746,19 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
                 return false;
         }
 
-        attackIntent = IntentSystem.Instance.Request<AttackIntent>();
-        attackIntent.Setup(cells[0]);
-        for (int i = 1; i < cells.Length; i++)
-            attackIntent.AddTarget(cells[i], 1f);
+        for (int i = 0; i < cells.Length; i++)
+            payload.AddTarget(cells[i], 1f);
 
         return true;
+    }
+
+    private bool CanUseLineAttack(EntitySystem entitySystem, Vector2Int from, Vector2Int to, int range)
+    {
+        if (!IsInCrossRange(from, to, range))
+            return false;
+
+        Vector2Int direction = GetCrossDirection(from, to);
+        return direction != Vector2Int.zero && HasWallBetween(entitySystem, from, to, direction);
     }
 
     private bool HasWallBetween(EntitySystem entitySystem, Vector2Int from, Vector2Int to, Vector2Int direction)
@@ -949,35 +984,6 @@ public class EnemyAutoAISystem : MonoBehaviour, ITickSystem
             return to.x > from.x ? Vector2Int.right : Vector2Int.left;
 
         return Vector2Int.zero;
-    }
-
-    private static bool IsTag(int sourceTagId, int expectedTagId)
-    {
-        return expectedTagId > 0 && sourceTagId == expectedTagId;
-    }
-
-    private static bool IsEnemyKind(in PropertyComponent props, int expectedTagId, params string[] nameHints)
-    {
-        if (IsTag(props.SourceTagId, expectedTagId))
-            return true;
-
-        if (props.SourceBP == null || nameHints == null)
-            return false;
-
-        string bpName = props.SourceBP.name;
-        if (string.IsNullOrEmpty(bpName))
-            return false;
-
-        for (int i = 0; i < nameHints.Length; i++)
-        {
-            if (!string.IsNullOrEmpty(nameHints[i]) &&
-                bpName.IndexOf(nameHints[i], System.StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static int StableTieBreak(int entityId, int directionIndex)

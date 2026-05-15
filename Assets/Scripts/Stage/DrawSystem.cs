@@ -98,6 +98,7 @@ public class DrawSystem : MonoBehaviour
     [SerializeField] private Color healthTextColor = new(0.35f, 0.9f, 0.45f);
     [SerializeField] private Color blockTextColor = new(0.25f, 0.85f, 1f);
     [SerializeField] private Color countdownTextColor = new(1f, 0.16f, 0.08f);
+    [SerializeField] private Color effectTextColor = new(1f, 0.78f, 0.18f);
 
     [Header("Unit Label Text")]
     [SerializeField] private bool showUnitLabelText = true;
@@ -735,11 +736,13 @@ public class DrawSystem : MonoBehaviour
         int attack = CombatStats.GetAttack(status);
         int health = CombatStats.GetCurrentHealth(status);
         int block = Mathf.Max(0, status.Block);
+        int overrun = GetOverrunStacks(entityIndex, entityType);
         var pair = GetStatTextPair(_statTextCount++);
         pair.Root.SetActive(true);
         pair.SetAttackVisible(attack > 0);
         pair.SetHealthVisible(true);
         pair.SetBlockVisible(block > 0);
+        pair.SetEffectVisible(overrun > 0);
         pair.SetCountdownVisible(false);
         if (attack > 0)
             pair.SetAttackText(attack.ToString());
@@ -747,12 +750,15 @@ public class DrawSystem : MonoBehaviour
         pair.SetHealthText(health.ToString());
         if (block > 0)
             pair.SetBlockText(block.ToString());
+        if (overrun > 0)
+            pair.SetEffectText($"OVR {overrun}");
 
         Vector3 visualPosition = GetVisualPosition(entityIndex, entityType, gridPos);
         float y = statsTextHeight * cellSize;
         pair.AttackRoot.transform.position = new Vector3(visualPosition.x - 0.5f * cellSize, y, visualPosition.z - 0.5f * cellSize);
         pair.HealthRoot.transform.position = new Vector3(visualPosition.x + 0.5f * cellSize, y, visualPosition.z - 0.5f * cellSize);
         pair.BlockRoot.transform.position = new Vector3(visualPosition.x + 0.5f * cellSize, y, visualPosition.z + 0.5f * cellSize);
+        pair.EffectRoot.transform.position = new Vector3(visualPosition.x - 0.5f * cellSize, y, visualPosition.z + 0.5f * cellSize);
     }
 
     private void AddCountdownText(int entityIndex, EntityType entityType, Vector2Int gridPos, int remainingTicks)
@@ -765,12 +771,30 @@ public class DrawSystem : MonoBehaviour
         pair.SetAttackVisible(false);
         pair.SetHealthVisible(false);
         pair.SetBlockVisible(false);
+        pair.SetEffectVisible(false);
         pair.SetCountdownVisible(true);
         pair.SetCountdownText(remainingTicks.ToString());
 
         Vector3 visualPosition = GetVisualPosition(entityIndex, entityType, gridPos);
         float y = statsTextHeight * cellSize;
         pair.CountdownRoot.transform.position = new Vector3(visualPosition.x + 0.5f * cellSize, y, visualPosition.z + 0.5f * cellSize);
+    }
+
+    private static int GetOverrunStacks(int entityIndex, EntityType entityType)
+    {
+        if (entityType != EntityType.Player)
+            return 0;
+
+        var entitySystem = EntitySystem.Instance;
+        var statusEffects = StatusEffectSystem.Instance;
+        if (entitySystem == null || statusEffects == null || !entitySystem.IsInitialized || entitySystem.entities == null)
+            return 0;
+
+        if (entityIndex < 0 || entityIndex >= entitySystem.entities.entityCount)
+            return 0;
+
+        var handle = entitySystem.GetHandleFromId(entitySystem.entities.coreComponents[entityIndex].Id);
+        return statusEffects.GetStacks(handle, StatusEffectSystem.OverrunEffectId);
     }
 
     private StatTextPair GetStatTextPair(int index)
@@ -789,8 +813,9 @@ public class DrawSystem : MonoBehaviour
         var attack = CreateStatTextStack(root.transform, "Attack", attackTextColor);
         var health = CreateStatTextStack(root.transform, "Health", healthTextColor);
         var block = CreateStatTextStack(root.transform, "Block", blockTextColor);
+        var effect = CreateStatTextStack(root.transform, "Effect", effectTextColor);
         var countdown = CreateStatTextStack(root.transform, "Countdown", countdownTextColor);
-        return new StatTextPair(root, attack, health, block, countdown);
+        return new StatTextPair(root, attack, health, block, effect, countdown);
     }
 
     private StatTextStack CreateStatTextStack(Transform parent, string name, Color color)
@@ -820,6 +845,7 @@ public class DrawSystem : MonoBehaviour
         {
             "Attack" => TextAlignmentOptions.BottomLeft,
             "Block" => TextAlignmentOptions.TopRight,
+            "Effect" => TextAlignmentOptions.TopLeft,
             "Countdown" => TextAlignmentOptions.TopRight,
             _ => TextAlignmentOptions.BottomRight
         };
@@ -833,6 +859,7 @@ public class DrawSystem : MonoBehaviour
         {
             "Attack" => Vector2.zero,
             "Block" => new Vector2(1f, 1f),
+            "Effect" => new Vector2(0f, 1f),
             "Countdown" => new Vector2(1f, 1f),
             _ => new Vector2(1f, 0f)
         };
@@ -1827,6 +1854,7 @@ public class DrawSystem : MonoBehaviour
         public readonly GameObject AttackRoot;
         public readonly GameObject HealthRoot;
         public readonly GameObject BlockRoot;
+        public readonly GameObject EffectRoot;
         public readonly GameObject CountdownRoot;
         private readonly TextMeshPro _attackVisible;
         private readonly TextMeshPro _attackOccluded;
@@ -1834,15 +1862,18 @@ public class DrawSystem : MonoBehaviour
         private readonly TextMeshPro _healthOccluded;
         private readonly TextMeshPro _blockVisible;
         private readonly TextMeshPro _blockOccluded;
+        private readonly TextMeshPro _effectVisible;
+        private readonly TextMeshPro _effectOccluded;
         private readonly TextMeshPro _countdownVisible;
         private readonly TextMeshPro _countdownOccluded;
 
-        public StatTextPair(GameObject root, StatTextStack attack, StatTextStack health, StatTextStack block, StatTextStack countdown)
+        public StatTextPair(GameObject root, StatTextStack attack, StatTextStack health, StatTextStack block, StatTextStack effect, StatTextStack countdown)
         {
             Root = root;
             AttackRoot = attack.Root;
             HealthRoot = health.Root;
             BlockRoot = block.Root;
+            EffectRoot = effect.Root;
             CountdownRoot = countdown.Root;
             _attackVisible = attack.Visible;
             _attackOccluded = attack.Occluded;
@@ -1850,6 +1881,8 @@ public class DrawSystem : MonoBehaviour
             _healthOccluded = health.Occluded;
             _blockVisible = block.Visible;
             _blockOccluded = block.Occluded;
+            _effectVisible = effect.Visible;
+            _effectOccluded = effect.Occluded;
             _countdownVisible = countdown.Visible;
             _countdownOccluded = countdown.Occluded;
         }
@@ -1885,6 +1918,17 @@ public class DrawSystem : MonoBehaviour
         public void SetBlockVisible(bool visible)
         {
             BlockRoot.SetActive(visible);
+        }
+
+        public void SetEffectText(string text)
+        {
+            _effectVisible.text = text;
+            _effectOccluded.text = text;
+        }
+
+        public void SetEffectVisible(bool visible)
+        {
+            EffectRoot.SetActive(visible);
         }
 
         public void SetCountdownText(string text)

@@ -65,6 +65,8 @@ public class CardEffectSystem : MonoBehaviour
                 return ExecuteCannonCharge(actor, intent.Direction);
             case "king.stomp":
                 return ExecuteKingStomp(actor);
+            case "buff.overrun.1":
+                return ExecuteAddStatusEffect(actor, StatusEffectSystem.OverrunEffectId, 1);
             default:
                 Debug.Log($"[CardEffectSystem] Unhandled card '{cardId}' direction={intent.Direction} instance='{card.instanceId ?? string.Empty}'.");
                 break;
@@ -132,9 +134,10 @@ public class CardEffectSystem : MonoBehaviour
 
             EntityType occupantType = entitySystem.entities.coreComponents[occupantIndex].EntityType;
             if (occupantType == EntityType.Enemy || occupantType == EntityType.Wall)
-                return next == watchedCell || (WouldKill(entitySystem, occupantIndex, attack) && PreviewLineChargeFrom(next, direction, watchedCell, attack, mask));
+                return next == watchedCell || (WouldKill(entitySystem, occupantIndex, attack) && PreviewLineChargeFrom(actor, next, direction, watchedCell, attack, mask));
 
-            if (occupantType == EntityType.Box && BoxDisplacementUtility.CanPreviewPushOrBounce(entitySystem, next, direction))
+            var pushContext = new BoxPushContext(actor, attack, true);
+            if (occupantType == EntityType.Box && BoxDisplacementUtility.CanPreviewPushOrBounce(entitySystem, next, direction, pushContext))
             {
                 current = next;
                 continue;
@@ -144,7 +147,7 @@ public class CardEffectSystem : MonoBehaviour
         }
     }
 
-    private bool PreviewLineChargeFrom(Vector2Int current, Vector2Int direction, Vector2Int watchedCell, int attack, DirectionMask mask)
+    private bool PreviewLineChargeFrom(EntityHandle actor, Vector2Int current, Vector2Int direction, Vector2Int watchedCell, int attack, DirectionMask mask)
     {
         var entitySystem = EntitySystem.Instance;
         while (true)
@@ -169,9 +172,10 @@ public class CardEffectSystem : MonoBehaviour
 
             EntityType occupantType = entitySystem.entities.coreComponents[occupantIndex].EntityType;
             if (occupantType == EntityType.Enemy || occupantType == EntityType.Wall)
-                return next == watchedCell || (WouldKill(entitySystem, occupantIndex, attack) && PreviewLineChargeFrom(next, direction, watchedCell, attack, mask));
+                return next == watchedCell || (WouldKill(entitySystem, occupantIndex, attack) && PreviewLineChargeFrom(actor, next, direction, watchedCell, attack, mask));
 
-            if (occupantType == EntityType.Box && BoxDisplacementUtility.CanPreviewPushOrBounce(entitySystem, next, direction))
+            var pushContext = new BoxPushContext(actor, attack, true);
+            if (occupantType == EntityType.Box && BoxDisplacementUtility.CanPreviewPushOrBounce(entitySystem, next, direction, pushContext))
             {
                 current = next;
                 continue;
@@ -222,7 +226,9 @@ public class CardEffectSystem : MonoBehaviour
         if (occupantType == EntityType.Enemy || occupantType == EntityType.Wall)
             return next == watchedCell;
 
-        if (occupantType == EntityType.Box && BoxDisplacementUtility.CanPreviewPushOrBounce(entitySystem, next, direction))
+        int attack = GetActorAttack(entitySystem, actor);
+        var pushContext = new BoxPushContext(actor, attack, true);
+        if (occupantType == EntityType.Box && BoxDisplacementUtility.CanPreviewPushOrBounce(entitySystem, next, direction, pushContext))
             return next == watchedCell;
 
         return false;
@@ -392,7 +398,9 @@ public class CardEffectSystem : MonoBehaviour
 
             if (occupantType == EntityType.Box)
             {
-                if (!BoxDisplacementUtility.TryPushOrBounce(entitySystem, occupant, direction))
+                int damage = GetActorAttack(entitySystem, actor);
+                var pushContext = new BoxPushContext(actor, damage, true, current, true);
+                if (!BoxDisplacementUtility.TryPushOrBounce(entitySystem, occupant, direction, pushContext))
                     break;
 
                 MoveEntity(entitySystem, actor, next);
@@ -463,7 +471,9 @@ public class CardEffectSystem : MonoBehaviour
 
         if (occupantType == EntityType.Box)
         {
-            if (!BoxDisplacementUtility.TryPushOrBounce(entitySystem, occupant, direction))
+            int damage = GetActorAttack(entitySystem, actor);
+            var pushContext = new BoxPushContext(actor, damage, true, current, true);
+            if (!BoxDisplacementUtility.TryPushOrBounce(entitySystem, occupant, direction, pushContext))
                 return false;
 
             MoveEntity(entitySystem, actor, next);
@@ -656,7 +666,9 @@ public class CardEffectSystem : MonoBehaviour
 
             if (occupantType == EntityType.Box)
             {
-                if (BoxDisplacementUtility.TryPushOrBounce(entitySystem, occupant, direction))
+                int damage = GetActorAttack(entitySystem, actor);
+                var pushContext = new BoxPushContext(actor, damage, true, current, true);
+                if (BoxDisplacementUtility.TryPushOrBounce(entitySystem, occupant, direction, pushContext))
                 {
                     MoveEntity(entitySystem, actor, next);
                     acted = true;
@@ -678,6 +690,22 @@ public class CardEffectSystem : MonoBehaviour
         }
 
         return acted;
+    }
+
+    private static bool ExecuteAddStatusEffect(EntityHandle actor, string effectId, int stacks)
+    {
+        var statusEffects = StatusEffectSystem.Instance;
+        if (statusEffects == null)
+        {
+            Debug.LogWarning($"[CardEffectSystem] StatusEffectSystem is missing. effect={effectId}");
+            return false;
+        }
+
+        bool applied = statusEffects.AddStacks(actor, effectId, stacks, StatusEffectDurationKind.Permanent);
+        if (applied)
+            Debug.Log($"[CardEffectSystem] Added status effect: actor={actor.Id}, effect={effectId}, stacks={statusEffects.GetStacks(actor, effectId)}");
+
+        return applied;
     }
 
     private static bool DamageEntity(EntitySystem entitySystem, EntityHandle actor, EntityHandle target)
