@@ -10,11 +10,31 @@ public class LevelTagEntry
     public int tagID;
     public int x;
     public int y;
+    public EntityBP entityBPOverride;
+
+    public EntityBP ResolveEntityBP(TileMappingConfig config)
+    {
+        if (entityBPOverride != null)
+            return entityBPOverride;
+
+        return config != null ? config.GetTagEntityBP(tagID) : null;
+    }
+
+    public LevelTagEntry Clone()
+    {
+        return new LevelTagEntry
+        {
+            tagID = tagID,
+            x = x,
+            y = y,
+            entityBPOverride = entityBPOverride
+        };
+    }
 }
 
 // ─────────── 关卡 SO ───────────
 
-[CreateAssetMenu(fileName = "LevelData", menuName = "BlockingKing/Level Data")]
+[CreateAssetMenu(fileName = "LevelData", menuName = "BlockingKing/Levels/Level Data")]
 public class LevelData : ScriptableObject
 {
     [BoxGroup("基本信息")]
@@ -174,9 +194,15 @@ public class LevelData : ScriptableObject
     }
 
     /// <summary>添加 tag</summary>
-    public void AddTag(int x, int y, int tagId)
+    public void AddTag(int x, int y, int tagId, EntityBP entityBPOverride = null)
     {
-        tags.Add(new LevelTagEntry { tagID = tagId, x = x, y = y });
+        tags.Add(new LevelTagEntry
+        {
+            tagID = tagId,
+            x = x,
+            y = y,
+            entityBPOverride = entityBPOverride
+        });
     }
 
     /// <summary>移除指定坐标的指定 tag</summary>

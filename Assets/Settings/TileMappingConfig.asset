@@ -53,12 +53,12 @@ MonoBehaviour:
   - editorTile: {fileID: 11400000, guid: 8891ff86204b2004988d24db83eb0175, type: 2}
     tagID: 7
     tagName: Target.Core
-    entityBP: {fileID: 11400000, guid: 24954e8c31c5bad47aada4440f9b9618, type: 2}
+    entityBP: {fileID: 0}
     color: {r: 0.12, g: 0.55, b: 1, a: 1}
   - editorTile: {fileID: 11400000, guid: 53f0411119e50de408a51d0aebc8e9c9, type: 2}
     tagID: 8
     tagName: Target.Enemy
-    entityBP: {fileID: 0}
+    entityBP: {fileID: 11400000, guid: 24954e8c31c5bad47aada4440f9b9618, type: 2}
     color: {r: 0.55, g: 0.04, b: 0.08, a: 1}
   - editorTile: {fileID: 11400000, guid: 030fa1c7fe2cde14dab1a36ba2e9a7b9, type: 2}
     tagID: 9

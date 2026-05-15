@@ -30,7 +30,12 @@ public sealed class BgmRecordOnGUIFrontend : MonoBehaviour
         EnsureStyles();
 
         int settingsX = Screen.width - margin - buttonSize;
+        bool reserveLinearChapterButton = GameFlowController.Instance != null &&
+                                          GameFlowController.Instance.Mode == GameFlowMode.LinearCampaign;
         int recordX = settingsX - gap - buttonSize;
+        if (reserveLinearChapterButton)
+            recordX -= gap + buttonSize;
+
         int y = margin;
         bool hasFormalRecordButton = BgmRecordAnimator.Instance != null;
 

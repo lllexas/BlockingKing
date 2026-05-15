@@ -166,7 +166,8 @@ public sealed class BgmRecordAnimator : SpaceUIAnimator
     private static bool ShouldHideForFlow()
     {
         return (GameFlowController.Instance != null &&
-                (GameFlowController.Instance.IsMainMenuVisible || GameFlowController.Instance.Mode == GameFlowMode.LevelEdit))
+                (GameFlowController.Instance.IsMainMenuVisible ||
+                 GameFlowController.Instance.Mode == GameFlowMode.LevelEdit))
             || (RunSettingsPanelAnimator.Instance != null && RunSettingsPanelAnimator.Instance.IsSettingsVisible);
     }
 }

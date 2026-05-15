@@ -1,7 +1,7 @@
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "RunStartSettings", menuName = "BlockingKing/Run Start Settings")]
+[CreateAssetMenu(fileName = "RunStartSettings", menuName = "BlockingKing/Run/Start Settings")]
 public class RunStartSettings : ScriptableObject
 {
     [Title("Presentation")]

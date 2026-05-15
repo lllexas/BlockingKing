@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "EnemySpawnTimingProfile", menuName = "BlockingKing/Enemy Spawn Timing Profile")]
+[CreateAssetMenu(fileName = "EnemySpawnTimingProfile", menuName = "BlockingKing/Stage/Enemy Spawn Timing Profile")]
 public class EnemySpawnTimingProfileSO : TableBaseSO
 {
     [Serializable]

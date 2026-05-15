@@ -447,6 +447,12 @@ public class LevelDataInspector : OdinEditor
 
     private void Open3DEditor()
     {
+        if (EditorApplication.isPlaying)
+        {
+            SwitchRunning3DEditorTarget();
+            return;
+        }
+
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
 
         SaveActiveTilemapEditorIfNeeded();
@@ -485,6 +491,47 @@ public class LevelDataInspector : OdinEditor
 
         Debug.Log($"[LevelEdit] 当前场景切换为编辑模式，target={_data.name} → EnterPlaymode()");
         EditorApplication.EnterPlaymode();
+    }
+
+    private void SwitchRunning3DEditorTarget()
+    {
+        EnsureEditableLevelData();
+
+        var controller = Object.FindObjectOfType<Level3DEditorController>();
+        var levelPlayer = LevelPlayer.ActiveInstance != null
+            ? LevelPlayer.ActiveInstance
+            : Object.FindObjectOfType<LevelPlayer>();
+
+        if (controller == null || levelPlayer == null)
+        {
+            EditorUtility.DisplayDialog("错误", "当前 Play Mode 中没有可切换的 3D 关卡编辑器。", "确定");
+            return;
+        }
+
+        if (controller.SourceLevel == _data)
+            return;
+
+        if (controller.HasUnsavedChanges)
+        {
+            string currentName = controller.SourceLevel != null ? controller.SourceLevel.name : "<unknown>";
+            int choice = EditorUtility.DisplayDialogComplex(
+                "切换 3D 编辑目标",
+                $"当前关卡 {currentName} 有未保存的 3D 修改。\n切换到 {_data.name} 前要如何处理？",
+                "保存并切换",
+                "取消",
+                "放弃并切换");
+
+            if (choice == 1)
+                return;
+            if (choice == 0)
+                controller.SaveChanges();
+        }
+
+        var config = levelPlayer.CurrentConfig != null ? levelPlayer.CurrentConfig : FindConfig();
+        controller.Configure(levelPlayer, _data, config);
+        Selection.activeObject = _data;
+        Repaint();
+        Debug.Log($"[LevelEdit] 3D 编辑目标已切换为 {_data.name}");
     }
 
     private void SaveActiveTilemapEditorIfNeeded()

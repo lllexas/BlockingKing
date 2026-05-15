@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "EnemySpawnDifficultyProfile", menuName = "BlockingKing/Enemy Spawn Difficulty Profile")]
+[CreateAssetMenu(fileName = "EnemySpawnDifficultyProfile", menuName = "BlockingKing/Stage/Enemy Spawn Difficulty Profile")]
 public class EnemySpawnDifficultyProfileSO : TableBaseSO, IPoolAnalyzable
 {
     [Serializable]

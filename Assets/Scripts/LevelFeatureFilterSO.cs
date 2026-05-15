@@ -1,7 +1,7 @@
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "LevelFeatureFilter", menuName = "BlockingKing/Level/Feature Filter")]
+[CreateAssetMenu(fileName = "LevelFeatureFilter", menuName = "BlockingKing/Levels/Feature Filter")]
 public sealed class LevelFeatureFilterSO : ScriptableObject
 {
     [MinMaxSlider(1, 50, true), LabelText("Width")]

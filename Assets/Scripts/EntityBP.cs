@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "EntityBP", menuName = "BlockingKing/Entity BP")]
+[CreateAssetMenu(fileName = "EntityBP", menuName = "BlockingKing/Stage/Entity BP")]
 public class EntityBP : ScriptableObject
 {
     [Header("Stats")]

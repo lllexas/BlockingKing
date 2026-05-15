@@ -47,6 +47,8 @@ public class HandZone : MonoBehaviour
     [SerializeField] private bool fillHandOnStart = true;
     [SerializeField] private bool autoBuildFromLibrary = true;
     [SerializeField] private bool requireLevelForAutoBuild = true;
+    [SerializeField] private bool shuffleDrawPileOnBuild = true;
+    [SerializeField] private bool recycleDiscardIntoDrawPile = true;
 
     [Header("Counters")]
     [SerializeField] private TMP_Text drawPileCountText;
@@ -260,7 +262,49 @@ public class HandZone : MonoBehaviour
         if (cards != null)
             _drawPile.AddRange(cards);
 
-        Shuffle(_drawPile);
+        if (shuffleDrawPileOnBuild)
+            Shuffle(_drawPile);
+
+        _initialized = true;
+        _cachedScreenWidth = Screen.width;
+        _cachedScreenHeight = Screen.height;
+
+        if (fillToMax)
+            RefillHandToMax(true);
+        else
+            DrawCards(handState.TargetHandCount, true);
+
+        _observedHandStateRevision = handState.Revision;
+        RefreshCounters();
+    }
+
+    public void RebuildFromOrderedDeck(StartingDeckSO deck, bool fillToMax, bool recycleDiscard)
+    {
+        ClearRuntimeCards();
+        _drawPile.Clear();
+        _discardPile.Clear();
+        _isRecyclingDiscardToDraw = false;
+        recycleDiscardIntoDrawPile = recycleDiscard;
+        ApplyRunStartHandSettings();
+
+        if (deck != null && deck.cards != null)
+        {
+            for (int i = 0; i < deck.cards.Count; i++)
+            {
+                var entry = deck.cards[i];
+                if (entry == null || entry.card == null)
+                    continue;
+
+                int count = Mathf.Max(1, entry.count);
+                for (int j = 0; j < count; j++)
+                {
+                    var instance = CardResources.CreateInstanceFromTemplate(entry.card);
+                    if (instance != null)
+                        _drawPile.Add(instance);
+                }
+            }
+        }
+
         _initialized = true;
         _cachedScreenWidth = Screen.width;
         _cachedScreenHeight = Screen.height;
@@ -1241,6 +1285,9 @@ public class HandZone : MonoBehaviour
     {
         if (_drawPile.Count > 0)
             return true;
+
+        if (!recycleDiscardIntoDrawPile)
+            return false;
 
         if (_hand.Count > 0 || _discardPile.Count == 0 || _isRecyclingDiscardToDraw)
             return false;

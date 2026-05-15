@@ -854,8 +854,11 @@ public class LevelPlayer : MonoBehaviour
             stageFacade.ResumeWaitingStage(result == LevelPlayResult.Success ? 0 : 1);
         }
 
+        var flow = GameFlowController.Instance;
         if (_playMode == LevelPlayMode.Tutorial || _playMode == LevelPlayMode.DirectorControlled)
             GameFlowController.Instance?.OnTutorialLevelSettled(result);
+        else if (flow != null && flow.Mode == GameFlowMode.LinearCampaign)
+            flow.OnLinearLevelSettled(result);
         else
             GameFlowController.Instance?.OnRouteClassicLevelSettled(result);
     }
@@ -1360,18 +1363,18 @@ public class LevelPlayer : MonoBehaviour
         {
             var pos = new Vector2Int(tag.x, tag.y);
             if (tag.tagID == playerTagID)
-                CreateTaggedEntity(entitySystem, EntityType.Player, pos, tag.tagID);
+                CreateTaggedEntity(entitySystem, EntityType.Player, pos, tag.tagID, resolvedBP: tag.ResolveEntityBP(_config));
             else if (tag.tagID == boxTagID)
-                CreateTaggedEntity(entitySystem, EntityType.Box, pos, tag.tagID);
+                CreateTaggedEntity(entitySystem, EntityType.Box, pos, tag.tagID, resolvedBP: tag.ResolveEntityBP(_config));
             else if (boxCoreTagID > 0 && tag.tagID == boxCoreTagID)
-                CreateCoreBox(entitySystem, pos, tag.tagID);
+                CreateCoreBox(entitySystem, pos, tag.tagID, tag.ResolveEntityBP(_config));
             else if (tag.tagID == targetTagID)
-                CreateTaggedEntity(entitySystem, EntityType.Target, pos, tag.tagID, false);
+                CreateTaggedEntity(entitySystem, EntityType.Target, pos, tag.tagID, false, resolvedBP: tag.ResolveEntityBP(_config));
             else if (targetCoreTagID > 0 && tag.tagID == targetCoreTagID)
-                CreateTaggedEntity(entitySystem, EntityType.Target, pos, tag.tagID, false);
+                CreateTaggedEntity(entitySystem, EntityType.Target, pos, tag.tagID, false, resolvedBP: tag.ResolveEntityBP(_config));
             else if (targetEnemyTagID > 0 && tag.tagID == targetEnemyTagID)
             {
-                var targetHandle = CreateTaggedEntity(entitySystem, EntityType.Target, pos, tag.tagID, false);
+                var targetHandle = CreateTaggedEntity(entitySystem, EntityType.Target, pos, tag.tagID, false, resolvedBP: tag.ResolveEntityBP(_config));
                 SetupEnemyTargetCounter(entitySystem, targetHandle, tag.tagID);
                 enemyTargetCount++;
             }
@@ -1384,9 +1387,9 @@ public class LevelPlayer : MonoBehaviour
                          enemyCurseCasterTagID,
                          enemyGuokuiTagID,
                          enemyErtongTagID))
-                CreateTaggedEntity(entitySystem, EntityType.Enemy, pos, tag.tagID);
+                CreateTaggedEntity(entitySystem, EntityType.Enemy, pos, tag.tagID, resolvedBP: tag.ResolveEntityBP(_config));
             else if (unstableWallTagID > 0 && tag.tagID == unstableWallTagID)
-                CreateUnstableWall(entitySystem, pos, tag.tagID);
+                CreateUnstableWall(entitySystem, pos, tag.tagID, tag.ResolveEntityBP(_config));
         }
 
         var spawnSystem = EnsureRuntimeSystem<SpawnSystem>();
@@ -1747,18 +1750,19 @@ public class LevelPlayer : MonoBehaviour
         Vector2Int pos,
         int tagId,
         bool occupiesGrid = true,
-        bool publishCreatedEvent = true)
+        bool publishCreatedEvent = true,
+        EntityBP resolvedBP = null)
     {
         var handle = entitySystem.CreateEntity(entityType, pos, occupiesGrid);
-        ApplyEntityBP(entitySystem, handle, tagId);
+        ApplyEntityBP(entitySystem, handle, tagId, resolvedBP);
         if (publishCreatedEvent)
             entitySystem.PublishEntityCreated(handle);
         return handle;
     }
 
-    private void CreateCoreBox(EntitySystem entitySystem, Vector2Int pos, int tagId)
+    private void CreateCoreBox(EntitySystem entitySystem, Vector2Int pos, int tagId, EntityBP resolvedBP = null)
     {
-        var handle = CreateTaggedEntity(entitySystem, EntityType.Box, pos, tagId, publishCreatedEvent: false);
+        var handle = CreateTaggedEntity(entitySystem, EntityType.Box, pos, tagId, publishCreatedEvent: false, resolvedBP: resolvedBP);
         int index = entitySystem.GetIndex(handle);
         if (index >= 0)
             entitySystem.entities.propertyComponents[index].IsCore = true;
@@ -1766,19 +1770,19 @@ public class LevelPlayer : MonoBehaviour
         entitySystem.PublishEntityCreated(handle);
     }
 
-    private void CreateUnstableWall(EntitySystem entitySystem, Vector2Int pos, int tagId)
+    private void CreateUnstableWall(EntitySystem entitySystem, Vector2Int pos, int tagId, EntityBP resolvedBP = null)
     {
-        CreateTaggedEntity(entitySystem, EntityType.Wall, pos, tagId);
+        CreateTaggedEntity(entitySystem, EntityType.Wall, pos, tagId, resolvedBP: resolvedBP);
         entitySystem.SetTerrain(pos, GetDefaultFloorTerrainId());
     }
 
-    private void ApplyEntityBP(EntitySystem entitySystem, EntityHandle handle, int tagId)
+    private void ApplyEntityBP(EntitySystem entitySystem, EntityHandle handle, int tagId, EntityBP resolvedBP = null)
     {
         int index = entitySystem.GetIndex(handle);
         if (index < 0)
             return;
 
-        EntityBP bp = _config != null ? _config.GetTagEntityBP(tagId) : null;
+        EntityBP bp = resolvedBP != null ? resolvedBP : _config != null ? _config.GetTagEntityBP(tagId) : null;
         ref var properties = ref entitySystem.entities.propertyComponents[index];
         properties.SourceTagId = tagId;
         properties.SourceBP = bp;
@@ -1812,7 +1816,7 @@ public class LevelPlayer : MonoBehaviour
         ref var counter = ref entitySystem.entities.counterComponents[index];
         ref var props = ref entitySystem.entities.propertyComponents[index];
 
-        EntityBP bp = _config != null ? _config.GetTagEntityBP(tagId) : null;
+        EntityBP bp = props.SourceBP != null ? props.SourceBP : _config != null ? _config.GetTagEntityBP(tagId) : null;
         int fallbackInterval = bp != null && bp.spawnInterval > 0
             ? bp.spawnInterval
             : _activeTargetEnemySpawnIntervalOverride > 0

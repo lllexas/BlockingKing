@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 using Sirenix.OdinInspector;
 
-[CreateAssetMenu(fileName = "TileMappingConfig", menuName = "BlockingKing/Tile Mapping Config")]
+[CreateAssetMenu(fileName = "TileMappingConfig", menuName = "BlockingKing/Levels/Tile Mapping Config")]
 public class TileMappingConfig : ScriptableObject
 {
     [System.Serializable]

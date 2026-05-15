@@ -83,7 +83,7 @@ public sealed class RunSettingsPanelAnimator : SpaceUIAnimator
     {
         Time.timeScale = 1f;
         HideSettings();
-        GameFlowController.Instance?.ReturnToMainMenuRound();
+        GameFlowController.Instance?.ReturnToMainMenu();
     }
 
     public void QuitGame()

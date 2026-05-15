@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d1e2f3448d2477ca85f646b6d49a2a1, type: 3}
+  m_Name: LinearCampaignConfig
+  m_EditorClassIdentifier: 
+  campaignId: 
+  displayName: 
+  chapters:
+  - chapterId: 
+    chapterConfig: {fileID: 11400000, guid: 0dd3d5022285de143a87f49e6c075142, type: 2}
+  - chapterId: 
+    chapterConfig: {fileID: 11400000, guid: 1aa9889627776034f812185cb2ebec79, type: 2}

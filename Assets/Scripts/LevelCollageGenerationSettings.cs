@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "LevelCollageGenerationSettings", menuName = "BlockingKing/Level Collage Generation Settings")]
+[CreateAssetMenu(fileName = "LevelCollageGenerationSettings", menuName = "BlockingKing/Levels/Legacy/Level Collage Generation Settings")]
 [Obsolete("Use LevelFeatureSelectionTableSO plus LevelCollageSourceDatabase as the round-level escort content inputs. This class is a legacy generation adapter.")]
 public class LevelCollageGenerationSettings : ScriptableObject
 {

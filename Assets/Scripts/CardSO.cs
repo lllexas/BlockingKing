@@ -2,7 +2,7 @@ using UnityEngine;
 using NekoGraph;
 using Newtonsoft.Json;
 
-[CreateAssetMenu(fileName = "Card", menuName = "BlockingKing/Card")]
+[CreateAssetMenu(fileName = "Card", menuName = "BlockingKing/Cards/Card")]
 [VFSContentKind(VFSContentKind.UnityObject)]
 [JsonObject(MemberSerialization.OptIn)]
 public class CardSO : ScriptableObject

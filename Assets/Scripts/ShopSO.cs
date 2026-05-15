@@ -4,7 +4,7 @@ using NekoGraph;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "Shop", menuName = "BlockingKing/Run Stage/Shop")]
+[CreateAssetMenu(fileName = "Shop", menuName = "BlockingKing/Stage/Shop")]
 [VFSContentKind(VFSContentKind.UnityObject)]
 public class ShopSO : ScriptableObject
 {

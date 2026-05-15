@@ -4,7 +4,7 @@ using UnityEngine;
 /// Editor -> Play Mode bridge for level editing.
 /// Runtime reads this once when GameFlowMode.LevelEdit starts.
 /// </summary>
-[CreateAssetMenu(fileName = "LevelEditSession", menuName = "BlockingKing/Level Edit Session")]
+[CreateAssetMenu(fileName = "LevelEditSession", menuName = "BlockingKing/Levels/Level Edit Session")]
 public class LevelEditSession : ScriptableObject
 {
     public LevelData targetLevel;

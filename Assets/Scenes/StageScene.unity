@@ -9853,6 +9853,8 @@ MonoBehaviour:
   fillHandOnStart: 1
   autoBuildFromLibrary: 1
   requireLevelForAutoBuild: 1
+  shuffleDrawPileOnBuild: 1
+  recycleDiscardIntoDrawPile: 1
   drawPileCountText: {fileID: 0}
   discardPileCountText: {fileID: 0}
   handCountText: {fileID: 0}
@@ -10420,7 +10422,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -0.000004053048}
+  m_AnchoredPosition: {x: 0, y: 0.00031015518}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1021658299
@@ -10579,6 +10581,7 @@ GameObject:
   - component: {fileID: 1075821692}
   - component: {fileID: 1075821691}
   - component: {fileID: 1075821693}
+  - component: {fileID: 1075821694}
   m_Layer: 0
   m_Name: GameFlowController
   m_TagString: Untagged
@@ -10598,12 +10601,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8789f936a93c0a14995664b0e35ca8e0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mode: 2
+  mode: 3
+  startupMode: 0
   runConfig: {fileID: 11400000, guid: c0a8b3951ddb83940a8b02d02a86fe15, type: 2}
+  linearCampaignConfig: {fileID: 11400000, guid: 703bcd834b657084a82a1bc71629424f,
+    type: 2}
   routeSettings: {fileID: 11400000, guid: 9daeddca15090084f8a8f48b48c0bda0, type: 2}
   runStartSettings: {fileID: 11400000, guid: 815607c9e90200942a60e230ce6e6ce6, type: 2}
   ensureRouteOnGUI: 1
-  routeMapStartupMode: 2
   ensureTutorialDirector: 1
 --- !u!4 &1075821692
 Transform:
@@ -10637,6 +10642,18 @@ MonoBehaviour:
   classicLevel: {fileID: 11400000, guid: e0e099134055e634a92ae9b74491fbc9, type: 2}
   rookBishopLevel: {fileID: 11400000, guid: ad59048e10841b84bb952aa0fe8cc6bf, type: 2}
   escortLevel: {fileID: 11400000, guid: e8e489385c7b223418b0467fe19fb17f, type: 2}
+--- !u!114 &1075821694
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1075821690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eef62b1803cb433da8a935f7cb3402de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1079948105
 GameObject:
   m_ObjectHideFlags: 0
@@ -11974,7 +11991,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 917839194}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.9985325
+  m_Size: 0.9999965
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:

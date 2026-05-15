@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "LevelCollageSourceDatabase", menuName = "BlockingKing/Level Collage Source Database")]
+[CreateAssetMenu(fileName = "LevelCollageSourceDatabase", menuName = "BlockingKing/Levels/Level Collage Source Database")]
 public class LevelCollageSourceDatabase : ContentPoolSO<LevelCollageSourceEntry, LevelData>
 {
     public List<LevelCollageSourceEntry> entries = new();

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using NekoGraph;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "RunMsg", menuName = "BlockingKing/Run Stage/Message")]
+[CreateAssetMenu(fileName = "RunMsg", menuName = "BlockingKing/Stage/Message")]
 [VFSContentKind(VFSContentKind.UnityObject)]
 public class RunMsgSO : ScriptableObject
 {

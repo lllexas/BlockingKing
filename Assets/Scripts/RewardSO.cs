@@ -4,7 +4,7 @@ using NekoGraph;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "Reward", menuName = "BlockingKing/Run Stage/Reward")]
+[CreateAssetMenu(fileName = "Reward", menuName = "BlockingKing/Stage/Reward")]
 [VFSContentKind(VFSContentKind.UnityObject)]
 public class RewardSO : ScriptableObject
 {

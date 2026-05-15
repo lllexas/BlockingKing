@@ -1,7 +1,7 @@
 using NekoGraph;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "Item", menuName = "BlockingKing/Item")]
+[CreateAssetMenu(fileName = "Item", menuName = "BlockingKing/Run/Item")]
 [VFSContentKind(VFSContentKind.UnityObject)]
 public sealed class ItemSO : ScriptableObject
 {

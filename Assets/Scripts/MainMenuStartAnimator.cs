@@ -4,6 +4,6 @@ public sealed class MainMenuStartAnimator : MainMenuButtonAnimatorBase
 
     protected override void Invoke()
     {
-        Controller?.StartRoundRunFromMainMenu();
+        Controller?.StartCurrentModeFromMainMenu();
     }
 }

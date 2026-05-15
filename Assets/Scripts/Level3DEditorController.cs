@@ -10,7 +10,9 @@ using UnityEngine;
 public sealed class Level3DEditorController : MonoBehaviour
 {
     private const string HoverOverlayId = "level_3d_editor_hover";
+    private const string SelectedOverlayId = "level_3d_editor_selected_tag";
     private const int DefaultPanelWidth = 330;
+    private const int SelectedPanelWidth = 330;
     private const float PanelMargin = 12f;
     private const float ToolbarHeight = 68f;
     private const float CellInspectorHeight = 92f;
@@ -24,6 +26,8 @@ public sealed class Level3DEditorController : MonoBehaviour
     private readonly Stack<Snapshot> _undoStack = new();
     private readonly Stack<Snapshot> _redoStack = new();
     private readonly List<Vector2Int> _singleCell = new(1);
+    private readonly List<Vector2Int> _selectedCell = new(1);
+    private readonly HashSet<Vector2Int> _rightEraseStrokeTagClearedCells = new();
 
     private LevelPlayer _player;
     private LevelData _source;
@@ -38,21 +42,38 @@ public sealed class Level3DEditorController : MonoBehaviour
     private string _search = string.Empty;
     private Vector2 _paletteScroll;
     private string _lastAppliedKey;
+    private bool _hasSelectedTag;
+    private Vector2Int _selectedTagCell;
+    private int _selectedTagId;
+    private int _selectedTagCycleIndex = -1;
     private GUIStyle _panelStyle;
     private GUIStyle _titleStyle;
     private GUIStyle _buttonStyle;
     private GUIStyle _selectedButtonStyle;
     private GUIStyle _miniLabelStyle;
+    private GUIStyle _selectedPanelTitleStyle;
+    private GUIStyle _selectedPanelLabelStyle;
+    private GUIStyle _selectedPanelValueStyle;
     private GUIStyle _colorSwatchStyle;
 
     public void Configure(LevelPlayer player, LevelData source, TileMappingConfig config)
     {
+        bool targetChanged = _source != source;
         _player = player;
         _source = source;
         _config = config;
         _config?.RebuildCache();
 
         _draft = CreateEditCanvas(source);
+        _dirty = false;
+        _lastAppliedKey = null;
+        _undoStack.Clear();
+        _redoStack.Clear();
+        _rightEraseStrokeTagClearedCells.Clear();
+        ClearSelectedTag();
+        if (targetChanged)
+            _cameraFocusedOnEntry = false;
+
         BuildBrushes();
         DisableRuntimeInput();
         RebuildPreview();
@@ -69,6 +90,7 @@ public sealed class Level3DEditorController : MonoBehaviour
     private void OnDisable()
     {
         GridOverlayDrawSystem.Instance?.RemoveOverlay(HoverOverlayId);
+        GridOverlayDrawSystem.Instance?.RemoveOverlay(SelectedOverlayId);
     }
 
     private void Update()
@@ -109,8 +131,10 @@ public sealed class Level3DEditorController : MonoBehaviour
         DrawBrushButtons(paletteHeight);
 
         GUILayout.Space(SectionGap);
-        GUILayout.Label("LMB paint   RMB erase   1-9 quick select   Ctrl+Z/Y undo/redo   Ctrl+S save   Esc exit", _miniLabelStyle);
+        GUILayout.Label("LMB paint   Alt+LMB select tag   RMB clear tags; terrain only with Terrain brush   1-9 quick select   Ctrl+Z/Y undo/redo   Ctrl+S save   Esc exit", _miniLabelStyle);
         GUILayout.EndArea();
+
+        DrawSelectedTagPanel();
     }
 
     private void DrawToolbarButtons(float height)
@@ -259,18 +283,37 @@ public sealed class Level3DEditorController : MonoBehaviour
 
     private void HandlePointerEdit()
     {
+        if (!Input.GetMouseButton(1))
+            _rightEraseStrokeTagClearedCells.Clear();
+        else if (Input.GetMouseButtonDown(1))
+            _rightEraseStrokeTagClearedCells.Clear();
+
+        if (!Input.GetMouseButton(0) && !Input.GetMouseButton(1))
+            _lastAppliedKey = null;
+
         if (!_hasHover || IsPointerOverEditorPanel())
         {
-            _lastAppliedKey = null;
             return;
         }
 
-        if (Input.GetMouseButton(0))
+        if (Input.GetMouseButtonDown(0) && IsAltHeld())
+        {
+            _lastAppliedKey = null;
+            _rightEraseStrokeTagClearedCells.Clear();
+            SelectNextTagAt(_hoverCell);
+        }
+        else if (Input.GetMouseButton(0) && !IsAltHeld())
+        {
+            _rightEraseStrokeTagClearedCells.Clear();
             ApplyBrush(_hoverCell);
+        }
         else if (Input.GetMouseButtonDown(1) || Input.GetMouseButton(1))
             EraseCell(_hoverCell);
         else
+        {
             _lastAppliedKey = null;
+            _rightEraseStrokeTagClearedCells.Clear();
+        }
     }
 
     private void UpdateHover()
@@ -292,6 +335,7 @@ public sealed class Level3DEditorController : MonoBehaviour
         _singleCell.Clear();
         _singleCell.Add(_hoverCell);
         overlay.SetOverlay(HoverOverlayId, _singleCell, new Color(0.2f, 0.85f, 1f, 0.32f), 0.032f, 100);
+        UpdateSelectedOverlay();
     }
 
     private bool TryGetMouseGridPosition(out Vector2Int gridPosition)
@@ -319,9 +363,13 @@ public sealed class Level3DEditorController : MonoBehaviour
     private bool IsPointerOverEditorPanel()
     {
         float width = Mathf.Min(DefaultPanelWidth, Screen.width - PanelMargin * 2f);
-        return Input.mousePosition.x <= PanelMargin + width &&
-               Input.mousePosition.y >= 0f &&
-               Input.mousePosition.y <= Screen.height;
+        if (Input.mousePosition.y < 0f || Input.mousePosition.y > Screen.height)
+            return false;
+
+        bool overLeftPanel = Input.mousePosition.x <= PanelMargin + width;
+        Vector2 guiMouse = new(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
+        bool overRightPanel = _hasSelectedTag && GetSelectedPanelRect().Contains(guiMouse);
+        return overLeftPanel || overRightPanel;
     }
 
     private void ApplyBrush(Vector2Int cell)
@@ -347,7 +395,10 @@ public sealed class Level3DEditorController : MonoBehaviour
         }
 
         if (_draft.HasTag(cell.x, cell.y, brush.Id))
+        {
+            _lastAppliedKey = applyKey;
             return;
+        }
 
         _lastAppliedKey = applyKey;
         PushUndo();
@@ -363,11 +414,414 @@ public sealed class Level3DEditorController : MonoBehaviour
         if (tile == 0 && tagCount == 0)
             return;
 
-        _lastAppliedKey = $"{cell.x}:{cell.y}:erase";
+        string eraseKey = $"{cell.x}:{cell.y}:erase";
+        if (tagCount > 0)
+        {
+            _lastAppliedKey = eraseKey;
+            _rightEraseStrokeTagClearedCells.Add(cell);
+            PushUndo();
+            _draft.ClearTagsAt(cell.x, cell.y);
+            ClearSelectedTagIfCell(cell);
+            MarkDraftChanged();
+            return;
+        }
+
+        if (!IsTerrainBrushSelected() || _rightEraseStrokeTagClearedCells.Contains(cell))
+            return;
+
+        _lastAppliedKey = eraseKey;
         PushUndo();
         _draft.SetTile(cell.x, cell.y, 0);
-        _draft.ClearTagsAt(cell.x, cell.y);
         MarkDraftChanged();
+    }
+
+    private bool IsTerrainBrushSelected()
+    {
+        if (_brushes.Count == 0)
+            return false;
+
+        Brush brush = _brushes[Mathf.Clamp(_brushIndex, 0, _brushes.Count - 1)];
+        return brush.Kind == BrushKind.Terrain;
+    }
+
+    private void SelectTag(Vector2Int cell, int tagId)
+    {
+        _hasSelectedTag = true;
+        _selectedTagCell = cell;
+        _selectedTagId = tagId;
+        _selectedTagCycleIndex = FindTagCycleIndex(cell, tagId);
+        UpdateSelectedOverlay();
+    }
+
+    private void SelectNextTagAt(Vector2Int cell)
+    {
+        var candidates = GetSelectableTagsAt(cell);
+        if (candidates.Count == 0)
+        {
+            ClearSelectedTag();
+            return;
+        }
+
+        int nextIndex = 0;
+        if (_hasSelectedTag && _selectedTagCell == cell)
+            nextIndex = (_selectedTagCycleIndex + 1 + candidates.Count) % candidates.Count;
+
+        var selected = candidates[nextIndex];
+        _hasSelectedTag = true;
+        _selectedTagCell = cell;
+        _selectedTagId = selected.tagID;
+        _selectedTagCycleIndex = nextIndex;
+        UpdateSelectedOverlay();
+    }
+
+    private List<LevelTagEntry> GetSelectableTagsAt(Vector2Int cell)
+    {
+        var result = new List<LevelTagEntry>();
+        if (_draft?.tags == null)
+            return result;
+
+        for (int pass = 0; pass < 2; pass++)
+        {
+            bool wantTarget = pass == 1;
+            for (int i = 0; i < _draft.tags.Count; i++)
+            {
+                var tag = _draft.tags[i];
+                if (tag == null || tag.x != cell.x || tag.y != cell.y)
+                    continue;
+
+                if (IsTargetTag(tag.tagID) == wantTarget)
+                    result.Add(tag);
+            }
+        }
+
+        return result;
+    }
+
+    private int FindTagCycleIndex(Vector2Int cell, int tagId)
+    {
+        var candidates = GetSelectableTagsAt(cell);
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            if (candidates[i].tagID == tagId)
+                return i;
+        }
+
+        return -1;
+    }
+
+    private void ClearSelectedTag()
+    {
+        _hasSelectedTag = false;
+        _selectedTagCell = default;
+        _selectedTagId = 0;
+        _selectedTagCycleIndex = -1;
+        GridOverlayDrawSystem.Instance?.RemoveOverlay(SelectedOverlayId);
+    }
+
+    private void ClearSelectedTagIfCell(Vector2Int cell)
+    {
+        if (_hasSelectedTag && _selectedTagCell == cell)
+            ClearSelectedTag();
+    }
+
+    private bool TryGetSelectedTag(out LevelTagEntry selectedTag)
+    {
+        selectedTag = null;
+        if (!_hasSelectedTag || _draft?.tags == null)
+            return false;
+
+        for (int i = 0; i < _draft.tags.Count; i++)
+        {
+            var tag = _draft.tags[i];
+            if (tag == null)
+                continue;
+
+            if (tag.x == _selectedTagCell.x &&
+                tag.y == _selectedTagCell.y &&
+                tag.tagID == _selectedTagId)
+            {
+                selectedTag = tag;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsTargetTag(int tagId)
+    {
+        string tagName = _config != null ? _config.GetTagName(tagId) : string.Empty;
+        return IsTargetTagName(tagName);
+    }
+
+    private static bool IsAltHeld()
+    {
+        return Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+    }
+
+    private void UpdateSelectedOverlay()
+    {
+        var overlay = GridOverlayDrawSystem.Instance;
+        if (overlay == null)
+            return;
+
+        if (!TryGetSelectedTag(out _))
+        {
+            if (_hasSelectedTag)
+                ClearSelectedTag();
+            else
+                overlay.RemoveOverlay(SelectedOverlayId);
+            return;
+        }
+
+        _selectedCell.Clear();
+        _selectedCell.Add(_selectedTagCell);
+        overlay.SetOverlay(
+            SelectedOverlayId,
+            _selectedCell,
+            GridOverlayStyle.SelectionRing,
+            new Color(1f, 0.86f, 0.22f, 0.95f),
+            0.042f,
+            140);
+    }
+
+    private void DrawSelectedTagPanel()
+    {
+        if (!_hasSelectedTag)
+            return;
+
+        if (!TryGetSelectedTag(out var selectedTag))
+        {
+            ClearSelectedTag();
+            return;
+        }
+
+        EnsureStyles();
+
+        var rect = GetSelectedPanelRect();
+
+        GUILayout.BeginArea(rect, GUIContent.none, _panelStyle);
+        GUILayout.Label("Selected Tag", _selectedPanelTitleStyle);
+        GUILayout.Label($"{selectedTag.x},{selectedTag.y}  tag: {selectedTag.tagID} {ResolveTagName(selectedTag.tagID)}", _selectedPanelLabelStyle);
+        GUILayout.Space(8f);
+
+        EntityBP defaultBP = _config != null ? _config.GetTagEntityBP(selectedTag.tagID) : null;
+        bool usesOverride = selectedTag.entityBPOverride != null;
+        GUILayout.Label(usesOverride ? "当前使用专有 BP" : "当前使用默认值", _selectedPanelValueStyle);
+        GUILayout.Label($"默认 BP: {FormatBPName(defaultBP)}", _selectedPanelLabelStyle);
+        if (!usesOverride && defaultBP == null)
+            GUILayout.Label("没有默认 BP；可以直接创建专有 BP。", _selectedPanelLabelStyle);
+
+        EditorGUI.BeginChangeCheck();
+        var overrideBP = (EntityBP)EditorGUILayout.ObjectField(
+            "专有 BP",
+            selectedTag.entityBPOverride,
+            typeof(EntityBP),
+            false);
+        if (EditorGUI.EndChangeCheck())
+            SetSelectedTagOverride(selectedTag, overrideBP);
+
+        GUILayout.Space(8f);
+        GUILayout.BeginHorizontal();
+        using (new EditorGUI.DisabledScope(selectedTag.entityBPOverride == null))
+        {
+            if (GUILayout.Button("使用默认值", _buttonStyle, GUILayout.Height(30f)))
+                SetSelectedTagOverride(selectedTag, null);
+        }
+
+        if (GUILayout.Button("创建专有 BP", _buttonStyle, GUILayout.Height(30f)))
+        {
+            var clone = CreateOverrideBPAsset(selectedTag, defaultBP);
+            if (clone != null)
+                SetSelectedTagOverride(selectedTag, clone);
+        }
+        GUILayout.EndHorizontal();
+
+        GUILayout.BeginHorizontal();
+        using (new EditorGUI.DisabledScope(selectedTag.entityBPOverride == null && defaultBP == null))
+        {
+            if (GUILayout.Button("定位 BP", _buttonStyle, GUILayout.Height(30f)))
+            {
+                var bp = selectedTag.entityBPOverride != null ? selectedTag.entityBPOverride : defaultBP;
+                EditorGUIUtility.PingObject(bp);
+                Selection.activeObject = bp;
+            }
+        }
+
+        if (GUILayout.Button("取消选择", _buttonStyle, GUILayout.Height(30f)))
+            ClearSelectedTag();
+        GUILayout.EndHorizontal();
+
+        GUILayout.Space(8f);
+        var resolved = selectedTag.ResolveEntityBP(_config);
+        DrawBPStats("默认参数", defaultBP);
+        if (selectedTag.entityBPOverride != null)
+            DrawOverrideBPEditor(selectedTag.entityBPOverride);
+        if (selectedTag.entityBPOverride != null)
+        {
+            GUILayout.Space(4f);
+            DrawBPStats("最终使用", resolved);
+        }
+
+        GUILayout.EndArea();
+    }
+
+    private static Rect GetSelectedPanelRect()
+    {
+        float width = Mathf.Min(SelectedPanelWidth, Screen.width - PanelMargin * 2f);
+        float height = Mathf.Min(440f, Mathf.Max(260f, Screen.height - PanelMargin * 2f));
+        float x = Mathf.Max(PanelMargin, Screen.width - PanelMargin - width);
+        float y = Mathf.Max(PanelMargin, Screen.height - PanelMargin - height);
+        return new Rect(x, y, width, height);
+    }
+
+    private void DrawBPStats(string title, EntityBP bp)
+    {
+        GUILayout.Label($"{title}: {FormatBPName(bp)}", _selectedPanelValueStyle);
+        if (bp == null)
+        {
+            GUILayout.Label("Health -   Attack -", _selectedPanelLabelStyle);
+            GUILayout.Label("Spawn Interval -   Spawn BP <none>", _selectedPanelLabelStyle);
+            return;
+        }
+
+        GUILayout.Label($"Health {bp.health}   Attack {bp.attack}", _selectedPanelLabelStyle);
+        GUILayout.Label($"Spawn Interval {bp.spawnInterval}   Spawn BP {FormatBPName(bp.spawnEntityBP)}", _selectedPanelLabelStyle);
+    }
+
+    private void DrawOverrideBPEditor(EntityBP bp)
+    {
+        if (bp == null)
+            return;
+
+        GUILayout.Space(6f);
+        GUILayout.Label("专有 BP 参数", _selectedPanelValueStyle);
+
+        bool changed = false;
+        int health = bp.health;
+        int attack = bp.attack;
+        int spawnInterval = bp.spawnInterval;
+        changed |= DrawIntTextField("Health", bp.health, 1, out health);
+        changed |= DrawIntTextField("Attack", bp.attack, 0, out attack);
+        changed |= DrawIntTextField("Spawn Interval", bp.spawnInterval, 0, out spawnInterval);
+
+        EditorGUI.BeginChangeCheck();
+        var spawnBP = (EntityBP)EditorGUILayout.ObjectField("Spawn BP", bp.spawnEntityBP, typeof(EntityBP), false);
+        changed |= EditorGUI.EndChangeCheck();
+        if (!changed)
+            return;
+
+        UnityEditor.Undo.RecordObject(bp, "Edit Level Tag Override BP");
+        bp.health = Mathf.Max(1, health);
+        bp.attack = Mathf.Max(0, attack);
+        bp.spawnInterval = Mathf.Max(0, spawnInterval);
+        bp.spawnEntityBP = spawnBP;
+        EditorUtility.SetDirty(bp);
+        AssetDatabase.SaveAssets();
+        MarkDraftChanged();
+    }
+
+    private bool DrawIntTextField(string label, int currentValue, int minValue, out int value)
+    {
+        value = currentValue;
+
+        GUILayout.BeginHorizontal();
+        GUILayout.Label(label, _selectedPanelLabelStyle, GUILayout.Width(110f));
+        string text = GUILayout.TextField(currentValue.ToString(), GUILayout.Height(22f));
+        GUILayout.EndHorizontal();
+
+        if (text == currentValue.ToString())
+            return false;
+
+        if (!int.TryParse(text, out int parsed))
+            return false;
+
+        value = Mathf.Max(minValue, parsed);
+        return value != currentValue;
+    }
+
+    private void SetSelectedTagOverride(LevelTagEntry selectedTag, EntityBP overrideBP)
+    {
+        if (selectedTag == null || selectedTag.entityBPOverride == overrideBP)
+            return;
+
+        PushUndo();
+        selectedTag.entityBPOverride = overrideBP;
+        MarkDraftChanged();
+        UpdateSelectedOverlay();
+    }
+
+    private EntityBP CreateOverrideBPAsset(LevelTagEntry selectedTag, EntityBP defaultBP)
+    {
+        if (selectedTag == null)
+            return null;
+
+        string levelName = SanitizeAssetName(_source != null ? _source.name : "Level");
+        string sourcePath = _source != null ? AssetDatabase.GetAssetPath(_source) : string.Empty;
+        string sourceFolder = string.IsNullOrEmpty(sourcePath)
+            ? "Assets"
+            : System.IO.Path.GetDirectoryName(sourcePath)?.Replace('\\', '/');
+        if (string.IsNullOrEmpty(sourceFolder))
+            sourceFolder = "Assets";
+
+        string levelFolder = $"{sourceFolder}/{levelName}_EntityBPOverrides";
+        EnsureAssetFolder(levelFolder);
+
+        string tagName = SanitizeAssetName(_config != null ? _config.GetTagName(selectedTag.tagID) : $"Tag{selectedTag.tagID}");
+        string fileName = $"{levelName}_Tag{selectedTag.tagID}_{tagName}_X{selectedTag.x}_Y{selectedTag.y}_EntityBPOverride.asset";
+        string assetPath = AssetDatabase.GenerateUniqueAssetPath($"{levelFolder}/{fileName}");
+
+        var clone = ScriptableObject.CreateInstance<EntityBP>();
+        if (defaultBP != null)
+            EditorUtility.CopySerialized(defaultBP, clone);
+        clone.name = System.IO.Path.GetFileNameWithoutExtension(assetPath);
+        AssetDatabase.CreateAsset(clone, assetPath);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        EditorGUIUtility.PingObject(clone);
+        return clone;
+    }
+
+    private static void EnsureAssetFolder(string folderPath)
+    {
+        if (AssetDatabase.IsValidFolder(folderPath))
+            return;
+
+        string parent = System.IO.Path.GetDirectoryName(folderPath)?.Replace('\\', '/');
+        string folderName = System.IO.Path.GetFileName(folderPath);
+        if (string.IsNullOrEmpty(parent) || string.IsNullOrEmpty(folderName))
+            return;
+
+        EnsureAssetFolder(parent);
+        if (!AssetDatabase.IsValidFolder(folderPath))
+            AssetDatabase.CreateFolder(parent, folderName);
+    }
+
+    private static string SanitizeAssetName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "Unnamed";
+
+        char[] invalid = System.IO.Path.GetInvalidFileNameChars();
+        var chars = value.Trim().ToCharArray();
+        for (int i = 0; i < chars.Length; i++)
+        {
+            for (int j = 0; j < invalid.Length; j++)
+            {
+                if (chars[i] == invalid[j])
+                {
+                    chars[i] = '_';
+                    break;
+                }
+            }
+        }
+
+        return new string(chars).Replace(' ', '_');
+    }
+
+    private static string FormatBPName(EntityBP bp)
+    {
+        return bp != null ? bp.name : "<none>";
     }
 
     private void RemoveConflictingTags(Vector2Int cell, int newTagId)
@@ -655,7 +1109,8 @@ public sealed class Level3DEditorController : MonoBehaviour
                 {
                     tagID = tag.tagID,
                     x = tag.x + offsetX,
-                    y = tag.y + offsetY
+                    y = tag.y + offsetY,
+                    entityBPOverride = tag.entityBPOverride
                 });
             }
         }
@@ -698,7 +1153,8 @@ public sealed class Level3DEditorController : MonoBehaviour
                 {
                     tagID = tag.tagID,
                     x = tag.x - bounds.xMin,
-                    y = tag.y - bounds.yMin
+                    y = tag.y - bounds.yMin,
+                    entityBPOverride = tag.entityBPOverride
                 });
             }
         }
@@ -790,7 +1246,7 @@ public sealed class Level3DEditorController : MonoBehaviour
             if (tag == null)
                 continue;
 
-            result.Add(new LevelTagEntry { tagID = tag.tagID, x = tag.x, y = tag.y });
+            result.Add(tag.Clone());
         }
 
         return result;
@@ -836,6 +1292,23 @@ public sealed class Level3DEditorController : MonoBehaviour
             fontSize = 11,
             wordWrap = true,
             normal = { textColor = new Color(0.82f, 0.86f, 0.9f, 1f) }
+        };
+        _selectedPanelTitleStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 22,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = Color.white }
+        };
+        _selectedPanelLabelStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 14,
+            wordWrap = true,
+            normal = { textColor = new Color(0.86f, 0.9f, 0.94f, 1f) }
+        };
+        _selectedPanelValueStyle = new GUIStyle(_selectedPanelLabelStyle)
+        {
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = new Color(1f, 0.88f, 0.28f, 1f) }
         };
         _buttonStyle = new GUIStyle(GUI.skin.button)
         {

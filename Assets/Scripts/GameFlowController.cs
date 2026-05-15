@@ -7,15 +7,15 @@ public enum GameFlowMode
     DirectLevel,
     RouteMap,
     RoundFlow,
+    LinearCampaign,
     Tutorial,
     LevelEdit
 }
 
-public enum RouteMapStartupMode
+public enum GameFlowStartupMode
 {
-    AutoStart,
-    RunSetup,
-    MainMenuRound
+    DirectInGame,
+    MainMenu
 }
 
 public class GameFlowController : MonoBehaviour
@@ -23,19 +23,22 @@ public class GameFlowController : MonoBehaviour
     public static GameFlowController Instance { get; private set; }
 
     [SerializeField] private GameFlowMode mode = GameFlowMode.DirectLevel;
+    [SerializeField] private GameFlowStartupMode startupMode = GameFlowStartupMode.DirectInGame;
     [SerializeField] private RunConfigSO runConfig;
+    [SerializeField] private LinearCampaignConfigSO linearCampaignConfig;
     [SerializeField, FormerlySerializedAs("settings")] private RunRouteConfigSO routeSettings;
     [SerializeField] private RunStartSettings runStartSettings;
     [SerializeField] private bool ensureRouteOnGUI = true;
-    [SerializeField] private RouteMapStartupMode routeMapStartupMode = RouteMapStartupMode.AutoStart;
     [Header("Tutorial")]
     [SerializeField] private bool ensureTutorialDirector = true;
 
     public GameFlowMode Mode => mode;
+    public GameFlowStartupMode StartupMode => startupMode;
     public bool ShouldLevelPlayerAutoBuild => mode == GameFlowMode.DirectLevel;
     public bool IsInLevel { get; private set; }
     public bool IsMainMenuVisible { get; private set; }
     public RunConfigSO CurrentRunConfig => runConfig;
+    public LinearCampaignConfigSO LinearCampaignConfig => linearCampaignConfig;
     public RunRouteConfigSO RouteSettings => runConfig != null && runConfig.routeSettings != null ? runConfig.routeSettings : routeSettings;
     public RunRoundConfigSO RoundSettings => runConfig != null ? runConfig.roundSettings : null;
     public RunDifficultyConfigSO DifficultySettings => runConfig != null ? runConfig.difficultySettings : null;
@@ -51,6 +54,7 @@ public class GameFlowController : MonoBehaviour
 
     private RunRouteOnGUIFrontend _routeFrontend;
     private RunRoundController _roundController;
+    private LinearModeDirector _linearDirector;
     private int _observedStageRunVersion;
     private float _routeNodeStartedAt;
     private bool _runStartApplied;
@@ -67,11 +71,8 @@ public class GameFlowController : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        if (mode != GameFlowMode.LevelEdit)
-        {
-            EnsureFacades();
-            EnsureBgmSystems();
-        }
+        EnsureFacades();
+        EnsureBgmSystems();
     }
 
     private void Start()
@@ -82,32 +83,15 @@ public class GameFlowController : MonoBehaviour
             return;
         }
 
-        if (routeMapStartupMode == RouteMapStartupMode.MainMenuRound)
+        if (startupMode == GameFlowStartupMode.MainMenu)
         {
-            ShowMainMenuRound(true);
+            ShowMainMenu(true);
             return;
         }
 
-        if (mode == GameFlowMode.DirectLevel)
-        {
-            EnsureFacades();
-            ApplyRunStartSettings();
-        }
-
-        if (mode == GameFlowMode.RouteMap)
-        {
-            if (routeMapStartupMode == RouteMapStartupMode.AutoStart)
-                InitializeRouteMap();
-            else
-                ShowRunSetup();
-        }
-
-        if (mode == GameFlowMode.RoundFlow)
-            InitializeRoundFlow();
-
-        if (mode == GameFlowMode.Tutorial)
-            StartTutorialLevel();
-
+        IsMainMenuVisible = false;
+        HideMainMenu(true);
+        EnterCurrentMode();
     }
 
     private void Update()
@@ -157,13 +141,15 @@ public class GameFlowController : MonoBehaviour
         if (player == null)
             player = gameObject.AddComponent<BgmRecordPlayer>();
 
-        bool startsAtMainMenu = routeMapStartupMode == RouteMapStartupMode.MainMenuRound;
-        player.PlayOnStart = !startsAtMainMenu;
+        bool startsAtMainMenu = startupMode == GameFlowStartupMode.MainMenu;
+        bool startsInLevelEdit = mode == GameFlowMode.LevelEdit;
+        bool shouldAutoPlay = !startsAtMainMenu && !startsInLevelEdit;
+        player.PlayOnStart = shouldAutoPlay;
 
         if (runConfig != null && runConfig.bgmPlaylist != null)
-            player.Configure(runConfig.bgmPlaylist, !startsAtMainMenu);
+            player.Configure(runConfig.bgmPlaylist, shouldAutoPlay);
 
-        if (runConfig != null && runConfig.mainMenuBgm != null && startsAtMainMenu)
+        if (runConfig != null && runConfig.mainMenuBgm != null && startsAtMainMenu && !startsInLevelEdit)
             player.PlayPrompt(runConfig.mainMenuBgm);
 
         if (FindObjectOfType<BgmRecordOnGUIFrontend>() == null)
@@ -171,6 +157,9 @@ public class GameFlowController : MonoBehaviour
 
         if (FindObjectOfType<RunSettingsOnGUIFrontend>() == null)
             gameObject.AddComponent<RunSettingsOnGUIFrontend>();
+
+        if (FindObjectOfType<LinearCampaignOnGUIFrontend>() == null)
+            gameObject.AddComponent<LinearCampaignOnGUIFrontend>();
     }
 
     public void InitializeRouteMap()
@@ -212,38 +201,64 @@ public class GameFlowController : MonoBehaviour
         SetRouteVisible(true);
     }
 
-    private void ShowRunSetup()
+    public void SetMode(GameFlowMode targetMode)
     {
-        EnsureFacades();
-
-        if (FindObjectOfType<RunSetupOnGUIFrontend>() == null)
-            gameObject.AddComponent<RunSetupOnGUIFrontend>();
+        mode = targetMode;
     }
 
-    public void StartRun(RunConfigSO config, GameFlowMode targetMode = GameFlowMode.RoundFlow)
+    public void EnterCurrentMode()
+    {
+        switch (mode)
+        {
+            case GameFlowMode.DirectLevel:
+                EnsureFacades();
+                ApplyRunStartSettings();
+                break;
+
+            case GameFlowMode.RouteMap:
+                InitializeRouteMap();
+                break;
+
+            case GameFlowMode.RoundFlow:
+                InitializeRoundFlow();
+                break;
+
+            case GameFlowMode.LinearCampaign:
+                StartLinearCampaign();
+                break;
+
+            case GameFlowMode.Tutorial:
+                StartTutorialLevel();
+                break;
+
+            case GameFlowMode.LevelEdit:
+                StartLevelEdit();
+                break;
+        }
+    }
+
+    public void StartModeFromMainMenu(GameFlowMode targetMode)
     {
         if (_isStartingRun)
             return;
 
         _isStartingRun = true;
-        runConfig = config;
         mode = targetMode;
-        _runStartApplied = false;
         IsMainMenuVisible = false;
 
-        HideMainMenu();
-        PlayRunBgm();
-
-        if (mode == GameFlowMode.RouteMap)
-            InitializeRouteMap();
-        else if (mode == GameFlowMode.RoundFlow)
-            InitializeRoundFlow();
-        else if (mode == GameFlowMode.Tutorial)
-            StartTutorialLevel();
-        else if (mode == GameFlowMode.LevelEdit)
-            StartLevelEdit();
+        PrepareToEnterMode(targetMode);
+        if (targetMode != GameFlowMode.LevelEdit)
+            PlayRunBgm();
+        EnterCurrentMode();
 
         _isStartingRun = false;
+    }
+
+    public void StartRun(RunConfigSO config, GameFlowMode targetMode = GameFlowMode.RoundFlow)
+    {
+        runConfig = config;
+        _runStartApplied = false;
+        StartModeFromMainMenu(targetMode);
     }
 
     public void StartLevelEdit()
@@ -254,9 +269,9 @@ public class GameFlowController : MonoBehaviour
         IsInLevel = false;
         HideMainMenu();
         HideRunUiPanels();
-        HideBgmRecord();
         SetRouteVisible(false);
         HandZone.SetCardsLocked(true);
+        HideBgmRecord();
 
         var levelPlayer = LevelPlayer.ActiveInstance != null
             ? LevelPlayer.ActiveInstance
@@ -333,29 +348,50 @@ public class GameFlowController : MonoBehaviour
         StartRun(runConfig, GameFlowMode.RoundFlow);
     }
 
+    public void StartCurrentModeFromMainMenu()
+    {
+        if (mode == GameFlowMode.RoundFlow)
+        {
+            StartRoundRunFromMainMenu();
+            return;
+        }
+
+        if (mode == GameFlowMode.RouteMap && runConfig != null)
+        {
+            StartRun(runConfig, GameFlowMode.RouteMap);
+            return;
+        }
+
+        StartModeFromMainMenu(mode);
+    }
+
     public void StartTutorialFromMainMenu()
     {
-        if (_isStartingRun)
-            return;
+        StartModeFromMainMenu(GameFlowMode.Tutorial);
+    }
 
-        _isStartingRun = true;
-        mode = GameFlowMode.Tutorial;
-        IsMainMenuVisible = false;
+    public void StartLinearCampaignFromMainMenu()
+    {
+        StartModeFromMainMenu(GameFlowMode.LinearCampaign);
+    }
 
+    private void PrepareToEnterMode(GameFlowMode targetMode)
+    {
+        StopTutorialDirector();
+        StopLinearDirector();
         HideMainMenu();
         HideRunUiPanels();
         SetRouteVisible(false);
+        IsMainMenuVisible = false;
+        IsInLevel = false;
         HandZone.SetCardsLocked(true);
-        PlayRunBgm();
-
-        StartTutorialLevel();
-        _isStartingRun = false;
     }
 
-    public void ShowMainMenuRound(bool instant = false)
+    public void ShowMainMenu(bool instant = false)
     {
         EnsureFacades();
         StopTutorialDirector();
+        StopLinearDirector();
         ExitLevel();
         _isStartingRun = false;
         IsMainMenuVisible = true;
@@ -366,12 +402,19 @@ public class GameFlowController : MonoBehaviour
         ShowMainMenuPart(MainMenuUIIds.Backdrop, instant);
         ShowMainMenuPart(MainMenuUIIds.Title, instant);
         ShowMainMenuPart(MainMenuUIIds.Start, instant);
+        ShowMainMenuPart(MainMenuUIIds.Campaign, instant);
         ShowMainMenuPart(MainMenuUIIds.Tutorial, instant);
         ShowMainMenuPart(MainMenuUIIds.Settings, instant);
         ShowMainMenuPart(MainMenuUIIds.Quit, instant);
     }
 
-    public void ReturnToMainMenuRound()
+    [System.Obsolete("Use ShowMainMenu. This wrapper is kept for old UI and scene references.")]
+    public void ShowMainMenuRound(bool instant = false)
+    {
+        ShowMainMenu(instant);
+    }
+
+    public void ReturnToMainMenu()
     {
         if (IsMainMenuVisible)
         {
@@ -382,7 +425,7 @@ public class GameFlowController : MonoBehaviour
         }
 
         StopTutorialDirector();
-        mode = GameFlowMode.RoundFlow;
+        StopLinearDirector();
         IsMainMenuVisible = true;
         IsInLevel = false;
         HandZone.SetCardsLocked(true);
@@ -394,7 +437,13 @@ public class GameFlowController : MonoBehaviour
 
         _roundController = FindObjectOfType<RunRoundController>();
         HideRunUiPanels();
-        ShowMainMenuRound(false);
+        ShowMainMenu(false);
+    }
+
+    [System.Obsolete("Use ReturnToMainMenu. This wrapper is kept for old UI and scene references.")]
+    public void ReturnToMainMenuRound()
+    {
+        ReturnToMainMenu();
     }
 
     public void InitializeRoundFlow()
@@ -422,6 +471,35 @@ public class GameFlowController : MonoBehaviour
             gameObject.AddComponent<RunShopOnGUIFrontend>();
 
         _roundController.StartRun(runConfig, RoundSettings);
+    }
+
+    public void StartLinearCampaign()
+    {
+        EnsureFacades();
+        ApplyRunStartSettings();
+        HideMainMenu();
+        HideRunUiPanels();
+        SetRouteVisible(false);
+        HandZone.SetCardsLocked(true);
+
+        if (linearCampaignConfig == null)
+        {
+            Debug.LogError("[GameFlowController] LinearCampaign mode requires a LinearCampaignConfigSO.");
+            ReturnToMainMenu();
+            return;
+        }
+
+        PlayRunBgm();
+
+        if (_linearDirector == null)
+            _linearDirector = FindObjectOfType<LinearModeDirector>();
+
+        if (_linearDirector == null)
+            _linearDirector = gameObject.AddComponent<LinearModeDirector>();
+
+        _linearDirector.Configure(linearCampaignConfig);
+        _linearDirector.StartCampaign();
+        LinearCampaignOnGUIFrontend.Instance?.Show();
     }
 
     private void PlayMainMenuBgm()
@@ -503,7 +581,21 @@ public class GameFlowController : MonoBehaviour
     {
         ExitLevel();
         Debug.Log($"[GameFlowController] Tutorial settled: {result}");
-        ReturnToMainMenuRound();
+        ReturnToMainMenu();
+    }
+
+    public void OnLinearLevelSettled(LevelPlayResult result)
+    {
+        ExitLevel();
+        _linearDirector ??= FindObjectOfType<LinearModeDirector>();
+        if (_linearDirector == null)
+        {
+            Debug.LogError($"[GameFlowController] Linear level settled without LinearModeDirector: {result}");
+            ReturnToMainMenu();
+            return;
+        }
+
+        _linearDirector.OnLevelSettled(result);
     }
 
     public void EnterLevel()
@@ -520,7 +612,11 @@ public class GameFlowController : MonoBehaviour
 
     private void ApplyRunStartSettings()
     {
-        var startSettings = RunStartSettings;
+        ApplyStartSettings(RunStartSettings);
+    }
+
+    private void ApplyStartSettings(RunStartSettings startSettings)
+    {
         if (_runStartApplied || startSettings == null)
             return;
 
@@ -629,14 +725,15 @@ public class GameFlowController : MonoBehaviour
         }
     }
 
-    private static void HideMainMenu()
+    private static void HideMainMenu(bool instant = false)
     {
-        HideMainMenuPart(MainMenuUIIds.Backdrop);
-        HideMainMenuPart(MainMenuUIIds.Title);
-        HideMainMenuPart(MainMenuUIIds.Start);
-        HideMainMenuPart(MainMenuUIIds.Tutorial);
-        HideMainMenuPart(MainMenuUIIds.Settings);
-        HideMainMenuPart(MainMenuUIIds.Quit);
+        HideMainMenuPart(MainMenuUIIds.Backdrop, instant);
+        HideMainMenuPart(MainMenuUIIds.Title, instant);
+        HideMainMenuPart(MainMenuUIIds.Start, instant);
+        HideMainMenuPart(MainMenuUIIds.Campaign, instant);
+        HideMainMenuPart(MainMenuUIIds.Tutorial, instant);
+        HideMainMenuPart(MainMenuUIIds.Settings, instant);
+        HideMainMenuPart(MainMenuUIIds.Quit, instant);
     }
 
     private static void HideRunUiPanels()
@@ -661,10 +758,21 @@ public class GameFlowController : MonoBehaviour
         PostSystem.Instance?.Send("期望隐藏面板", new BgmRecordUIRequest(BgmRecordUIIds.RecordButton));
     }
 
+    private static void ShowBgmRecord()
+    {
+        PostSystem.Instance?.Send("期望显示面板", new BgmRecordUIRequest(BgmRecordUIIds.RecordButton));
+    }
+
     private static void StopTutorialDirector()
     {
         var director = FindObjectOfType<TutorialStageDirector>();
         director?.StopTutorial();
+    }
+
+    private static void StopLinearDirector()
+    {
+        var director = FindObjectOfType<LinearModeDirector>();
+        director?.StopCampaign();
     }
 
     private static void HideRunRoundPart(string uiid)
@@ -692,8 +800,11 @@ public class GameFlowController : MonoBehaviour
         });
     }
 
-    private static void HideMainMenuPart(string uiid)
+    private static void HideMainMenuPart(string uiid, bool instant = false)
     {
-        PostSystem.Instance?.Send("期望隐藏面板", new MainMenuUIRequest(uiid));
+        PostSystem.Instance?.Send("期望隐藏面板", new MainMenuUIRequest(uiid)
+        {
+            Instant = instant
+        });
     }
 }

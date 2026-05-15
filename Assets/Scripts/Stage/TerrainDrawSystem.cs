@@ -86,7 +86,13 @@ public class TerrainDrawSystem : MonoBehaviour
         {
             if (_targetTags[i].x == x && _targetTags[i].y == y && _targetTags[i].tagID == oldTagId)
             {
-                _targetTags[i] = new LevelTagEntry { x = x, y = y, tagID = newTagId };
+                _targetTags[i] = new LevelTagEntry
+                {
+                    x = x,
+                    y = y,
+                    tagID = newTagId,
+                    entityBPOverride = _targetTags[i].entityBPOverride
+                };
                 _dirty = true;
                 return;
             }

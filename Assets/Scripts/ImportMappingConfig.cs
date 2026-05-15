@@ -6,7 +6,7 @@ using Sirenix.OdinInspector;
 /// 经典 Sokoban 文本关卡 → LevelData SO 的符号映射配置。
 /// 一份 SO = 一组映射，支持多组配置应对不同关卡格式。
 /// </summary>
-[CreateAssetMenu(fileName = "ImportMappingConfig", menuName = "BlockingKing/Import Mapping Config")]
+[CreateAssetMenu(fileName = "ImportMappingConfig", menuName = "BlockingKing/Levels/Import Mapping Config")]
 public class ImportMappingConfig : ScriptableObject
 {
     [BoxGroup("地形符号")]

@@ -5,7 +5,7 @@ using UnityEngine;
 /// 放在 Resources/ 下，编辑器设 LevelData 引用 + active=true，
 /// 运行时 LevelPlayer 读取后置 active=false。
 /// </summary>
-[CreateAssetMenu(fileName = "QuickPlaySession", menuName = "BlockingKing/Quick Play Session")]
+[CreateAssetMenu(fileName = "QuickPlaySession", menuName = "BlockingKing/Tools/Quick Play Session")]
 public class QuickPlaySession : ScriptableObject
 {
     public LevelData targetLevel;

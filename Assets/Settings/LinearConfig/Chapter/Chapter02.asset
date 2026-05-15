@@ -1,0 +1,88 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d73990c05964adba7e947a61629da52, type: 3}
+  m_Name: Chapter02
+  m_EditorClassIdentifier: 
+  chapterId: 
+  displayName: 
+  description: 
+  levels:
+  - levelId: 02.01
+    displayName: Level 02.01
+    levelData: {fileID: 11400000, guid: c886113fdf1848708eea1857aa67145d, type: 2}
+    subMode: 0
+    playerInitialHp: 30
+    orderedStartingDeck: {fileID: 11400000, guid: f694e5e4d97b49f7a930baa8585fbdd4, type: 2}
+    stepLimit: 30
+  - levelId: 02.02
+    displayName: Level 02.02
+    levelData: {fileID: 11400000, guid: 56cdb7daf2fd42c9869b51cc2ac39b6f, type: 2}
+    subMode: 0
+    playerInitialHp: 30
+    orderedStartingDeck: {fileID: 11400000, guid: 8e7e82e3fffe4945a92d3648f3d24dd7, type: 2}
+    stepLimit: 30
+  - levelId: 02.03
+    displayName: Level 02.03
+    levelData: {fileID: 11400000, guid: cbfb61e531874a208ad413e92aa2c88b, type: 2}
+    subMode: 0
+    playerInitialHp: 30
+    orderedStartingDeck: {fileID: 11400000, guid: d43630a0e5e44395a93c432087f12688, type: 2}
+    stepLimit: 30
+  - levelId: 02.04
+    displayName: Level 02.04
+    levelData: {fileID: 11400000, guid: 4748a6321b624b0ca5e44c5a4f2467e2, type: 2}
+    subMode: 0
+    playerInitialHp: 30
+    orderedStartingDeck: {fileID: 11400000, guid: d3b24fedc93745dd8990c5dcc8b6b115, type: 2}
+    stepLimit: 30
+  - levelId: 02.05
+    displayName: Level 02.05
+    levelData: {fileID: 11400000, guid: 6ec07b7f241148c78645b78d60c400ba, type: 2}
+    subMode: 0
+    playerInitialHp: 30
+    orderedStartingDeck: {fileID: 11400000, guid: ed4b802f939e4a6a9d433e2fb7b694de, type: 2}
+    stepLimit: 30
+  - levelId: 02.06
+    displayName: Level 02.06
+    levelData: {fileID: 11400000, guid: 58e95979ee7b43c9806b412aadc174e2, type: 2}
+    subMode: 0
+    playerInitialHp: 30
+    orderedStartingDeck: {fileID: 11400000, guid: 88a745b66d2049e8a37877d281b17752, type: 2}
+    stepLimit: 30
+  - levelId: 02.07
+    displayName: Level 02.07
+    levelData: {fileID: 11400000, guid: 064908b8164e43329a171c1701f069e1, type: 2}
+    subMode: 0
+    playerInitialHp: 30
+    orderedStartingDeck: {fileID: 11400000, guid: 520d628d957e45d28a16e737fa9725e0, type: 2}
+    stepLimit: 30
+  - levelId: 02.08
+    displayName: Level 02.08
+    levelData: {fileID: 11400000, guid: e7750a3de2094cdb88b8092c79853f79, type: 2}
+    subMode: 0
+    playerInitialHp: 30
+    orderedStartingDeck: {fileID: 11400000, guid: cd7dcceb55594b75968b8132e0be34ab, type: 2}
+    stepLimit: 30
+  - levelId: 02.09
+    displayName: Level 02.09
+    levelData: {fileID: 11400000, guid: ad3d229a2c5349f8826c7ea9511b0b00, type: 2}
+    subMode: 0
+    playerInitialHp: 30
+    orderedStartingDeck: {fileID: 11400000, guid: 28805558556149e8bb55d573501d9617, type: 2}
+    stepLimit: 30
+  - levelId: 02.10
+    displayName: Level 02.10
+    levelData: {fileID: 11400000, guid: 0c1f13af5b3246b9a629d630993b5d7e, type: 2}
+    subMode: 0
+    playerInitialHp: 30
+    orderedStartingDeck: {fileID: 11400000, guid: 0bda5396868c4631a4b2176beee54136, type: 2}
+    stepLimit: 30

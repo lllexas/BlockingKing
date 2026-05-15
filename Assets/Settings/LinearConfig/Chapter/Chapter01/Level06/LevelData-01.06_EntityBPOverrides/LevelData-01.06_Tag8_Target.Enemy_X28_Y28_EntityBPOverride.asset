@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cbc03074f43d0df44ab3b30a4ac7a637, type: 3}
+  m_Name: LevelData-01.06_Tag8_Target.Enemy_X28_Y28_EntityBPOverride
+  m_EditorClassIdentifier: 
+  health: 1
+  attack: 1
+  auras: []
+  spawnInterval: 12
+  spawnEntityBP: {fileID: 11400000, guid: 9fefed5420345a64584ac08dcaf5070e, type: 2}
+  prefab: {fileID: 0}
+  instancedMesh: {fileID: 0}
+  instancedMaterial: {fileID: 0}
+  visualScale: {x: 1, y: 1, z: 1}
+  showUnitLabel: 0
+  unitLabelText: 
+  unitLabelColor: {r: 1, g: 1, b: 1, a: 1}
+  unitLabelOffset: {x: 0, y: 0, z: 0}
+  unitLabelScale: 1
+  references:
+    version: 2
+    RefIds: []

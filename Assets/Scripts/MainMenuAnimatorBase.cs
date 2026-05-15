@@ -10,7 +10,7 @@ public abstract class MainMenuAnimatorBase : SpaceUIAnimator
     {
         base.Awake();
         期望显示面板 += OnShowPanel;
-        期望隐藏面板 += _ => HideMenuPart();
+        期望隐藏面板 += OnHidePanel;
     }
 
     private void OnShowPanel(object data)
@@ -25,6 +25,14 @@ public abstract class MainMenuAnimatorBase : SpaceUIAnimator
             ShowMenuPartInstant();
         else
             ShowMenuPart();
+    }
+
+    private void OnHidePanel(object data)
+    {
+        if (data is MainMenuUIRequest { Instant: true })
+            HideMenuPartInstant();
+        else
+            HideMenuPart();
     }
 
     protected override void CloseAction()
@@ -52,5 +60,13 @@ public abstract class MainMenuAnimatorBase : SpaceUIAnimator
         StopBreathing();
         ResetScale();
         this.FadeOutIfVisible();
+    }
+
+    protected virtual void HideMenuPartInstant()
+    {
+        StopBreathing();
+        ResetScale();
+        if (_canvasGroup != null && _canvasGroup.blocksRaycasts)
+            Hide();
     }
 }

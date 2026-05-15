@@ -47,7 +47,7 @@ public sealed class RunResultPanelAnimator : SpaceUIAnimator
     {
         Time.timeScale = 1f;
         this.FadeOutIfVisible();
-        GameFlowController.Instance?.ReturnToMainMenuRound();
+        GameFlowController.Instance?.ReturnToMainMenu();
     }
 
     private void BindButtons()
